@@ -134,7 +134,10 @@ product_variants(
   sku           TEXT UNIQUE NOT NULL,
   stock         INTEGER NOT NULL DEFAULT 0,
   weight_grams  INTEGER,
-  option_values TEXT NOT NULL              -- JSON: {"size":"XL","color":"black"}
+  option_values TEXT NOT NULL,             -- JSON: {"size":"XL","color":"black"}
+  moq           INTEGER NOT NULL DEFAULT 1, -- 最小起订量，见 4.5
+  lead_time_days_min INTEGER,              -- 交货周期下限（工作日）
+  lead_time_days_max INTEGER               -- 交货周期上限（工作日）
 )
 
 -- 多币种价格：基准价手填，其余自动换算，支持手动覆盖（见第 4.4 节）
@@ -313,6 +316,34 @@ GBP  [ 79.99 ]  ✎ 手动设定                                        [恢复�
 
 **默认参数**：缓冲系数 3%、重算阈值 2%、取整至 `.99` 结尾。
 
+## 4.5 最小起订量（MOQ）与交货周期
+
+外贸场景刚需字段，置于 **variant（SKU）层级**而非商品层级：不同规格的起订量与交期经常不同（大口径规格起订量低但交期长）。后台提供"批量应用到全部 SKU"操作以避免重复填写。
+
+**不做结构化的字段**：技术参数表、认证证书统一放入商品描述富文本。不同品类需展示的参数差异极大，强行结构化会束缚内容表达，且增加后台填写负担。
+
+### 4.5.1 MOQ 的业务规则
+
+MOQ 不只是展示文案，必须参与校验，三处都要拦：
+
+1. **商品页**：数量选择器初始值即为 MOQ，步进按 MOQ 递增（避免用户选出 MOQ=50 时的 73 件这种无效数量）
+2. **加入购物车**：数量低于 MOQ 时拒绝并提示该 SKU 的实际起订量
+3. **结账**：服务端二次校验（前端校验可被绕过），不通过则拒绝创建订单
+
+`moq` 默认值为 1，即不设起订限制的普通商品无需额外配置。
+
+### 4.5.2 交货周期的呈现
+
+以区间存储（`lead_time_days_min` / `lead_time_days_max`，单位工作日），呈现于三处：
+
+1. 商品页：`Lead time: 15–20 business days`，按 locale 本地化数字与文案
+2. 结账页：多 SKU 时取各行交期的最大值作为整单预计交期
+3. 订单确认邮件：写入预计发货时间，减少客户催单
+
+数值为语言无关的整数，仅展示层做本地化，无需进翻译表。
+
+**SEO 关联**：商品页 JSON-LD 的 `Offer` 中输出 `deliveryLeadTime`，可被 Google 用于展示配送信息。
+
 ## 5. 前台渲染与 SEO 策略
 
 ### 5.0 目标市场、语言与币种
@@ -391,7 +422,7 @@ GBP  [ 79.99 ]  ✎ 手动设定                                        [恢复�
 
 ```
 1. 用户点击结账
-   → 后端重新校验：商品是否上架、库存是否充足、按当前 D1 数据重算价格
+   → 后端重新校验：商品是否上架、库存是否充足、数量是否满足 MOQ、按当前 D1 数据重算价格
    → 创建 orders 记录（status = pending）
    → 创建 Stripe PaymentIntent（金额取后端计算结果，绝不信任前端传值）
    → 返回 client_secret
@@ -442,7 +473,7 @@ pending ──→ paid ──→ shipped ──→ delivered
 
 | 模块 | 功能 |
 |---|---|
-| 商品管理 | 商品 CRUD、SKU/规格矩阵、USD 基准价 + 自动换算价（可单币种覆盖，见 4.4.6）、库存调整（写流水）、上下架 |
+| 商品管理 | 商品 CRUD、SKU/规格矩阵、USD 基准价 + 自动换算价（可单币种覆盖，见 4.4.6）、MOQ 与交货周期（支持批量应用到全部 SKU）、库存调整（写流水）、上下架 |
 | 内容与 SEO | 按语言分栏编辑：名称/描述/SEO meta/特性/工况；工况 `has_own_page` 开关；alt 必填校验；搜索结果预览 |
 | 图片管理 | 拖拽上传至 R2、上传时生成尺寸变体、排序、设主图 |
 | 订单管理 | 列表/详情、发货（填单号触发邮件）、退款（调 Stripe API）、oversold 人工处理队列 |
@@ -464,7 +495,7 @@ pending ──→ paid ──→ shipped ──→ delivered
 不追求覆盖率数字，按风险分三层：
 
 1. **单元测试**：定价引擎（汇率换算、缓冲系数、心理价位取整、重算阈值判定、manual 行不被覆盖）、库存扣减条件、订单状态机、hreflang / JSON-LD / sitemap 生成
-2. **集成测试**（Workers 测试运行时 + 本地 D1）：下单全流程、webhook 幂等、越权访问（客户能否读到他人订单、staff 能否访问 owner 功能）
+2. **集成测试**（Workers 测试运行时 + 本地 D1）：下单全流程、MOQ 服务端校验（前端绕过场景）、webhook 幂等、越权访问（客户能否读到他人订单、staff 能否访问 owner 功能）
 3. **E2E**（Playwright + Stripe 测试模式）：浏览商品 → 加购 → 结账 → 测试卡支付 → 订单生成
 
 ## 10. 开源准备（随开发同步进行，不留待后补）
