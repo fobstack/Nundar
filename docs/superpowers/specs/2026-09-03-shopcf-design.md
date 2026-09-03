@@ -523,7 +523,7 @@ pending ──→ paid ──→ shipped ──→ delivered
 
 1. Workers 运行时内图片 resize 的可用方案及套餐要求
 2. Cloudflare Email 发送事务邮件的当前接口形态与送达率限制；若不满足需求，退回方案为接入 Resend 等事务邮件服务
-3. `@opennextjs/cloudflare` 对 ISR / on-demand revalidation 的当前支持程度
+3. ~~`@opennextjs/cloudflare` 对 ISR / on-demand revalidation 的当前支持程度~~ **已核实（2026-09-03）**：完整支持。机制为三件套——R2 增量缓存（`r2IncrementalCache`，可叠加 `withRegionalCache`）+ Durable Object 队列（`doQueue`，去重时间型重验证）+ Durable Object 分片 tag cache（`doShardedTagCache`，支撑 `revalidateTag` / `revalidatePath` 按需重验证），在 `open-next.config.ts` 中经 `defineCloudflareConfig` 装配。本项目"后台改内容 → 触发对应商品页重新生成"的方案成立。
 4. D1 的事务语义与并发写入限制，确认 6.3 的条件扣减方案可行
 5. ECB 每日参考汇率的当前接口形态、更新时间与节假日空档处理（见 4.4.1）
 
