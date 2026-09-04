@@ -13,7 +13,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply shopcf --local",
     "db:migrate:remote": "wrangler d1 migrations apply shopcf --remote",
-    "db:seed:build": "tsx src/scripts/build-seed-sql.ts",
+    "db:seed:build": "tsx src/scripts/write-seed-sql.ts",
     "db:seed:local": "pnpm db:seed:build && wrangler d1 execute shopcf --local --file=./drizzle/seed.sql",
     "db:seed:remote": "pnpm db:seed:build && wrangler d1 execute shopcf --remote --file=./drizzle/seed.sql",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
