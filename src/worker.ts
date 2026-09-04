@@ -8,7 +8,7 @@ import { runExchangeRateCron } from "@/lib/pricing/cron";
  * 自定义 Worker 入口：复用 OpenNext 生成的 fetch handler，另加 Cron 的 scheduled handler。
  * 见 https://opennext.js.org/cloudflare/howtos/custom-worker
  */
-export default {
+const worker = {
   fetch: handler.fetch,
 
   async scheduled(_event, env, ctx) {
@@ -27,6 +27,8 @@ export default {
     );
   },
 };
+
+export default worker;
 
 // DO Queue 与 DO Tag Cache 的类在生成的 worker 里，必须从自定义入口再导出一次
 export {
