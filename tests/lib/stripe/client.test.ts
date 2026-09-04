@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { createPaymentIntent, createRefund } from "@/lib/stripe/client";
+import {
+  createCheckoutSession,
+  createPaymentIntent,
+  createRefund,
+} from "@/lib/stripe/client";
 
 type Captured = { url: string; init: RequestInit };
 
@@ -136,5 +140,78 @@ describe("createRefund", () => {
 
     const headers = calls[0].init.headers as Record<string, string>;
     expect(headers["Idempotency-Key"]).toBe("refund:pi_9");
+  });
+});
+
+describe("createCheckoutSession", () => {
+  it("charges the server-computed total as a single line item", async () => {
+    const { impl, calls } = recordingFetch({
+      id: "cs_1",
+      url: "https://checkout.stripe.com/c/pay/cs_1",
+    });
+
+    await createCheckoutSession(
+      "sk_test_123",
+      {
+        amountMinor: 99_000,
+        currency: "USD",
+        orderId: "order-1",
+        orderNo: "SC-1",
+        productName: "Order SC-1",
+        successUrl: "https://shop.example/en/orders/SC-1",
+        cancelUrl: "https://shop.example/en/cart",
+      },
+      impl,
+    );
+
+    const body = bodyOf(calls[0]);
+    expect(calls[0].url).toBe("https://api.stripe.com/v1/checkout/sessions");
+    expect(body.get("line_items[0][price_data][unit_amount]")).toBe("99000");
+    expect(body.get("line_items[0][quantity]")).toBe("1");
+    expect(body.get("mode")).toBe("payment");
+  });
+
+  it("propagates the order id onto the payment intent, which the webhook reads", async () => {
+    const { impl, calls } = recordingFetch({ id: "cs_1", url: "https://x" });
+
+    await createCheckoutSession(
+      "sk_test_123",
+      {
+        amountMinor: 100,
+        currency: "USD",
+        orderId: "order-99",
+        orderNo: "SC-9",
+        productName: "Order SC-9",
+        successUrl: "https://shop.example/ok",
+        cancelUrl: "https://shop.example/cart",
+      },
+      impl,
+    );
+
+    const body = bodyOf(calls[0]);
+    // webhook 收到的是 payment_intent.succeeded，只有这里带上 order_id 才找得到订单
+    expect(body.get("payment_intent_data[metadata][order_id]")).toBe("order-99");
+    expect(body.get("metadata[order_id]")).toBe("order-99");
+  });
+
+  it("keys idempotency on the order so a double submit reuses the session", async () => {
+    const { impl, calls } = recordingFetch({ id: "cs_1", url: "https://x" });
+
+    await createCheckoutSession(
+      "sk_test_123",
+      {
+        amountMinor: 100,
+        currency: "USD",
+        orderId: "order-3",
+        orderNo: "SC-3",
+        productName: "Order SC-3",
+        successUrl: "https://shop.example/ok",
+        cancelUrl: "https://shop.example/cart",
+      },
+      impl,
+    );
+
+    const headers = calls[0].init.headers as Record<string, string>;
+    expect(headers["Idempotency-Key"]).toBe("checkout:order-3");
   });
 });

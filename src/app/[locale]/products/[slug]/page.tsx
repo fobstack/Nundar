@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AddToCart } from "@/components/AddToCart";
 import { JsonLd } from "@/components/JsonLd";
 import { LiveStock } from "@/components/LiveStock";
 import { LOCALES, defaultCurrencyForLocale, isLocale } from "@/config/locales";
@@ -152,6 +153,13 @@ export default async function ProductPage({
                 <dd data-stock>{variant.stock}</dd>
               </div>
             </dl>
+
+            <AddToCart
+              variantId={variant.id}
+              moq={variant.moq}
+              stock={variant.stock}
+              locale={locale}
+            />
           </div>
         ))}
       </section>

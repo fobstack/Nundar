@@ -112,3 +112,58 @@ export async function createRefund(
     fetchImpl,
   );
 }
+
+export type CheckoutSession = {
+  id: string;
+  url: string;
+};
+
+/**
+ * 创建 Stripe 托管结账会话。
+ *
+ * 相比 Elements 嵌入式支付，托管页零客户端依赖、卡号同样不经过本站服务器。
+ * 代价是用户会跳到 stripe.com 完成支付，品牌一致性略差。
+ *
+ * 关键点：order_id 必须写进 payment_intent_data.metadata，
+ * 否则 webhook 收到 payment_intent.succeeded 时找不到对应订单。
+ */
+export async function createCheckoutSession(
+  secretKey: string,
+  input: {
+    amountMinor: number;
+    currency: Currency;
+    orderId: string;
+    orderNo: string;
+    productName: string;
+    successUrl: string;
+    cancelUrl: string;
+    customerEmail?: string;
+  },
+  fetchImpl: typeof fetch = fetch,
+): Promise<CheckoutSession> {
+  const body: Record<string, string> = {
+    mode: "payment",
+    "line_items[0][quantity]": "1",
+    "line_items[0][price_data][currency]": input.currency.toLowerCase(),
+    "line_items[0][price_data][unit_amount]": String(input.amountMinor),
+    "line_items[0][price_data][product_data][name]": input.productName,
+    success_url: input.successUrl,
+    cancel_url: input.cancelUrl,
+    "metadata[order_id]": input.orderId,
+    "metadata[order_no]": input.orderNo,
+    "payment_intent_data[metadata][order_id]": input.orderId,
+    "payment_intent_data[metadata][order_no]": input.orderNo,
+  };
+
+  if (input.customerEmail) {
+    body.customer_email = input.customerEmail;
+  }
+
+  return stripeRequest<CheckoutSession>(
+    secretKey,
+    "/checkout/sessions",
+    body,
+    `checkout:${input.orderId}`,
+    fetchImpl,
+  );
+}

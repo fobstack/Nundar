@@ -8,7 +8,8 @@ import { CART_COOKIE } from "@/lib/cart/cookie";
 import { readCart } from "@/lib/cart/cart";
 import { priceCart } from "@/lib/cart/pricing";
 import { createPendingOrder } from "@/lib/orders/orders";
-import { createPaymentIntent } from "@/lib/stripe/client";
+import { SITE } from "@/config/site";
+import { createCheckoutSession } from "@/lib/stripe/client";
 
 const addressSchema = z.object({
   recipient: z.string().min(1).max(120),
@@ -78,16 +79,19 @@ export async function POST(request: Request) {
     customerId: null,
   });
 
-  const intent = await createPaymentIntent(secretKey, {
+  const session = await createCheckoutSession(secretKey, {
     amountMinor: order.totalMinor,
     currency: priced.currency,
     orderId: order.id,
     orderNo: order.orderNo,
+    productName: `Order ${order.orderNo}`,
+    successUrl: `${SITE.url}/${parsed.data.locale}/orders/${order.orderNo}`,
+    cancelUrl: `${SITE.url}/${parsed.data.locale}/cart`,
   });
 
   return Response.json({
     orderNo: order.orderNo,
-    clientSecret: intent.client_secret,
+    checkoutUrl: session.url,
     currency: priced.currency,
     totalMinor: order.totalMinor,
   });
