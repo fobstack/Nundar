@@ -131,3 +131,34 @@
 - `pnpm build` 生成：4 语言 × (首页 + 列表页 + 商品页) + 4 语言 × 独立工况页
 - 商品页 HTML 中含完整 hreflang 集合、自指 canonical、`Product` JSON-LD
 - `/sitemap.xml` 可访问且不含 `has_own_page = 0` 的工况页
+
+---
+
+## 执行记录（2026-09-04）
+
+阶段 2 全部 8 个任务已完成并验证。
+
+**新增页面**：4 语言 ×（首页 + 列表页 + 商品页 + 工况落地页）= 16 个静态页，另加 `/sitemap.xml`、`/robots.txt`、`/api/inventory`。
+
+**实现中发现并修复的两个真实缺陷：**
+
+1. **hreflang 指向 404**（严重）。工况落地页的 slug 逐语言本地化，但初版让所有语言共用英文 slug 拼 hreflang，导致德/法/西的 hreflang 全部指向不存在的页面。根因是 `product_use_cases` 各语言行之间没有共同标识。修复：新增 `group_key` 列（见 spec 4.2.1）与 `getUseCaseAlternates` 查询，逐语言取真实 slug；缺翻译的语言直接省略该 hreflang 条目而非用别的语言顶替。
+
+2. **构建期 D1 并发失败**。`generateStaticParams` 读本地 D1 时，多个 Next 构建 worker 并发连同一个 miniflare SQLite 触发 `D1_ERROR: internal error`。修复：`next.config.ts` 设 `experimental.cpus = 1`、`workerThreads = false`，构建串行化。
+
+**其他偏差：**
+
+| 偏差 | 原因 |
+|---|---|
+| 迁移合并为单个 `0000` 而非追加 `0001` | SQLite 不支持给已有表加无默认值的 NOT NULL 列；项目尚未部署到任何远端，合并是安全的 |
+| `useCaseJsonLd` 更名为 `buildUseCaseJsonLd` | ESLint 的 `react-hooks/rules-of-hooks` 把 `use` 前缀误判为 React Hook |
+| 提前实现根路径重定向（原属阶段 2 计划外） | 已在阶段 1 补齐 |
+
+**验证结果**：`pnpm test` 110 个用例全绿（15 个测试文件）、`pnpm typecheck`、`pnpm lint`、`pnpm build` 全部通过。
+
+dev 模式实测：
+- `/sitemap.xml` 16 条，不含 `has_own_page = 0` 的工况，工况页 URL 为各语言本地化 slug
+- `/robots.txt` disallow 清单完整（api/admin/cart/checkout/account/带参 URL）
+- `/api/inventory?variants=...&currency=EUR` 返回实时库存与回落后的真实币种；缺参数返回 400
+- 未成页的工况 URL 返回 404
+- 商品页 HTML 含四语言 hreflang + x-default、自指 canonical、Product/Offer/BreadcrumbList JSON-LD（含 MOQ 的 `eligibleQuantity` 与交期的 `deliveryLeadTime`）

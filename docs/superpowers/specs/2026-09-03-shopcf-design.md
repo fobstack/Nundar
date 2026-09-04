@@ -107,6 +107,7 @@ product_features(
   id            TEXT PRIMARY KEY,
   product_id    TEXT NOT NULL,
   locale        TEXT NOT NULL,
+  group_key     TEXT NOT NULL,             -- 跨语言标识，见 4.2.1
   sort_order    INTEGER NOT NULL,
   title         TEXT NOT NULL,
   body          TEXT,
@@ -119,13 +120,27 @@ product_use_cases(
   id            TEXT PRIMARY KEY,
   product_id    TEXT NOT NULL,
   locale        TEXT NOT NULL,
+  group_key     TEXT NOT NULL,             -- 跨语言标识，见 4.2.1
   sort_order    INTEGER NOT NULL,
   scenario_title TEXT NOT NULL,
-  scenario_slug TEXT,                      -- 独立落地页 URL 片段
+  scenario_slug TEXT,                      -- 独立落地页 URL 片段，逐语言本地化
   has_own_page  INTEGER NOT NULL DEFAULT 0, -- 是否生成独立落地页
   body          TEXT,                      -- Markdown
   spec_highlights TEXT                     -- JSON：该工况下的关键参数
 )
+```
+
+### 4.2.1 group_key：内容块的跨语言标识
+
+`product_features` 与 `product_use_cases` 每语言一行，但行与行之间没有天然关联。`group_key` 就是这个关联：同一条特性/工况的各语言版本共用一个 `group_key`，配合 `(product_id, locale, group_key)` 唯一索引。
+
+**为什么必须有**（实现阶段 2 时踩到的真实缺陷）：工况落地页的 slug 是逐语言本地化的（`offshore-seawater-lines` / `offshore-seewasserleitungen` / `circuits-eau-de-mer-offshore`）。没有跨语言标识就只能让所有语言共用同一个 slug 拼 hreflang，结果是 hreflang 指向根本不存在的 URL——等于主动把爬虫引向死链。
+
+同一机制也是翻译工作台（7.2）统计翻译完整度的前提：没有它就无法判断德语的哪一条对应英语的哪一条。
+
+**缺翻译时的处理**：某语言缺该 `group_key` 的记录时，hreflang 直接省略该语言条目，绝不用其他语言的 slug 顶替。
+
+```sql
 
 -- SKU / 规格
 product_variants(
