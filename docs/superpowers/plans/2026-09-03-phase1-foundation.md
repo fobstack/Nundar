@@ -2508,6 +2508,28 @@ git commit -m "feat: 打通数据库到页面到部署的完整链路，补齐 R
 - [ ] 仓库无硬编码密钥，`.dev.vars.example` 齐备
 - [ ] README 中的部署步骤经过实际执行验证
 
+## 执行记录（2026-09-04）
+
+阶段 1 已执行完毕，除**部署**外全部完成并验证。实际执行与计划的偏差如下，均已落到代码里：
+
+| # | 偏差 | 原因 |
+|---|---|---|
+| 1 | 未用 `npm create cloudflare`，改用 `create-next-app` + 手动接入 `@opennextjs/cloudflare` | C3 v2.72.5 忽略 `--framework=next`，生成的是纯 Workers 模板 |
+| 2 | `allowBuilds` 写在 `pnpm-workspace.yaml` 而非 `package.json` | pnpm 11 已迁移该设置；不放行 esbuild/workerd 则本地运行时起不来 |
+| 3 | 测试配置用 `cloudflareTest` 插件、文件名为 `vitest.config.mts` | `@cloudflare/vitest-pool-workers` 0.22 移除了 `defineWorkersConfig` 与 `./config` 子路径导出，且为 ESM-only |
+| 4 | `compatibility_date` 定为 `2026-08-22` | 本地 workerd 二进制支持的最新日期，超过则测试运行时拒绝启动 |
+| 5 | 新增 `tests/worker-entry.ts` 作为测试主入口 | 生产入口 `.open-next/worker.js` 是构建产物，跑单测时不存在 |
+| 6 | `drizzle.config.ts` 不配 `d1-http` driver 与凭据 | 迁移一律由 wrangler 应用，drizzle-kit 只需生成 SQL，因此本地开发零凭据 |
+| 7 | 抽出纯函数 `createDb(d1)`，`getDb/getDbAsync` 退化为组合根 | `getCloudflareContext()` 依赖 OpenNext 请求上下文，测试运行时里取不到 |
+| 8 | SQL 生成拆成 `build-seed-sql.ts`（纯）+ `write-seed-sql.ts`（落盘） | 前者需在 Workers 运行时里被测试，不能依赖 `node:fs` |
+| 9 | 提前实现根路径重定向到默认语言 | 删掉脚手架首页后 `/` 会 404；固定跳 `/en`，不看 IP |
+| 10 | `listActiveProducts` 增加 `currency` 参数与 `priceCurrency` 返回值 | **验证时发现的真实缺陷**：德/法/西页面把 USD 基准价挂上欧元符号展示。现在按请求币种取价，缺价时回落基准币种并如实报告实际币种 |
+| 11 | 提交 `cloudflare-env.d.ts`（wrangler types 生成） | 让 clone 后无需连 Cloudflare 即可通过类型检查 |
+
+**验证结果**：`pnpm test` 56 个用例全绿（10 个测试文件）、`pnpm typecheck` 通过、`pnpm lint` 通过、`pnpm build` 与 `opennextjs-cloudflare build` 均成功；四语言页面静态生成且内容与币种标注正确；dev 模式下 `/de` 正常、`/zh` 404、`/` 307 跳 `/en`；`pnpm db:seed:local` 重复执行保持幂等。
+
+**唯一未完成项**：Task 9 Step 5 的**部署**，以及 `wrangler d1/r2/kv create` 创建云端资源——需要项目所有者执行 `wrangler login`。`wrangler.jsonc` 中相关 id 目前是 `local-placeholder-replace-before-deploy` 占位值，本地开发与测试不受影响。
+
 ## 本阶段刻意不做的事
 
 以下均为后续阶段内容，本阶段出现即为范围蔓延：
