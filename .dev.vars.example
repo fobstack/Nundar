@@ -1,0 +1,19 @@
+# 本地开发用的环境变量模板。复制为 .dev.vars 后填写真实值（.dev.vars 已被 gitignore）。
+#
+#   cp .dev.vars.example .dev.vars
+#
+# 阶段 1（当前）：本地开发与测试不需要任何密钥——D1 / R2 / KV 都由 miniflare 在本地模拟，
+# 迁移经 wrangler 应用，drizzle-kit 只生成 SQL 不连远端。
+#
+# 以下变量在后续阶段启用，届时取消注释并填值：
+
+# 阶段 4 · Stripe 支付
+# STRIPE_SECRET_KEY=
+# STRIPE_WEBHOOK_SECRET=
+# NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+
+# 阶段 3 · 后台会话签名密钥（用 openssl rand -base64 32 生成）
+# SESSION_SECRET=
+
+# 阶段 5 · 事务邮件发件地址
+# MAIL_FROM_ADDRESS=

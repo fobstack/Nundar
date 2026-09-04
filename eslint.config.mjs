@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // wrangler types 生成的绑定与运行时类型，不参与 lint
+    "cloudflare-env.d.ts",
+    ".open-next/**",
   ]),
 ]);
 

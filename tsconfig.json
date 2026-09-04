@@ -13,6 +13,8 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
+    // cloudflare:test 的类型（env / applyD1Migrations 等），供测试文件使用
+    "types": ["@cloudflare/vitest-pool-workers/types"],
     "plugins": [
       {
         "name": "next"
