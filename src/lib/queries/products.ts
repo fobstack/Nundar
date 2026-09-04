@@ -333,6 +333,8 @@ export type UseCasePageRef = {
   productSlug: string;
   locale: Locale;
   useCaseSlug: string;
+  /** 跨语言标识，用于把同一工况的各语言版本关联起来做 hreflang */
+  groupKey: string;
 };
 
 /**
@@ -346,6 +348,7 @@ export async function listUseCasePages(db: Db): Promise<UseCasePageRef[]> {
       productSlug: schema.products.slug,
       locale: schema.productUseCases.locale,
       useCaseSlug: schema.productUseCases.scenarioSlug,
+      groupKey: schema.productUseCases.groupKey,
     })
     .from(schema.productUseCases)
     .innerJoin(
@@ -367,6 +370,7 @@ export async function listUseCasePages(db: Db): Promise<UseCasePageRef[]> {
             productSlug: row.productSlug,
             locale: row.locale,
             useCaseSlug: row.useCaseSlug,
+            groupKey: row.groupKey,
           },
         ]
       : [],
@@ -436,4 +440,19 @@ export async function getUseCaseAlternates(
   }
 
   return alternates;
+}
+
+/** slug → updated_at，供 sitemap 的 lastModified 使用 */
+export async function listProductUpdatedAt(
+  db: Db,
+): Promise<Record<string, number>> {
+  const rows = await db
+    .select({
+      slug: schema.products.slug,
+      updatedAt: schema.products.updatedAt,
+    })
+    .from(schema.products)
+    .where(eq(schema.products.status, "active"));
+
+  return Object.fromEntries(rows.map((row) => [row.slug, row.updatedAt]));
 }

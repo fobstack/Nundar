@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/JsonLd";
+import { LiveStock } from "@/components/LiveStock";
 import { LOCALES, defaultCurrencyForLocale, isLocale } from "@/config/locales";
 import { SITE } from "@/config/site";
 import { getDbAsync } from "@/db/client";
@@ -95,6 +96,13 @@ export default async function ProductPage({
           },
           { name: product.name, url: productUrl },
         ])}
+      />
+
+      {/* 静态页的库存与价格可能过期，hydration 后用实时数据覆盖 */}
+      <LiveStock
+        variantIds={product.variants.map((variant) => variant.id)}
+        currency={currency}
+        locale={locale}
       />
 
       <h1 className="text-3xl font-semibold tracking-tight">{product.name}</h1>
