@@ -18,7 +18,8 @@
     "db:seed:remote": "pnpm db:seed:build && wrangler d1 execute shopcf --remote --file=./drizzle/seed.sql",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
+    "admin:create": "tsx src/scripts/create-admin.ts"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "^1.20.6",
