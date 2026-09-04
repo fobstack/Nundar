@@ -1,7 +1,8 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "shopcf",
-  "main": ".open-next/worker.js",
+  // 自定义入口：复用 OpenNext 的 fetch handler，另加 Cron 的 scheduled handler
+  "main": "src/worker.ts",
   // 不要超过本地 workerd 二进制支持的最新日期，否则 vitest-pool-workers 起不来
   "compatibility_date": "2026-08-22",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],

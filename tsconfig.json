@@ -32,5 +32,7 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  // src/worker.ts 导入的是构建产物 .open-next/worker.js，而该产物由本次构建后段生成，
+  // 类型检查阶段必然不存在；它只是薄接线层，逻辑都在可测的 src/lib 中
+  "exclude": ["node_modules", "src/worker.ts"]
 }
