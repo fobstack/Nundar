@@ -1,0 +1,353 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { BASE_CURRENCY, CURRENCIES } from "@/config/currency";
+import { getDb } from "@/db/client";
+import { requireAdmin } from "@/lib/auth/guard";
+import { getAdminProduct } from "@/lib/admin/queries";
+import { fromMinor } from "@/lib/money";
+import {
+  priceOverrideAction,
+  saveTranslationAction,
+  saveUseCaseAction,
+  saveVariantAction,
+} from "./actions";
+
+const field =
+  "mt-1 w-full rounded border border-neutral-300 px-3 py-2 text-sm";
+const button = "rounded bg-neutral-900 px-3 py-2 text-sm text-white";
+
+export default async function AdminProductPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  await requireAdmin();
+  const { slug } = await params;
+
+  const product = await getAdminProduct(getDb(), slug);
+  if (!product) {
+    notFound();
+  }
+
+  return (
+    <main className="mx-auto max-w-4xl px-6 py-10">
+      <Link href="/admin/products" className="text-sm underline underline-offset-4">
+        ← All products
+      </Link>
+
+      <h1 className="mt-4 text-2xl font-semibold tracking-tight">
+        {product.translations.find((t) => t.locale === "en")?.name ?? product.slug}
+      </h1>
+      <p className="mt-1 font-mono text-xs text-neutral-500">
+        {product.slug} · {product.status}
+      </p>
+
+      {/* ── 多语言内容与 SEO ─────────────────────────── */}
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold">Content &amp; SEO</h2>
+
+        {product.translations.map((translation) => (
+          <form
+            key={translation.locale}
+            action={saveTranslationAction}
+            className="mt-6 rounded border border-neutral-200 bg-white p-4"
+          >
+            <input type="hidden" name="productId" value={product.id} />
+            <input type="hidden" name="slug" value={product.slug} />
+            <input type="hidden" name="locale" value={translation.locale} />
+
+            <div className="flex items-center justify-between">
+              <h3 className="font-medium uppercase">{translation.locale}</h3>
+              {translation.name ? null : (
+                <span className="text-xs text-amber-700">not translated yet</span>
+              )}
+            </div>
+
+            <label className="mt-3 block text-sm">
+              Name
+              <input
+                name="name"
+                defaultValue={translation.name ?? ""}
+                required
+                className={field}
+              />
+            </label>
+
+            <label className="mt-3 block text-sm">
+              Summary
+              <input
+                name="summary"
+                defaultValue={translation.summary ?? ""}
+                className={field}
+              />
+            </label>
+
+            <label className="mt-3 block text-sm">
+              Description
+              <textarea
+                name="description"
+                rows={4}
+                defaultValue={translation.description ?? ""}
+                className={field}
+              />
+            </label>
+
+            <label className="mt-3 block text-sm">
+              SEO title
+              <input
+                name="seoTitle"
+                defaultValue={translation.seoTitle ?? ""}
+                maxLength={70}
+                className={field}
+              />
+              <span className="mt-1 block text-xs text-neutral-500">
+                Aim for under 60 characters so Google does not truncate it.
+              </span>
+            </label>
+
+            <label className="mt-3 block text-sm">
+              SEO description
+              <textarea
+                name="seoDescription"
+                rows={2}
+                defaultValue={translation.seoDescription ?? ""}
+                maxLength={180}
+                className={field}
+              />
+              <span className="mt-1 block text-xs text-neutral-500">
+                Aim for 150–160 characters.
+              </span>
+            </label>
+
+            <button type="submit" className={`${button} mt-4`}>
+              Save {translation.locale.toUpperCase()}
+            </button>
+          </form>
+        ))}
+      </section>
+
+      {/* ── SKU、库存、MOQ、交期与定价 ───────────────── */}
+      <section className="mt-12">
+        <h2 className="text-lg font-semibold">SKUs, stock &amp; pricing</h2>
+
+        {product.variants.map((variant) => {
+          const base = variant.prices.find((p) => p.currency === BASE_CURRENCY);
+
+          return (
+            <div
+              key={variant.id}
+              className="mt-6 rounded border border-neutral-200 bg-white p-4"
+            >
+              <h3 className="font-mono text-sm font-medium">{variant.sku}</h3>
+
+              <form action={saveVariantAction} className="mt-3">
+                <input type="hidden" name="slug" value={product.slug} />
+                <input type="hidden" name="variantId" value={variant.id} />
+
+                <div className="grid gap-3 sm:grid-cols-5">
+                  <label className="text-sm">
+                    Base price ({BASE_CURRENCY})
+                    <input
+                      name="basePrice"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      defaultValue={
+                        base ? fromMinor(base.amountMinor, BASE_CURRENCY) : ""
+                      }
+                      className={field}
+                    />
+                  </label>
+                  <label className="text-sm">
+                    Stock
+                    <input
+                      name="stock"
+                      type="number"
+                      min="0"
+                      defaultValue={variant.stock}
+                      className={field}
+                    />
+                  </label>
+                  <label className="text-sm">
+                    MOQ
+                    <input
+                      name="moq"
+                      type="number"
+                      min="1"
+                      defaultValue={variant.moq}
+                      className={field}
+                    />
+                  </label>
+                  <label className="text-sm">
+                    Lead time min
+                    <input
+                      name="leadTimeDaysMin"
+                      type="number"
+                      min="0"
+                      defaultValue={variant.leadTimeDaysMin ?? ""}
+                      className={field}
+                    />
+                  </label>
+                  <label className="text-sm">
+                    Lead time max
+                    <input
+                      name="leadTimeDaysMax"
+                      type="number"
+                      min="0"
+                      defaultValue={variant.leadTimeDaysMax ?? ""}
+                      className={field}
+                    />
+                  </label>
+                </div>
+
+                <button type="submit" className={`${button} mt-3`}>
+                  Save SKU
+                </button>
+              </form>
+
+              {/* 换算价一览：一眼看出哪个是自动算的、哪个是手动定的、汇率多旧 */}
+              <table className="mt-4 w-full text-sm">
+                <thead>
+                  <tr className="border-b border-neutral-200 text-left">
+                    <th className="py-1">Currency</th>
+                    <th className="py-1">Price</th>
+                    <th className="py-1">Source</th>
+                    <th className="py-1">Rate</th>
+                    <th className="py-1">Override</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {CURRENCIES.filter((c) => c !== BASE_CURRENCY).map((currency) => {
+                    const price = variant.prices.find(
+                      (p) => p.currency === currency,
+                    );
+
+                    return (
+                      <tr key={currency} className="border-b border-neutral-100">
+                        <td className="py-2">{currency}</td>
+                        <td className="py-2">
+                          {price ? fromMinor(price.amountMinor, currency) : "—"}
+                        </td>
+                        <td className="py-2">
+                          {price?.source === "manual" ? (
+                            <span className="text-blue-700">manual</span>
+                          ) : price?.source === "auto" ? (
+                            <span className="text-neutral-500">auto</span>
+                          ) : (
+                            <span className="text-neutral-400">
+                              awaiting rate
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2 text-xs text-neutral-500">
+                          {price?.rateUsed ?? "—"}
+                        </td>
+                        <td className="py-2">
+                          <form
+                            action={priceOverrideAction}
+                            className="flex items-center gap-2"
+                          >
+                            <input type="hidden" name="slug" value={product.slug} />
+                            <input
+                              type="hidden"
+                              name="variantId"
+                              value={variant.id}
+                            />
+                            <input
+                              type="hidden"
+                              name="currency"
+                              value={currency}
+                            />
+                            <input
+                              name="amount"
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              placeholder={
+                                price ? String(fromMinor(price.amountMinor, currency)) : ""
+                              }
+                              className="w-24 rounded border border-neutral-300 px-2 py-1"
+                            />
+                            <button
+                              type="submit"
+                              name="intent"
+                              value="override"
+                              className="rounded border border-neutral-300 px-2 py-1 text-xs"
+                            >
+                              Set
+                            </button>
+                            {price?.source === "manual" ? (
+                              <button
+                                type="submit"
+                                name="intent"
+                                value="clear"
+                                className="rounded border border-neutral-300 px-2 py-1 text-xs"
+                              >
+                                Auto
+                              </button>
+                            ) : null}
+                          </form>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          );
+        })}
+      </section>
+
+      {/* ── 使用工况：控制哪些提升为独立落地页 ───────── */}
+      <section className="mt-12">
+        <h2 className="text-lg font-semibold">Applications</h2>
+        <p className="mt-1 text-sm text-neutral-500">
+          Give a use case its own landing page once it has enough substance to
+          stand alone. Thin pages hurt the whole site.
+        </p>
+
+        {product.useCases.map((useCase) => (
+          <form
+            key={useCase.id}
+            action={saveUseCaseAction}
+            className="mt-4 flex flex-wrap items-end gap-3 rounded border border-neutral-200 bg-white p-4"
+          >
+            <input type="hidden" name="slug" value={product.slug} />
+            <input type="hidden" name="useCaseId" value={useCase.id} />
+
+            <div className="min-w-0 flex-1">
+              <p className="text-xs uppercase text-neutral-500">
+                {useCase.locale} · {useCase.groupKey}
+              </p>
+              <p className="truncate text-sm font-medium">
+                {useCase.scenarioTitle}
+              </p>
+            </div>
+
+            <label className="text-sm">
+              URL slug
+              <input
+                name="scenarioSlug"
+                defaultValue={useCase.scenarioSlug ?? ""}
+                className="mt-1 w-56 rounded border border-neutral-300 px-2 py-1 font-mono text-xs"
+              />
+            </label>
+
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="hasOwnPage"
+                defaultChecked={useCase.hasOwnPage}
+              />
+              Own page
+            </label>
+
+            <button type="submit" className="rounded border border-neutral-300 px-3 py-1 text-sm">
+              Save
+            </button>
+          </form>
+        ))}
+      </section>
+    </main>
+  );
+}
