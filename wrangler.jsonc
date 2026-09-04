@@ -1,0 +1,28 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "shopcf",
+  "main": ".open-next/worker.js",
+  // 不要超过本地 workerd 二进制支持的最新日期，否则 vitest-pool-workers 起不来
+  "compatibility_date": "2026-08-22",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+
+  "assets": {
+    "binding": "ASSETS",
+    "directory": ".open-next/assets"
+  },
+
+  "observability": {
+    "enabled": true
+  },
+
+  // 主数据库。database_id 为本地占位值，部署前需替换为 `wrangler d1 create shopcf` 的真实输出。
+  // 本地开发与测试走 miniflare 模拟的 D1，不读取该 id。
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "shopcf",
+      "database_id": "local-placeholder-replace-before-deploy",
+      "migrations_dir": "drizzle/migrations"
+    }
+  ]
+}

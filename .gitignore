@@ -21,6 +21,13 @@ dist/
 .env.*
 !.env.example
 
+# typescript
+next-env.d.ts
+*.tsbuildinfo
+
+# 由 build-seed-sql 生成
+drizzle/seed.sql
+
 # test / coverage
 coverage/
 playwright-report/

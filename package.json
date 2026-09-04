@@ -1,0 +1,47 @@
+{
+  "name": "shopcf",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 migrations apply shopcf --local",
+    "db:migrate:remote": "wrangler d1 migrations apply shopcf --remote",
+    "db:seed:build": "tsx src/scripts/build-seed-sql.ts",
+    "db:seed:local": "pnpm db:seed:build && wrangler d1 execute shopcf --local --file=./drizzle/seed.sql",
+    "db:seed:remote": "pnpm db:seed:build && wrangler d1 execute shopcf --remote --file=./drizzle/seed.sql",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
+  },
+  "dependencies": {
+    "@opennextjs/cloudflare": "^1.20.6",
+    "drizzle-orm": "^0.45.2",
+    "next": "16.3.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.22.0",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.4",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.13",
+    "typescript": "^5",
+    "vitest": "^4.1.11",
+    "wrangler": "^4.128.0"
+  },
+  "packageManager": "pnpm@11.1.3"
+}
