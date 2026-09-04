@@ -57,6 +57,11 @@ export const productFeatures = sqliteTable(
       .notNull()
       .references(() => products.id, { onDelete: "cascade" }),
     locale: text("locale").notNull(),
+    /**
+     * 跨语言标识：同一条特性的各语言版本共用一个 group_key。
+     * 没有它就无法判断德语的哪一条对应英语的哪一条，翻译完整度也就无从统计。
+     */
+    groupKey: text("group_key").notNull(),
     sortOrder: integer("sort_order").notNull().default(0),
     title: text("title").notNull(),
     body: text("body"),
@@ -66,6 +71,11 @@ export const productFeatures = sqliteTable(
     index("product_features_product_locale_idx").on(
       table.productId,
       table.locale,
+    ),
+    uniqueIndex("product_features_group_unique").on(
+      table.productId,
+      table.locale,
+      table.groupKey,
     ),
   ],
 );
@@ -82,6 +92,12 @@ export const productUseCases = sqliteTable(
       .notNull()
       .references(() => products.id, { onDelete: "cascade" }),
     locale: text("locale").notNull(),
+    /**
+     * 跨语言标识：同一个工况的各语言版本共用一个 group_key。
+     * hreflang 必须指向该工况在目标语言下的本地化 slug，没有它就只能错误地
+     * 让所有语言共用同一个 slug，指向不存在的页面。
+     */
+    groupKey: text("group_key").notNull(),
     sortOrder: integer("sort_order").notNull().default(0),
     scenarioTitle: text("scenario_title").notNull(),
     scenarioSlug: text("scenario_slug"),
@@ -99,6 +115,11 @@ export const productUseCases = sqliteTable(
       table.productId,
       table.locale,
       table.scenarioSlug,
+    ),
+    uniqueIndex("product_use_cases_group_unique").on(
+      table.productId,
+      table.locale,
+      table.groupKey,
     ),
   ],
 );

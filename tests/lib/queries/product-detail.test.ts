@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { createDb } from "@/db/client";
 import {
   getProductDetail,
+  getUseCaseAlternates,
   listProductSlugs,
   listUseCasePages,
 } from "@/lib/queries/products";
@@ -127,5 +128,57 @@ describe("listUseCasePages", () => {
   it("excludes use cases belonging to archived products", async () => {
     await env.DB.exec("UPDATE products SET status = 'archived'");
     expect(await listUseCasePages(createDb(env.DB))).toEqual([]);
+  });
+});
+
+describe("getUseCaseAlternates", () => {
+  it("maps each locale to that locale's own landing-page slug", async () => {
+    const alternates = await getUseCaseAlternates(
+      createDb(env.DB),
+      SLUG,
+      "en",
+      "offshore-seawater-lines",
+    );
+
+    // hreflang 必须指向该语言下真实存在的 slug，指向英文 slug 会得到 404
+    expect(alternates).toEqual({
+      en: "offshore-seawater-lines",
+      de: "offshore-seewasserleitungen",
+      fr: "circuits-eau-de-mer-offshore",
+      es: "lineas-agua-de-mar-offshore",
+    });
+  });
+
+  it("resolves from a non-default locale too", async () => {
+    const alternates = await getUseCaseAlternates(
+      createDb(env.DB),
+      SLUG,
+      "de",
+      "offshore-seewasserleitungen",
+    );
+
+    expect(alternates!.fr).toBe("circuits-eau-de-mer-offshore");
+  });
+
+  it("returns null when the use case has no landing page in that locale", async () => {
+    expect(
+      await getUseCaseAlternates(createDb(env.DB), SLUG, "en", "food-grade-dosing"),
+    ).toBeNull();
+  });
+
+  it("omits locales whose translation is missing rather than guessing a slug", async () => {
+    await env.DB.exec(
+      "DELETE FROM product_use_cases WHERE locale = 'fr' AND group_key = 'offshore-seawater'",
+    );
+
+    const alternates = await getUseCaseAlternates(
+      createDb(env.DB),
+      SLUG,
+      "en",
+      "offshore-seawater-lines",
+    );
+
+    expect(alternates!.fr).toBeUndefined();
+    expect(alternates!.de).toBe("offshore-seewasserleitungen");
   });
 });

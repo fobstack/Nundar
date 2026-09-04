@@ -36,13 +36,13 @@ export function buildSeedSql(now: number): string {
 
       product.features[locale].forEach((feature, index) => {
         statements.push(
-          `INSERT OR IGNORE INTO product_features (id, product_id, locale, sort_order, title, body) VALUES (${sqlString(`${product.id}-feature-${locale}-${index}`)}, ${sqlString(product.id)}, ${sqlString(locale)}, ${index}, ${sqlString(feature.title)}, ${sqlString(feature.body)});`,
+          `INSERT OR IGNORE INTO product_features (id, product_id, locale, group_key, sort_order, title, body) VALUES (${sqlString(`${product.id}-feature-${locale}-${index}`)}, ${sqlString(product.id)}, ${sqlString(locale)}, ${sqlString(feature.groupKey)}, ${index}, ${sqlString(feature.title)}, ${sqlString(feature.body)});`,
         );
       });
 
       product.useCases[locale].forEach((useCase, index) => {
         statements.push(
-          `INSERT OR IGNORE INTO product_use_cases (id, product_id, locale, sort_order, scenario_title, scenario_slug, has_own_page, body) VALUES (${sqlString(`${product.id}-usecase-${locale}-${index}`)}, ${sqlString(product.id)}, ${sqlString(locale)}, ${index}, ${sqlString(useCase.scenarioTitle)}, ${sqlString(useCase.scenarioSlug)}, ${useCase.hasOwnPage ? 1 : 0}, ${sqlString(useCase.body)});`,
+          `INSERT OR IGNORE INTO product_use_cases (id, product_id, locale, group_key, sort_order, scenario_title, scenario_slug, has_own_page, body) VALUES (${sqlString(`${product.id}-usecase-${locale}-${index}`)}, ${sqlString(product.id)}, ${sqlString(locale)}, ${sqlString(useCase.groupKey)}, ${index}, ${sqlString(useCase.scenarioTitle)}, ${sqlString(useCase.scenarioSlug)}, ${useCase.hasOwnPage ? 1 : 0}, ${sqlString(useCase.body)});`,
         );
       });
     }

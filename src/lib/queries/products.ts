@@ -372,3 +372,68 @@ export async function listUseCasePages(db: Db): Promise<UseCasePageRef[]> {
       : [],
   );
 }
+
+/**
+ * 取某个工况在各语言下的落地页 slug。
+ *
+ * hreflang 必须指向目标语言下真实存在的 slug——各语言的工况 slug 是本地化的
+ * （offshore-seawater-lines / offshore-seewasserleitungen …），若让所有语言共用
+ * 同一个 slug，hreflang 会指向 404，等于把爬虫引向死链。
+ *
+ * 返回 null 表示该 slug 在该语言下不存在独立落地页。
+ */
+export async function getUseCaseAlternates(
+  db: Db,
+  productSlug: string,
+  locale: Locale,
+  useCaseSlug: string,
+): Promise<Partial<Record<Locale, string>> | null> {
+  const [current] = await db
+    .select({
+      productId: schema.productUseCases.productId,
+      groupKey: schema.productUseCases.groupKey,
+    })
+    .from(schema.productUseCases)
+    .innerJoin(
+      schema.products,
+      eq(schema.products.id, schema.productUseCases.productId),
+    )
+    .where(
+      and(
+        eq(schema.products.slug, productSlug),
+        eq(schema.products.status, "active"),
+        eq(schema.productUseCases.locale, locale),
+        eq(schema.productUseCases.scenarioSlug, useCaseSlug),
+        eq(schema.productUseCases.hasOwnPage, 1),
+      ),
+    )
+    .limit(1);
+
+  if (!current) {
+    return null;
+  }
+
+  const rows = await db
+    .select({
+      locale: schema.productUseCases.locale,
+      scenarioSlug: schema.productUseCases.scenarioSlug,
+    })
+    .from(schema.productUseCases)
+    .where(
+      and(
+        eq(schema.productUseCases.productId, current.productId),
+        eq(schema.productUseCases.groupKey, current.groupKey),
+        eq(schema.productUseCases.hasOwnPage, 1),
+      ),
+    );
+
+  const alternates: Partial<Record<Locale, string>> = {};
+  for (const row of rows) {
+    // 缺翻译的语言直接不出现在 hreflang 里，绝不用别的语言 slug 顶替
+    if (row.scenarioSlug && isLocale(row.locale)) {
+      alternates[row.locale] = row.scenarioSlug;
+    }
+  }
+
+  return alternates;
+}

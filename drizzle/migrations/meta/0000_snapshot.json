@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "0e392d4f-bcf3-4303-9548-f0dae824f610",
+  "id": "62f0bbd8-ddf6-4cf1-9495-e9f9901244f7",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "product_features": {
@@ -23,6 +23,13 @@
         },
         "locale": {
           "name": "locale",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "group_key": {
+          "name": "group_key",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -66,6 +73,15 @@
             "locale"
           ],
           "isUnique": false
+        },
+        "product_features_group_unique": {
+          "name": "product_features_group_unique",
+          "columns": [
+            "product_id",
+            "locale",
+            "group_key"
+          ],
+          "isUnique": true
         }
       },
       "foreignKeys": {
@@ -288,6 +304,13 @@
           "notNull": true,
           "autoincrement": false
         },
+        "group_key": {
+          "name": "group_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "sort_order": {
           "name": "sort_order",
           "type": "integer",
@@ -348,6 +371,15 @@
             "product_id",
             "locale",
             "scenario_slug"
+          ],
+          "isUnique": true
+        },
+        "product_use_cases_group_unique": {
+          "name": "product_use_cases_group_unique",
+          "columns": [
+            "product_id",
+            "locale",
+            "group_key"
           ],
           "isUnique": true
         }

@@ -2,6 +2,7 @@ CREATE TABLE `product_features` (
 	`id` text PRIMARY KEY NOT NULL,
 	`product_id` text NOT NULL,
 	`locale` text NOT NULL,
+	`group_key` text NOT NULL,
 	`sort_order` integer DEFAULT 0 NOT NULL,
 	`title` text NOT NULL,
 	`body` text,
@@ -10,6 +11,7 @@ CREATE TABLE `product_features` (
 );
 --> statement-breakpoint
 CREATE INDEX `product_features_product_locale_idx` ON `product_features` (`product_id`,`locale`);--> statement-breakpoint
+CREATE UNIQUE INDEX `product_features_group_unique` ON `product_features` (`product_id`,`locale`,`group_key`);--> statement-breakpoint
 CREATE TABLE `product_images` (
 	`id` text PRIMARY KEY NOT NULL,
 	`product_id` text NOT NULL,
@@ -40,6 +42,7 @@ CREATE TABLE `product_use_cases` (
 	`id` text PRIMARY KEY NOT NULL,
 	`product_id` text NOT NULL,
 	`locale` text NOT NULL,
+	`group_key` text NOT NULL,
 	`sort_order` integer DEFAULT 0 NOT NULL,
 	`scenario_title` text NOT NULL,
 	`scenario_slug` text,
@@ -51,6 +54,7 @@ CREATE TABLE `product_use_cases` (
 --> statement-breakpoint
 CREATE INDEX `product_use_cases_product_locale_idx` ON `product_use_cases` (`product_id`,`locale`);--> statement-breakpoint
 CREATE UNIQUE INDEX `product_use_cases_slug_unique` ON `product_use_cases` (`product_id`,`locale`,`scenario_slug`);--> statement-breakpoint
+CREATE UNIQUE INDEX `product_use_cases_group_unique` ON `product_use_cases` (`product_id`,`locale`,`group_key`);--> statement-breakpoint
 CREATE TABLE `product_variants` (
 	`id` text PRIMARY KEY NOT NULL,
 	`product_id` text NOT NULL,

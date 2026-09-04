@@ -44,3 +44,38 @@ export function buildAlternates(
     languages,
   };
 }
+
+/**
+ * 当各语言的路径片段不同（如本地化的工况 slug）时构造 alternates。
+ *
+ * 缺该语言 slug 时直接省略该 hreflang 条目——用别的语言 slug 顶替会指向 404，
+ * 比缺条目更糟。
+ */
+export function buildAlternatesFromMap(
+  currentLocale: Locale,
+  slugByLocale: Partial<Record<Locale, string>>,
+  pathFor: (locale: Locale, slug: string) => string,
+): Alternates {
+  const languages: Record<string, string> = {};
+
+  for (const locale of LOCALES) {
+    const slug = slugByLocale[locale];
+    if (slug) {
+      languages[locale] = absoluteUrl(pathFor(locale, slug));
+    }
+  }
+
+  const defaultSlug = slugByLocale[DEFAULT_LOCALE];
+  if (defaultSlug) {
+    languages["x-default"] = absoluteUrl(pathFor(DEFAULT_LOCALE, defaultSlug));
+  }
+
+  const currentSlug = slugByLocale[currentLocale];
+
+  return {
+    canonical: currentSlug
+      ? absoluteUrl(pathFor(currentLocale, currentSlug))
+      : absoluteUrl(pathFor(currentLocale, "")),
+    languages,
+  };
+}

@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { JsonLd } from "@/components/JsonLd";
 import { LOCALES, defaultCurrencyForLocale, isLocale } from "@/config/locales";
-import { SITE } from "@/config/site";
 import { getDbAsync } from "@/db/client";
 import { formatMoney } from "@/lib/money";
 import { listActiveProducts } from "@/lib/queries/products";
-import { buildAlternates, localePath } from "@/lib/seo";
+import { absoluteUrl, buildAlternates, localePath } from "@/lib/seo";
 
-// 四门语言的首页在构建期静态生成，爬虫拿到的是完整内容
 export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
 }
@@ -24,12 +23,12 @@ export async function generateMetadata({
   }
 
   return {
-    title: SITE.name,
-    alternates: buildAlternates(locale, (l) => localePath(l)),
+    title: "Products",
+    alternates: buildAlternates(locale, (l) => localePath(l, "products")),
   };
 }
 
-export default async function HomePage({
+export default async function ProductsPage({
   params,
 }: {
   params: Promise<{ locale: string }>;
@@ -39,13 +38,31 @@ export default async function HomePage({
     notFound();
   }
 
-  const db = await getDbAsync();
   const currency = defaultCurrencyForLocale(locale);
+  const db = await getDbAsync();
   const products = await listActiveProducts(db, locale, currency);
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-16">
-      <h1 className="text-3xl font-semibold tracking-tight">shopcf</h1>
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          url: absoluteUrl(localePath(locale, "products")),
+          mainEntity: {
+            "@type": "ItemList",
+            itemListElement: products.map((product, index) => ({
+              "@type": "ListItem",
+              position: index + 1,
+              name: product.name,
+              url: absoluteUrl(localePath(locale, "products", product.slug)),
+            })),
+          },
+        }}
+      />
+
+      <h1 className="text-3xl font-semibold tracking-tight">Products</h1>
+
       <ul className="mt-10 space-y-6">
         {products.map((product) => (
           <li key={product.id} className="border-b border-neutral-200 pb-6">
@@ -60,8 +77,6 @@ export default async function HomePage({
             {product.summary ? (
               <p className="mt-1 text-sm text-neutral-600">{product.summary}</p>
             ) : null}
-            {/* 用查询返回的实际币种格式化：该币种缺价时会回落到基准币种，
-                直接用 locale 默认币种会把美元金额挂上欧元符号 */}
             {product.fromPriceMinor !== null && product.priceCurrency ? (
               <p className="mt-2 text-sm">
                 {formatMoney(product.fromPriceMinor, product.priceCurrency, locale)}

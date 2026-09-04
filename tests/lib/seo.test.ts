@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { SITE } from "@/config/site";
-import { absoluteUrl, buildAlternates, localePath } from "@/lib/seo";
+import {
+  absoluteUrl,
+  buildAlternates,
+  buildAlternatesFromMap,
+  localePath,
+} from "@/lib/seo";
 
 describe("localePath", () => {
   it("prefixes the locale and joins segments", () => {
@@ -55,5 +60,48 @@ describe("buildAlternates", () => {
     for (const url of Object.values(alternates.languages)) {
       expect(url.startsWith(SITE.url)).toBe(true);
     }
+  });
+});
+
+describe("buildAlternatesFromMap", () => {
+  const alternates = buildAlternatesFromMap(
+    "en",
+    {
+      en: "offshore-seawater-lines",
+      de: "offshore-seewasserleitungen",
+      fr: "circuits-eau-de-mer-offshore",
+    },
+    (locale, slug) => localePath(locale, "products", "valve", slug),
+  );
+
+  it("uses each locale's own slug", () => {
+    expect(alternates.languages.de).toBe(
+      `${SITE.url}/de/products/valve/offshore-seewasserleitungen`,
+    );
+  });
+
+  it("omits locales with no slug rather than pointing them at a 404", () => {
+    expect(alternates.languages.es).toBeUndefined();
+  });
+
+  it("keeps canonical self-referential", () => {
+    expect(alternates.canonical).toBe(
+      `${SITE.url}/en/products/valve/offshore-seawater-lines`,
+    );
+  });
+
+  it("maps x-default to the default locale when it is present", () => {
+    expect(alternates.languages["x-default"]).toBe(
+      `${SITE.url}/en/products/valve/offshore-seawater-lines`,
+    );
+  });
+
+  it("omits x-default entirely when the default locale is missing", () => {
+    const withoutDefault = buildAlternatesFromMap(
+      "de",
+      { de: "offshore-seewasserleitungen" },
+      (locale, slug) => localePath(locale, "products", "valve", slug),
+    );
+    expect(withoutDefault.languages["x-default"]).toBeUndefined();
   });
 });
