@@ -24,5 +24,60 @@
       "database_id": "local-placeholder-replace-before-deploy",
       "migrations_dir": "drizzle/migrations"
     }
-  ]
+  ],
+
+  "r2_buckets": [
+    // 商品图原图与预生成尺寸变体
+    {
+      "binding": "IMAGES",
+      "bucket_name": "shopcf-images"
+    },
+    // OpenNext 的 ISR 增量缓存
+    {
+      "binding": "NEXT_INC_CACHE_R2_BUCKET",
+      "bucket_name": "shopcf-inc-cache"
+    }
+  ],
+
+  // 游客购物车、后台 session、限流计数
+  "kv_namespaces": [
+    {
+      "binding": "SESSIONS",
+      "id": "local-placeholder-replace-before-deploy"
+    }
+  ],
+
+  // OpenNext 的重验证队列需要 Worker 自引用
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "shopcf"
+    }
+  ],
+
+  // ISR 三件套：队列去重时间型重验证，分片 tag cache 支撑按需 revalidate，
+  // BucketCachePurge 负责缓存清除
+  "durable_objects": {
+    "bindings": [
+      { "name": "NEXT_CACHE_DO_QUEUE", "class_name": "DOQueueHandler" },
+      { "name": "NEXT_TAG_CACHE_DO_SHARDED", "class_name": "DOShardedTagCache" },
+      { "name": "NEXT_CACHE_DO_PURGE", "class_name": "BucketCachePurge" }
+    ]
+  },
+
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "DOQueueHandler",
+        "DOShardedTagCache",
+        "BucketCachePurge"
+      ]
+    }
+  ],
+
+  // 每日 06:00 UTC 拉取 ECB 汇率并按阈值触发价格重算（handler 在阶段 3 实现）
+  "triggers": {
+    "crons": ["0 6 * * *"]
+  }
 }
