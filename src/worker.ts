@@ -11,7 +11,11 @@ import { runExchangeRateCron } from "@/lib/pricing/cron";
 const worker = {
   fetch: handler.fetch,
 
-  async scheduled(_event, env, ctx) {
+  async scheduled(
+    _event: ScheduledController,
+    env: CloudflareEnv,
+    ctx: ExecutionContext,
+  ) {
     ctx.waitUntil(
       runExchangeRateCron(createDb(env.DB)).then((outcome) => {
         if (outcome.ok) {

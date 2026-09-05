@@ -1,5 +1,12 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { DEFAULT_LOCALE, isLocale } from "@/config/locales";
+import type { Currency } from "@/config/currency";
 import { getDb } from "@/db/client";
+import { sendTransactionalEmail, type EmailBinding } from "@/lib/email/send";
+import { orderConfirmationEmail } from "@/lib/email/templates";
+import { getOrder } from "@/lib/orders/admin";
+import * as schema from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { markOrderPaid } from "@/lib/orders/orders";
 import { verifyStripeSignature } from "@/lib/stripe/webhook";
 
@@ -69,6 +76,12 @@ export async function POST(request: Request) {
     if (result.status === "oversold") {
       // 已扣款但库存不足：进人工队列处理退款，仍回 200 避免 Stripe 重投
       console.error(`[stripe] order ${orderId} oversold, needs manual refund`);
+      return Response.json({ status: result.status });
+    }
+
+    // 首次确认支付时发订单确认邮件；重复投递不再重发
+    if (!result.alreadyProcessed && result.status === "paid") {
+      await sendOrderConfirmation(orderId);
     }
 
     return Response.json({ status: result.status });
@@ -79,5 +92,56 @@ export async function POST(request: Request) {
       error instanceof Error ? error.message : String(error),
     );
     return new Response("Processing failed", { status: 500 });
+  }
+}
+
+/**
+ * 发订单确认邮件。
+ *
+ * 发信失败只记日志，不影响 webhook 的返回值——钱已经收了、库存已经扣了，
+ * 因为邮件发不出去就返回 5xx 会让 Stripe 反复重投，反而更糟。
+ */
+async function sendOrderConfirmation(orderId: string): Promise<void> {
+  const db = getDb();
+
+  const [order] = await db
+    .select({ orderNo: schema.orders.orderNo })
+    .from(schema.orders)
+    .where(eq(schema.orders.id, orderId))
+    .limit(1);
+
+  if (!order) {
+    return;
+  }
+
+  const detail = await getOrder(db, order.orderNo);
+  const email = detail?.shippingAddress.email;
+
+  if (!detail || !email) {
+    console.error(`[stripe] order ${orderId} has no email; skipped confirmation`);
+    return;
+  }
+
+  const { env } = getCloudflareContext();
+  const result = await sendTransactionalEmail(
+    (env as unknown as { EMAIL?: EmailBinding }).EMAIL,
+    {
+      to: email,
+      fromAddress:
+        (env as unknown as { MAIL_FROM_ADDRESS?: string }).MAIL_FROM_ADDRESS ??
+        "",
+      fromName: "shopcf",
+      content: orderConfirmationEmail({
+        orderNo: detail.orderNo,
+        currency: detail.currency as Currency,
+        totalMinor: detail.totalMinor,
+        locale: isLocale(detail.locale) ? detail.locale : DEFAULT_LOCALE,
+        lines: detail.items,
+      }),
+    },
+  );
+
+  if (!result.ok) {
+    console.error(`[stripe] confirmation email failed: ${result.reason}`);
   }
 }

@@ -13,6 +13,8 @@ import { createCheckoutSession } from "@/lib/stripe/client";
 
 const addressSchema = z.object({
   recipient: z.string().min(1).max(120),
+  // 邮箱是唯一的订单通知渠道，结账时必填
+  email: z.string().email().max(200),
   line1: z.string().min(1).max(200),
   line2: z.string().max(200).optional(),
   city: z.string().min(1).max(120),
@@ -85,6 +87,7 @@ export async function POST(request: Request) {
     orderId: order.id,
     orderNo: order.orderNo,
     productName: `Order ${order.orderNo}`,
+    customerEmail: parsed.data.shippingAddress.email,
     successUrl: `${SITE.url}/${parsed.data.locale}/orders/${order.orderNo}`,
     cancelUrl: `${SITE.url}/${parsed.data.locale}/cart`,
   });

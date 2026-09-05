@@ -27,6 +27,7 @@ export type CartView = {
 
 export type CheckoutAddress = {
   recipient: string;
+  email: string;
   line1: string;
   line2?: string;
   city: string;

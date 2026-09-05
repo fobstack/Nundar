@@ -38,6 +38,7 @@ export function CheckoutForm({
     try {
       const result = await cartApi.startCheckout(locale, currency, {
         recipient: String(data.get("recipient") ?? ""),
+        email: String(data.get("email") ?? ""),
         line1: String(data.get("line1") ?? ""),
         line2: String(data.get("line2") ?? "") || undefined,
         city: String(data.get("city") ?? ""),
@@ -76,6 +77,13 @@ export function CheckoutForm({
         <label className="text-sm sm:col-span-2">
           Recipient
           <input name="recipient" required className={field} />
+        </label>
+        <label className="text-sm sm:col-span-2">
+          Email
+          <input name="email" type="email" required className={field} />
+          <span className="mt-1 block text-xs text-neutral-500">
+            Order confirmation and shipping updates go here.
+          </span>
         </label>
         <label className="text-sm sm:col-span-2">
           Address

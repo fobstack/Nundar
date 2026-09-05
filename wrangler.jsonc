@@ -48,6 +48,10 @@
     }
   ],
 
+  // 事务邮件（订单确认、发货通知）。发件域名需先执行：
+  // npx wrangler email sending enable <yourdomain.com>
+  "send_email": [{ "name": "EMAIL" }],
+
   // OpenNext 的重验证队列需要 Worker 自引用
   "services": [
     {
