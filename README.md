@@ -6,8 +6,6 @@
 [![CI](https://github.com/FobStack/Nundar/actions/workflows/ci.yml/badge.svg)](https://github.com/FobStack/Nundar/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](LICENSE)
 
-[中文文档](README.zh-CN.md)
-
 ---
 
 ## The problem
@@ -62,7 +60,7 @@ Everything runs on Workers: D1 for data, R2 for images, KV for sessions and cart
 
 **Admin**
 
-- Chinese / English interface, kept separate from the storefront's buyer languages
+- English interface, with Chinese available, kept separate from the storefront's buyer languages
 - Product creation, multilingual content, SEO fields with length guidance
 - Image upload to R2 with the format verified from file headers, and mandatory alt text
 - Order management driven by an explicit state machine
@@ -207,3 +205,11 @@ Please do not open a public issue for a security problem. [SECURITY.md](SECURITY
 Dual-licensed under **MIT OR Apache-2.0**, at your option.
 
 This mirrors Cloudflare's own tooling (`wrangler` is `MIT OR Apache-2.0`; `workerd` is Apache-2.0). MIT alone says nothing about patents; Apache-2.0 adds an explicit patent grant and retaliation terms, which matters to commercial adopters.
+
+## Translations
+
+This README is the authoritative version. Community translations are kept for convenience and may lag behind it:
+
+- [简体中文](README.zh-CN.md)
+
+Corrections belong in the English version first.

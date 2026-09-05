@@ -10,12 +10,18 @@ import {
 import { LOCALES } from "@/config/locales";
 
 describe("admin locales", () => {
-  it("ships Chinese and English only", () => {
-    expect([...ADMIN_LOCALES]).toEqual(["zh", "en"]);
+  it("ships English and Chinese only", () => {
+    expect([...ADMIN_LOCALES]).toEqual(["en", "zh"]);
   });
 
-  it("defaults to Chinese, the operator's language", () => {
-    expect(DEFAULT_ADMIN_LOCALE).toBe("zh");
+  it("defaults to English, since anyone may deploy this", () => {
+    // The shop is run by whoever forked the project, not by its author. A
+    // default of anything but English strands most of them on first login.
+    expect(DEFAULT_ADMIN_LOCALE).toBe("en");
+  });
+
+  it("lists English first, so the picker opens on it", () => {
+    expect(ADMIN_LOCALES[0]).toBe("en");
   });
 
   it("is a different set from the storefront content languages", () => {
@@ -81,7 +87,7 @@ describe("message catalogue", () => {
     }
   });
 
-  it("keeps Chinese and English genuinely different, catching copy-paste", () => {
+  it("keeps the languages genuinely different, catching copy-paste", () => {
     const zh = getAdminMessages("zh");
     const en = getAdminMessages("en");
 

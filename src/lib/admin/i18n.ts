@@ -12,11 +12,11 @@
  * almost no plural rules, and the runtime's built-in Intl handles number and
  * date formatting.
  */
-export const ADMIN_LOCALES = ["zh", "en"] as const;
+export const ADMIN_LOCALES = ["en", "zh"] as const;
 
 export type AdminLocale = (typeof ADMIN_LOCALES)[number];
 
-export const DEFAULT_ADMIN_LOCALE: AdminLocale = "zh";
+export const DEFAULT_ADMIN_LOCALE: AdminLocale = "en";
 
 export const ADMIN_LOCALE_COOKIE = "nundar_admin_lang";
 
@@ -41,142 +41,6 @@ export function parseAdminLocale(
  * error instead of a blank spot discovered at runtime.
  */
 const MESSAGES = {
-  zh: {
-    nav: {
-      overview: "概览",
-      products: "商品",
-      orders: "订单",
-      customers: "客户",
-      translations: "翻译",
-      settings: "设置",
-      signOut: "退出",
-      language: "界面语言",
-    },
-    common: {
-      save: "保存",
-      cancel: "取消",
-      create: "新建",
-      delete: "删除",
-      edit: "编辑",
-      back: "返回",
-      search: "搜索",
-      none: "无",
-      all: "全部",
-      loading: "加载中…",
-      confirm: "确认",
-      required: "必填",
-      optional: "选填",
-    },
-    login: {
-      title: "Nundar 后台",
-      email: "邮箱",
-      password: "密码",
-      submit: "登录",
-      invalid: "邮箱或密码不正确。",
-      locked: "失败次数过多，请 15 分钟后再试。",
-    },
-    overview: {
-      title: "概览",
-      signedInAs: "当前登录",
-      activeProducts: "在售商品",
-      exchangeRates: "汇率条目",
-      ratesUpdated: "汇率更新于",
-      never: "从未",
-      revenue: "已支付营收",
-      pendingOrders: "待处理订单",
-    },
-    products: {
-      title: "商品",
-      newProduct: "新建商品",
-      name: "名称",
-      slug: "URL 标识",
-      status: "状态",
-      skus: "SKU 数",
-      from: "起价",
-      translations: "翻译完整度",
-      complete: "已完成",
-      missing: "缺少",
-      empty: "还没有商品。",
-      contentSeo: "内容与 SEO",
-      pricingStock: "定价与库存",
-      applications: "使用工况",
-      basePrice: "基准价",
-      stock: "库存",
-      moq: "最小起订量",
-      leadTimeMin: "交期下限",
-      leadTimeMax: "交期上限",
-      ownPage: "独立成页",
-      urlSlug: "URL 片段",
-      notTranslated: "尚未翻译",
-      seoTitleHint: "控制在 60 字符内，避免被 Google 截断。",
-      seoDescHint: "建议 150–160 字符。",
-      images: "图片",
-      primaryImage: "主图",
-      gallery: "轮播图",
-      altText: "替代文本",
-      altRequired: "替代文本必填——它既是无障碍要求，也是图片排名信号。",
-    },
-    orders: {
-      title: "订单",
-      order: "订单号",
-      status: "状态",
-      total: "金额",
-      locale: "语言",
-      placed: "下单时间",
-      empty: "还没有订单。",
-      items: "商品明细",
-      shipTo: "收货地址",
-      actions: "操作",
-      trackingNo: "物流单号",
-      markShipped: "标记已发货",
-      markDelivered: "标记已送达",
-      refund: "退款",
-      cancel: "取消订单",
-      oversoldWarning:
-        "已扣款但库存售罄。请为此单退款并联系客户。",
-      subtotal: "小计",
-      shipping: "运费",
-    },
-    customers: {
-      title: "客户",
-      email: "邮箱",
-      orders: "订单数",
-      spent: "累计消费",
-      joined: "注册时间",
-      empty: "还没有客户。",
-      addresses: "地址",
-      orderHistory: "订单历史",
-    },
-    translations: {
-      title: "翻译",
-      comparedAgainst: "与源语言对照",
-      coverage: "覆盖率",
-      source: "源语言",
-      fullyTranslated: "已完整翻译为",
-      missingFields: "缺少字段",
-      untranslatedFeatures: "未翻译的特性",
-      untranslatedApplications: "未翻译的工况",
-      noProducts: "还没有在售商品。",
-    },
-    settings: {
-      title: "设置",
-      site: "站点",
-      siteName: "站点名称",
-      siteUrl: "站点地址",
-      pricing: "定价参数",
-      bufferRate: "汇率缓冲",
-      recalcThreshold: "重算阈值",
-      rounding: "取整策略",
-      admins: "管理员",
-      addAdmin: "添加管理员",
-      role: "角色",
-      owner: "所有者",
-      staff: "员工",
-      removeAdmin: "移除",
-      cannotRemoveSelf: "不能移除自己的账号。",
-    },
-  },
-
   en: {
     nav: {
       overview: "Overview",
@@ -313,16 +177,153 @@ const MESSAGES = {
       cannotRemoveSelf: "You cannot remove your own account.",
     },
   },
+
+  zh: {
+    nav: {
+      overview: "概览",
+      products: "商品",
+      orders: "订单",
+      customers: "客户",
+      translations: "翻译",
+      settings: "设置",
+      signOut: "退出",
+      language: "界面语言",
+    },
+    common: {
+      save: "保存",
+      cancel: "取消",
+      create: "新建",
+      delete: "删除",
+      edit: "编辑",
+      back: "返回",
+      search: "搜索",
+      none: "无",
+      all: "全部",
+      loading: "加载中…",
+      confirm: "确认",
+      required: "必填",
+      optional: "选填",
+    },
+    login: {
+      title: "Nundar 后台",
+      email: "邮箱",
+      password: "密码",
+      submit: "登录",
+      invalid: "邮箱或密码不正确。",
+      locked: "失败次数过多，请 15 分钟后再试。",
+    },
+    overview: {
+      title: "概览",
+      signedInAs: "当前登录",
+      activeProducts: "在售商品",
+      exchangeRates: "汇率条目",
+      ratesUpdated: "汇率更新于",
+      never: "从未",
+      revenue: "已支付营收",
+      pendingOrders: "待处理订单",
+    },
+    products: {
+      title: "商品",
+      newProduct: "新建商品",
+      name: "名称",
+      slug: "URL 标识",
+      status: "状态",
+      skus: "SKU 数",
+      from: "起价",
+      translations: "翻译完整度",
+      complete: "已完成",
+      missing: "缺少",
+      empty: "还没有商品。",
+      contentSeo: "内容与 SEO",
+      pricingStock: "定价与库存",
+      applications: "使用工况",
+      basePrice: "基准价",
+      stock: "库存",
+      moq: "最小起订量",
+      leadTimeMin: "交期下限",
+      leadTimeMax: "交期上限",
+      ownPage: "独立成页",
+      urlSlug: "URL 片段",
+      notTranslated: "尚未翻译",
+      seoTitleHint: "控制在 60 字符内，避免被 Google 截断。",
+      seoDescHint: "建议 150–160 字符。",
+      images: "图片",
+      primaryImage: "主图",
+      gallery: "轮播图",
+      altText: "替代文本",
+      altRequired: "替代文本必填——它既是无障碍要求，也是图片排名信号。",
+    },
+    orders: {
+      title: "订单",
+      order: "订单号",
+      status: "状态",
+      total: "金额",
+      locale: "语言",
+      placed: "下单时间",
+      empty: "还没有订单。",
+      items: "商品明细",
+      shipTo: "收货地址",
+      actions: "操作",
+      trackingNo: "物流单号",
+      markShipped: "标记已发货",
+      markDelivered: "标记已送达",
+      refund: "退款",
+      cancel: "取消订单",
+      oversoldWarning:
+        "已扣款但库存售罄。请为此单退款并联系客户。",
+      subtotal: "小计",
+      shipping: "运费",
+    },
+    customers: {
+      title: "客户",
+      email: "邮箱",
+      orders: "订单数",
+      spent: "累计消费",
+      joined: "注册时间",
+      empty: "还没有客户。",
+      addresses: "地址",
+      orderHistory: "订单历史",
+    },
+    translations: {
+      title: "翻译",
+      comparedAgainst: "与源语言对照",
+      coverage: "覆盖率",
+      source: "源语言",
+      fullyTranslated: "已完整翻译为",
+      missingFields: "缺少字段",
+      untranslatedFeatures: "未翻译的特性",
+      untranslatedApplications: "未翻译的工况",
+      noProducts: "还没有在售商品。",
+    },
+    settings: {
+      title: "设置",
+      site: "站点",
+      siteName: "站点名称",
+      siteUrl: "站点地址",
+      pricing: "定价参数",
+      bufferRate: "汇率缓冲",
+      recalcThreshold: "重算阈值",
+      rounding: "取整策略",
+      admins: "管理员",
+      addAdmin: "添加管理员",
+      role: "角色",
+      owner: "所有者",
+      staff: "员工",
+      removeAdmin: "移除",
+      cannotRemoveSelf: "不能移除自己的账号。",
+    },
+  },
 } as const;
 
 /**
- * The Chinese dictionary defines the authoritative shape; English must match it
- * key for key.
+ * English defines the authoritative shape; every other language must match it
+ * key for key. English is the project's first language, so a string exists in
+ * English before it exists anywhere else.
  *
  * Literal types are widened to string before the shapes are compared. `as
- * const` turns every Chinese string into a literal type, so constraining
- * English against it directly would demand that English equal that exact
- * Chinese string. This checks the **structure** only, never the values. A
+ * const` turns every English string into a literal type, so constraining
+ * another language against it directly would demand that language equal that
+ * exact English string. This checks the **structure** only, never the values. A
  * missing translation fails to compile rather than rendering undefined on a
  * page.
  */
@@ -330,7 +331,7 @@ type Widen<T> = T extends string
   ? string
   : { [K in keyof T]: Widen<T[K]> };
 
-export type AdminMessages = Widen<(typeof MESSAGES)["zh"]>;
+export type AdminMessages = Widen<(typeof MESSAGES)["en"]>;
 
 const CATALOGUE: Record<AdminLocale, AdminMessages> = MESSAGES;
 

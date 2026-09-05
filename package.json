@@ -2,6 +2,21 @@
   "name": "nundar",
   "version": "0.1.0",
   "description": "Open-source commerce engine for Cloudflare. SEO-first, multilingual, single-tenant.",
+  "keywords": [
+    "cloudflare",
+    "cloudflare-workers",
+    "commerce",
+    "ecommerce",
+    "storefront",
+    "seo",
+    "multilingual",
+    "d1",
+    "r2",
+    "stripe",
+    "nextjs",
+    "opennext",
+    "self-hosted"
+  ],
   "license": "MIT OR Apache-2.0",
   "private": true,
   "repository": {
