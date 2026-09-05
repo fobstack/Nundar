@@ -565,4 +565,8 @@ Recorded here rather than edited away, so the reasoning is auditable. Two of the
 
 **A build-time theme system** (not in the original spec). Added after the storefront had a UI: routes fetch data and emit SEO metadata, and a theme decides only appearance. The contract is in `src/themes/contract.ts` and TypeScript enforces completeness. SEO logic never enters a theme, so a broken theme can make the site ugly but cannot damage its indexing. Settled.
 
+**A shared storefront string catalogue** (not in the original spec). Interface strings originally lived inside each theme, which made every theme author a translator into four languages — and the translations had already rotted by the time a second theme existed to prove it. Commerce vocabulary and breadcrumb labels now live in `src/lib/storefront/i18n.ts`, English authoritative, read by both the route layer and the themes. A theme owns its voice and nothing else. Settled; see the phase 7 record.
+
+**Breadcrumb structured data was not localised.** Section 5.3 requires per-language structured data, and the implementation emitted a hardcoded English "Products" into `BreadcrumbList` on all four language versions, while the visible breadcrumb was correct only in German. Both now read the shared catalogue. Fixed.
+
 **Image size variants are not pre-generated** (2, 7.2). Originals are uploaded to R2 and cropped at display time. Open question 1 above is therefore still open; revisit when image volume or traffic justifies it.
