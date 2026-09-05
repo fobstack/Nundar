@@ -333,6 +333,8 @@ export type UseCasePageRef = {
   productSlug: string;
   locale: Locale;
   useCaseSlug: string;
+  /** 该语言下的工况标题，首页与导航列表要显示它 */
+  useCaseTitle: string;
   /** 跨语言标识，用于把同一工况的各语言版本关联起来做 hreflang */
   groupKey: string;
 };
@@ -348,6 +350,7 @@ export async function listUseCasePages(db: Db): Promise<UseCasePageRef[]> {
       productSlug: schema.products.slug,
       locale: schema.productUseCases.locale,
       useCaseSlug: schema.productUseCases.scenarioSlug,
+      useCaseTitle: schema.productUseCases.scenarioTitle,
       groupKey: schema.productUseCases.groupKey,
     })
     .from(schema.productUseCases)
@@ -370,6 +373,7 @@ export async function listUseCasePages(db: Db): Promise<UseCasePageRef[]> {
             productSlug: row.productSlug,
             locale: row.locale,
             useCaseSlug: row.useCaseSlug,
+            useCaseTitle: row.useCaseTitle,
             groupKey: row.groupKey,
           },
         ]

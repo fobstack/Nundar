@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/JsonLd";
 import { defaultCurrencyForLocale, isLocale } from "@/config/locales";
@@ -17,6 +16,8 @@ import {
   localePath,
 } from "@/lib/seo";
 import { breadcrumbJsonLd, buildUseCaseJsonLd } from "@/lib/seo/jsonld";
+import { buildSiteUrls } from "@/lib/site-urls";
+import { getTheme } from "@/themes/registry";
 
 type PageParams = { locale: string; slug: string; useCaseSlug: string };
 
@@ -98,13 +99,9 @@ export default async function UseCasePage({
     notFound();
   }
 
+  const currency = defaultCurrencyForLocale(locale);
   const db = await getDbAsync();
-  const product = await getProductDetail(
-    db,
-    slug,
-    locale,
-    defaultCurrencyForLocale(locale),
-  );
+  const product = await getProductDetail(db, slug, locale, currency);
   const useCase = product ? findUseCase(product, useCaseSlug) : undefined;
   if (!product || !useCase) {
     notFound();
@@ -112,15 +109,37 @@ export default async function UseCasePage({
 
   const productUrl = absoluteUrl(localePath(locale, "products", slug));
   const pageUrl = absoluteUrl(localePath(locale, "products", slug, useCaseSlug));
-  const siblings = product.useCases.filter(
-    (candidate) =>
-      candidate.hasOwnPage &&
-      candidate.scenarioSlug &&
-      candidate.scenarioSlug !== useCaseSlug,
-  );
+
+  const siblings = product.useCases
+    .filter(
+      (candidate) =>
+        candidate.hasOwnPage &&
+        candidate.scenarioSlug &&
+        candidate.scenarioSlug !== useCaseSlug,
+    )
+    .map((candidate) => ({
+      title: candidate.scenarioTitle,
+      href: localePath(locale, "products", slug, candidate.scenarioSlug!),
+    }));
+
+  // 各语言的工况 slug 是本地化的，切语言必须查该语言的真实 slug，否则会跳到 404
+  const slugByLocale = await getUseCaseAlternates(db, slug, locale, useCaseSlug);
+
+  const theme = getTheme();
+  const urls = {
+    ...buildSiteUrls(locale, (target) => {
+      const targetSlug = slugByLocale?.[target];
+      return targetSlug
+        ? localePath(target, "products", slug, targetSlug)
+        : localePath(target, "products", slug);
+    }),
+    product: localePath(locale, "products", slug),
+    useCase: (scenarioSlug: string) =>
+      localePath(locale, "products", slug, scenarioSlug),
+  };
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
+    <theme.Shell locale={locale} currency={currency} urls={urls}>
       <JsonLd
         data={buildUseCaseJsonLd({
           headline: useCase.scenarioTitle,
@@ -134,69 +153,20 @@ export default async function UseCasePage({
       <JsonLd
         data={breadcrumbJsonLd([
           { name: SITE.name, url: absoluteUrl(localePath(locale)) },
-          {
-            name: "Products",
-            url: absoluteUrl(localePath(locale, "products")),
-          },
+          { name: "Products", url: absoluteUrl(localePath(locale, "products")) },
           { name: product.name, url: productUrl },
           { name: useCase.scenarioTitle, url: pageUrl },
         ])}
       />
 
-      <nav className="text-sm text-neutral-500">
-        <Link
-          className="underline underline-offset-4"
-          href={localePath(locale, "products", slug)}
-        >
-          {product.name}
-        </Link>
-      </nav>
-
-      <h1 className="mt-4 text-3xl font-semibold tracking-tight">
-        {useCase.scenarioTitle}
-      </h1>
-
-      {useCase.body ? (
-        <p className="mt-6 whitespace-pre-line leading-relaxed">
-          {useCase.body}
-        </p>
-      ) : null}
-
-      {useCase.specHighlights ? (
-        <dl className="mt-8 grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-          {Object.entries(useCase.specHighlights).map(([key, value]) => (
-            <div key={key} className="contents">
-              <dt className="text-neutral-500">{key}</dt>
-              <dd>{value}</dd>
-            </div>
-          ))}
-        </dl>
-      ) : null}
-
-      {siblings.length ? (
-        <section className="mt-12 border-t border-neutral-200 pt-6">
-          <h2 className="text-sm font-medium text-neutral-500">
-            Other applications
-          </h2>
-          <ul className="mt-3 space-y-2">
-            {siblings.map((sibling) => (
-              <li key={sibling.id}>
-                <Link
-                  className="underline underline-offset-4"
-                  href={localePath(
-                    locale,
-                    "products",
-                    slug,
-                    sibling.scenarioSlug!,
-                  )}
-                >
-                  {sibling.scenarioTitle}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-    </main>
+      <theme.UseCaseView
+        locale={locale}
+        currency={currency}
+        product={product}
+        useCase={useCase}
+        siblings={siblings}
+        urls={urls}
+      />
+    </theme.Shell>
   );
 }

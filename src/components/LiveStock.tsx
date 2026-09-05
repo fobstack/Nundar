@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { Currency } from "@/config/currency";
 import type { Locale } from "@/config/locales";
+import { readCurrencyCookieFromDocument } from "@/lib/currency-preference";
 import { formatMoney } from "@/lib/money";
 
 type LiveItem = {
@@ -34,10 +35,14 @@ export function LiveStock({
       return;
     }
 
+    // 静态页是按语言默认币种生成的；用户切过币种时以 cookie 为准。
+    // 静态页无法为每个币种各生成一份，所以币种只能在客户端覆盖。
+    const preferred = readCurrencyCookieFromDocument() ?? currency;
+
     const controller = new AbortController();
     const params = new URLSearchParams({
       variants: variantIds.join(","),
-      currency,
+      currency: preferred,
     });
 
     fetch(`/api/inventory?${params}`, { signal: controller.signal })

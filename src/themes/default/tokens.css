@@ -1,0 +1,167 @@
+/*
+ * default 主题的设计 token。
+ *
+ * 另一个主题只需重新定义同名变量，整站外观即改变——组件里不出现字面色值。
+ * 取值来自设计稿的 token 画板。
+ */
+:root {
+  /* Color */
+  --bg: #fbfbfc;
+  --surface: #ffffff;
+  --surface-sunken: #f6f7f8;
+  --line: #e3e5e8;
+  --line-strong: #cdd1d6;
+  --ink: #16181c;
+  --ink-2: #4e545c;
+  --ink-3: #787f88;
+  --ink-inverse: #ffffff;
+  --accent: #0e5a6e;
+  --accent-ink: #0a4351;
+  --accent-soft: #eaf3f6;
+  --ok: #146c43;
+  --warn: #8a5a00;
+  --danger: #b42318;
+
+  /* Type */
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --text-display: 52px;
+  --text-h1: 30px;
+  --text-h2: 24px;
+  --text-h3: 19px;
+  --text-lg: 18px;
+  --text-body: 16px;
+  --text-sm: 14px;
+  --text-xs: 13px;
+  --text-eyebrow: 12px;
+
+  /* Space — 4px base */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-24: 96px;
+
+  /* Geometry — sharp corners read as precision; borders instead of shadows */
+  --radius: 2px;
+  --shell-max: 1240px;
+  --shell-pad: 32px;
+  --measure: 68ch;
+  --measure-lead: 60ch;
+}
+
+.theme-root {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.theme-root a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.theme-root a:hover {
+  color: var(--accent-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.theme-root .mono {
+  font-family: var(--font-mono);
+}
+
+/* 内容区：所有页面共用同一条水平节奏线 */
+.theme-root .shell {
+  max-width: var(--shell-max);
+  margin: 0 auto;
+  padding-left: var(--shell-pad);
+  padding-right: var(--shell-pad);
+  width: 100%;
+}
+
+/* Markdown 正文：商品描述与工况正文共用 */
+.theme-root .prose {
+  font-size: var(--text-body);
+  line-height: 1.75;
+  color: #2b2f36;
+  max-width: var(--measure);
+}
+
+.theme-root .prose > * + * {
+  margin-top: 1em;
+}
+
+.theme-root .prose h2 {
+  font-size: var(--text-h2);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  margin-top: 1.8em;
+  margin-bottom: 0;
+}
+
+.theme-root .prose h3 {
+  font-size: var(--text-h3);
+  font-weight: 600;
+  margin-top: 1.6em;
+  margin-bottom: 0;
+}
+
+.theme-root .prose ul,
+.theme-root .prose ol {
+  padding-left: 22px;
+}
+
+.theme-root .prose li + li {
+  margin-top: 0.5em;
+}
+
+.theme-root .prose blockquote {
+  margin: 1.6em 0;
+  padding: 20px 24px;
+  border-left: 3px solid var(--accent);
+  background: var(--surface);
+}
+
+.theme-root .prose table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: var(--text-sm);
+}
+
+.theme-root .prose th,
+.theme-root .prose td {
+  border-bottom: 1px solid var(--line);
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.theme-root .prose th {
+  color: var(--ink-3);
+  font-weight: 600;
+}
+
+.theme-root .prose code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  background: var(--surface-sunken);
+  padding: 1px 5px;
+}
+
+@media (max-width: 900px) {
+  :root {
+    --text-display: 36px;
+    --text-h1: 26px;
+    --text-h2: 21px;
+    --shell-pad: 20px;
+  }
+}

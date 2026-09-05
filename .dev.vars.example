@@ -17,3 +17,7 @@
 
 # 阶段 5 · 事务邮件发件地址
 # MAIL_FROM_ADDRESS=
+
+# 主题（构建时生效）。留空用 default。
+# 复制 src/themes/default 改名后在 src/themes/registry.ts 注册，再把名字填这里。
+THEME=

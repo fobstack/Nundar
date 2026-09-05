@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { LOCALES, defaultCurrencyForLocale, isLocale } from "@/config/locales";
 import { SITE } from "@/config/site";
 import { getDbAsync } from "@/db/client";
-import { formatMoney } from "@/lib/money";
-import { listActiveProducts } from "@/lib/queries/products";
+import { listActiveProducts, listUseCasePages } from "@/lib/queries/products";
 import { buildAlternates, localePath } from "@/lib/seo";
+import { buildSiteUrls } from "@/lib/site-urls";
+import { getTheme } from "@/themes/registry";
 
 // 四门语言的首页在构建期静态生成，爬虫拿到的是完整内容
 export function generateStaticParams() {
@@ -41,35 +41,39 @@ export default async function HomePage({
 
   const db = await getDbAsync();
   const currency = defaultCurrencyForLocale(locale);
-  const products = await listActiveProducts(db, locale, currency);
+  const [products, useCasePages] = await Promise.all([
+    listActiveProducts(db, locale, currency),
+    listUseCasePages(db),
+  ]);
+
+  const productNameBySlug = new Map(
+    products.map((product) => [product.slug, product.name]),
+  );
+
+  // 首页给工况落地页导流：它们是长尾词矩阵的主力，藏在商品页里传不到权重
+  const applications = useCasePages
+    .filter((page) => page.locale === locale)
+    .map((page) => ({
+      title: page.useCaseTitle,
+      productName: productNameBySlug.get(page.productSlug) ?? page.productSlug,
+      href: localePath(locale, "products", page.productSlug, page.useCaseSlug),
+    }));
+
+  const theme = getTheme();
+  const urls = {
+    ...buildSiteUrls(locale, (target) => localePath(target)),
+    product: (slug: string) => localePath(locale, "products", slug),
+  };
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-16">
-      <h1 className="text-3xl font-semibold tracking-tight">shopcf</h1>
-      <ul className="mt-10 space-y-6">
-        {products.map((product) => (
-          <li key={product.id} className="border-b border-neutral-200 pb-6">
-            <h2 className="text-lg font-medium">
-              <Link
-                className="underline underline-offset-4"
-                href={localePath(locale, "products", product.slug)}
-              >
-                {product.name}
-              </Link>
-            </h2>
-            {product.summary ? (
-              <p className="mt-1 text-sm text-neutral-600">{product.summary}</p>
-            ) : null}
-            {/* 用查询返回的实际币种格式化：该币种缺价时会回落到基准币种，
-                直接用 locale 默认币种会把美元金额挂上欧元符号 */}
-            {product.fromPriceMinor !== null && product.priceCurrency ? (
-              <p className="mt-2 text-sm">
-                {formatMoney(product.fromPriceMinor, product.priceCurrency, locale)}
-              </p>
-            ) : null}
-          </li>
-        ))}
-      </ul>
-    </main>
+    <theme.Shell locale={locale} currency={currency} urls={urls}>
+      <theme.HomeView
+        locale={locale}
+        currency={currency}
+        products={products}
+        applications={applications}
+        urls={urls}
+      />
+    </theme.Shell>
   );
 }

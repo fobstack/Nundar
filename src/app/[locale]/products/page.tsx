@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/JsonLd";
 import { LOCALES, defaultCurrencyForLocale, isLocale } from "@/config/locales";
 import { getDbAsync } from "@/db/client";
-import { formatMoney } from "@/lib/money";
 import { listActiveProducts } from "@/lib/queries/products";
 import { absoluteUrl, buildAlternates, localePath } from "@/lib/seo";
+import { buildSiteUrls } from "@/lib/site-urls";
+import { getTheme } from "@/themes/registry";
 
 export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
@@ -38,12 +38,19 @@ export default async function ProductsPage({
     notFound();
   }
 
-  const currency = defaultCurrencyForLocale(locale);
   const db = await getDbAsync();
+  const currency = defaultCurrencyForLocale(locale);
   const products = await listActiveProducts(db, locale, currency);
 
+  const theme = getTheme();
+  const urls = {
+    ...buildSiteUrls(locale, (target) => localePath(target, "products")),
+    product: (slug: string) => localePath(locale, "products", slug),
+  };
+
   return (
-    <main className="mx-auto max-w-5xl px-6 py-16">
+    <theme.Shell locale={locale} currency={currency} urls={urls}>
+      {/* 结构化数据留在路由层：换主题绝不该影响 SEO */}
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -61,30 +68,12 @@ export default async function ProductsPage({
         }}
       />
 
-      <h1 className="text-3xl font-semibold tracking-tight">Products</h1>
-
-      <ul className="mt-10 space-y-6">
-        {products.map((product) => (
-          <li key={product.id} className="border-b border-neutral-200 pb-6">
-            <h2 className="text-lg font-medium">
-              <Link
-                className="underline underline-offset-4"
-                href={localePath(locale, "products", product.slug)}
-              >
-                {product.name}
-              </Link>
-            </h2>
-            {product.summary ? (
-              <p className="mt-1 text-sm text-neutral-600">{product.summary}</p>
-            ) : null}
-            {product.fromPriceMinor !== null && product.priceCurrency ? (
-              <p className="mt-2 text-sm">
-                {formatMoney(product.fromPriceMinor, product.priceCurrency, locale)}
-              </p>
-            ) : null}
-          </li>
-        ))}
-      </ul>
-    </main>
+      <theme.ProductListView
+        locale={locale}
+        currency={currency}
+        products={products}
+        urls={urls}
+      />
+    </theme.Shell>
   );
 }
