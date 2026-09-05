@@ -6,7 +6,7 @@
   "private": true,
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/[YOUR-ORG]/kontor.git"
+    "url": "git+https://github.com/FobStack/kontor.git"
   },
   "cloudflare": {
     "bindings": {

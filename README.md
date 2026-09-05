@@ -6,7 +6,7 @@
 
 ## 一键部署
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/[YOUR-ORG]/kontor)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/FobStack/kontor)
 
 点击后 Cloudflare 会把仓库复制到你的 GitHub 账号，**自动创建所需的 D1 数据库、两个 R2 桶和 KV 命名空间并把 id 写回配置**，跑一遍迁移后完成首次部署。你只需要在设置页填几个值（每一项都有说明）。
 

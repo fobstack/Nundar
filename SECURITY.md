@@ -4,7 +4,12 @@
 
 **Do not open a public issue for a security problem.** Report it privately
 through GitHub's [private vulnerability reporting][gh-private] on this
-repository, or email [YOUR SECURITY CONTACT].
+repository — that is the channel we monitor, and it keeps the report
+confidential until a fix ships.
+
+> Maintainers: once the project has its own domain, add `security@<domain>` here
+> as a second channel. Some researchers will not open a GitHub account to file a
+> report, and a dead-end contact costs you the disclosure.
 
 Include: what you found, how to reproduce it, and what an attacker could achieve.
 A working proof of concept helps but is not required.
