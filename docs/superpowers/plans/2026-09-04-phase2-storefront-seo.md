@@ -1,164 +1,164 @@
-# 阶段 2：前台商品浏览与 SEO 基建 Implementation Plan
+# Phase 2: storefront browsing and SEO foundations — implementation plan
 
-> **执行方式**：本计划由掌握完整上下文的同一会话执行，因此按任务级编排（每个任务给出接口契约与必须覆盖的测试点），而非逐步骤复述代码。执行仍严格遵循 TDD：先写失败测试 → 确认失败 → 实现 → 确认通过 → 提交。
+> **How this was executed**: by a single session holding the full context, which is why it is organised by task — each one giving an interface contract and the test points it must cover — rather than restating code step by step. Execution still followed TDD strictly: write a failing test, confirm it fails, implement, confirm it passes, commit.
 
-**Goal:** 让每个商品成为内容完整、SEO 完备的静态页面，并把使用工况按需提升为独立落地页，形成长尾词矩阵。
+**Goal:** make every product a complete, fully optimised static page, and promote use cases into landing pages on demand, forming the long-tail matrix.
 
-**Architecture:** 商品页、工况页、列表页全部走 `generateStaticParams` 静态生成 + ISR；SEO 元信息（hreflang / canonical / JSON-LD）由集中的 SEO 工具层统一产出，避免各页面各写一套；库存与价格在静态页 hydration 后经 `/api/inventory` 补实时数据。
+**Architecture:** product pages, use-case pages and the listing all go through `generateStaticParams` with ISR. SEO metadata (hreflang, canonical, JSON-LD) is produced by one central SEO layer rather than reimplemented per page. Stock and prices are patched into the static page after hydration through `/api/inventory`.
 
-**Tech Stack:** 承阶段 1，无新增依赖。
+**Tech stack:** as phase 1, with no new dependencies.
 
-**Spec:** `docs/superpowers/specs/2026-09-03-nundar-design.md`（第 5 节）
+**Spec:** `docs/superpowers/specs/2026-09-03-nundar-design.md`, section 5
 
-## Global Constraints
+## Global constraints
 
-承阶段 1 全部约束，另加：
+Everything from phase 1, plus:
 
-- **语言由 URL 路径前缀唯一决定**，禁止按 IP 跳转或改写内容
-- **每个页面必须输出完整 hreflang 集合**（四语言 + x-default），缺失会让 Google 把不同语言版本判为重复内容
-- **工况落地页的 canonical 指向自身**，不得指向商品页——指向商品页等于放弃该页排名
-- **`has_own_page = 0` 的工况不生成独立页面、不进 sitemap**
-- **静态页中的库存数字视为可能过期**，真实库存由客户端补数据覆盖
+- **The language is decided solely by the URL path prefix.** No IP-based redirects, no IP-based content rewriting
+- **Every page must emit the complete hreflang set** (four languages plus x-default). Missing it makes Google treat the language versions as duplicate content
+- **A use-case landing page's canonical points at itself**, never at the product page — pointing it there forfeits that page's ranking
+- **Use cases with `has_own_page = 0` get no page and do not enter the sitemap**
+- **Stock numbers in a static page are assumed stale** and are replaced by client-side data
 
 ---
 
-## Task 1: 站点配置与 SEO 工具层
+## Task 1: site configuration and the SEO layer
 
-**Files:** `src/config/site.ts`、`src/lib/seo.ts`、`tests/lib/seo.test.ts`
+**Files:** `src/config/site.ts`, `src/lib/seo.ts`, `tests/lib/seo.test.ts`
 
 **Produces:**
-- `SITE: { url: string; name: string }`（`url` 从 `NEXT_PUBLIC_SITE_URL` 读，缺省 `http://localhost:3000`）
+- `SITE: { url: string; name: string }` (`url` from `NEXT_PUBLIC_SITE_URL`, defaulting to `http://localhost:3000`)
 - `absoluteUrl(path: string): string`
 - `buildAlternates(pathByLocale: (locale: Locale) => string): { canonical: string; languages: Record<string, string> }`
 - `localePath(locale: Locale, ...segments: string[]): string`
 
-**测试点：**
-1. `localePath("de", "products", "x")` → `/de/products/x`
-2. `buildAlternates` 输出四语言全集
-3. `buildAlternates` 输出 `x-default` 且指向默认语言
-4. canonical 为绝对 URL
-5. 路径拼接不产生重复斜杠
+**Test points:**
+1. `localePath("de", "products", "x")` gives `/de/products/x`
+2. `buildAlternates` emits all four languages
+3. `buildAlternates` emits `x-default`, pointing at the default language
+4. The canonical is an absolute URL
+5. Joining paths never produces a double slash
 
-## Task 2: 商品详情查询
+## Task 2: the product detail query
 
-**Files:** `src/lib/queries/products.ts`（扩展）、`tests/lib/queries/product-detail.test.ts`
+**Files:** `src/lib/queries/products.ts` (extended), `tests/lib/queries/product-detail.test.ts`
 
 **Produces:**
 - `getProductDetail(db, slug, locale, currency): Promise<ProductDetail | null>`
-  返回：商品基础字段、该语言翻译、`features[]`、`useCases[]`（含 `hasOwnPage`）、`variants[]`（含 `moq`、交期、该币种价格与实际币种）
-- `listProductSlugs(db): Promise<string[]>` —— 供 `generateStaticParams`
-- `listUseCasePages(db): Promise<{ slug: string; locale: Locale; useCaseSlug: string }[]>` —— 仅 `has_own_page = 1`
+  returning the product's base fields, its translation in that language, `features[]`, `useCases[]` (with `hasOwnPage`), and `variants[]` (with `moq`, lead time, and the price in that currency alongside the currency actually used)
+- `listProductSlugs(db): Promise<string[]>`, for `generateStaticParams`
+- `listUseCasePages(db): Promise<{ slug: string; locale: Locale; useCaseSlug: string }[]>`, restricted to `has_own_page = 1`
 
-**测试点：**
-1. 未知 slug 返回 null
-2. archived 商品返回 null
-3. 按 locale 取到对应语言的名称与描述
-4. features 与 useCases 按 `sort_order` 排序
-5. variants 带 moq 与交期区间
-6. 价格按请求币种，缺价回落基准币种并如实报告
-7. `listUseCasePages` 只返回 `has_own_page = 1` 的记录
+**Test points:**
+1. An unknown slug returns null
+2. An archived product returns null
+3. The name and description come back in the requested locale
+4. Features and use cases are ordered by `sort_order`
+5. Variants carry the MOQ and the lead time range
+6. Prices come in the requested currency, falling back to the base currency and reporting that honestly
+7. `listUseCasePages` returns only rows with `has_own_page = 1`
 
-## Task 3: 商品详情页
+## Task 3: the product detail page
 
-**Files:** `src/app/[locale]/products/[slug]/page.tsx`、`tests/app/product-page.test.ts`
+**Files:** `src/app/[locale]/products/[slug]/page.tsx`, `tests/app/product-page.test.ts`
 
-**内容块顺序**（SEO 与阅读动线一致）：名称 → 摘要 → 价格与 MOQ/交期 → 描述 → 产品特性 → 使用工况（`has_own_page` 的给出内链）
+**Block order** — the same for reading and for SEO: name, summary, price with MOQ and lead time, description, features, use cases (with internal links for those that have their own page)
 
-**Produces:** `generateStaticParams`（四语言 × 全部 slug）、`generateMetadata`（title/description 取自翻译表，含 alternates）
+**Produces:** `generateStaticParams` (four languages × every slug) and `generateMetadata` (title and description from the translation table, alternates included)
 
-**测试点：** 交给 Task 4 的 JSON-LD 测试与构建产物断言（见验收）
+**Test points:** covered by Task 4's JSON-LD tests and by the build output assertions in the acceptance criteria
 
-## Task 4: 结构化数据（JSON-LD）
+## Task 4: structured data (JSON-LD)
 
-**Files:** `src/lib/seo/jsonld.ts`、`tests/lib/jsonld.test.ts`
+**Files:** `src/lib/seo/jsonld.ts`, `tests/lib/jsonld.test.ts`
 
 **Produces:**
-- `productJsonLd(input): object` —— `Product` + `Offer`（`price`、`priceCurrency`、`availability`）
+- `productJsonLd(input): object` — `Product` + `Offer` (`price`, `priceCurrency`, `availability`)
 - `breadcrumbJsonLd(items): object`
-- `useCaseJsonLd(input): object` —— `Article` + 关联 `Product`
+- `useCaseJsonLd(input): object` — `Article` with its associated `Product`
 
-**测试点：**
-1. 价格以主单位小数字符串输出（`"99.00"`），不是最小单位整数
-2. `priceCurrency` 与实际币种一致
-3. 库存为 0 时 availability 为 `OutOfStock`
-4. `offers` 覆盖全部 SKU
-5. breadcrumb 的 position 从 1 递增
-6. 含 MOQ 时输出 `eligibleQuantity`，含交期时输出 `deliveryLeadTime`
+**Test points:**
+1. Prices are decimal strings in major units (`"99.00"`), not minor-unit integers
+2. `priceCurrency` matches the currency actually used
+3. Zero stock yields `OutOfStock`
+4. `offers` covers every SKU
+5. Breadcrumb positions start at 1 and increment
+6. An MOQ emits `eligibleQuantity`; a lead time emits `deliveryLeadTime`
 
-## Task 5: 工况落地页
+## Task 5: the use-case landing page
 
 **Files:** `src/app/[locale]/products/[slug]/[useCaseSlug]/page.tsx`
 
-**Produces:** 仅对 `has_own_page = 1` 生成；canonical 指向自身；面包屑回溯到商品页；页面底部内链回商品页与同商品其他工况页。
+**Produces:** pages only for `has_own_page = 1`; a self-referencing canonical; breadcrumbs back to the product page; and footer links back to the product and to the product's other use-case pages.
 
-**测试点：** `has_own_page = 0` 的 slug 访问返回 404（构建期不生成 + 运行时 notFound）
+**Test point:** a slug with `has_own_page = 0` returns 404 — not generated at build time, and `notFound` at runtime
 
-## Task 6: 商品列表页
+## Task 6: the product list page
 
 **Files:** `src/app/[locale]/products/page.tsx`
 
-复用 `listActiveProducts`，输出 `CollectionPage` + `ItemList` JSON-LD。
+Reuses `listActiveProducts` and emits `CollectionPage` + `ItemList` JSON-LD.
 
-## Task 7: sitemap 与 robots
+## Task 7: sitemap and robots
 
-**Files:** `src/app/sitemap.ts`、`src/app/robots.ts`、`tests/app/sitemap.test.ts`
+**Files:** `src/app/sitemap.ts`, `src/app/robots.ts`, `tests/app/sitemap.test.ts`
 
-**Produces:** 全部语言的首页、列表页、商品页、`has_own_page` 工况页，带 `lastModified`；robots 屏蔽 `/cart`、`/checkout`、`/account`、`/admin`、`/api`。
+**Produces:** the home page, the listing, the product pages and the `has_own_page` use-case pages in every language, each with `lastModified`. robots blocks `/cart`, `/checkout`, `/account`, `/admin` and `/api`.
 
-**测试点：**
-1. 每个商品出现四次（四语言）
-2. `has_own_page = 0` 的工况不出现
-3. archived 商品不出现
-4. 每条含 alternates 语言映射
-5. robots 的 disallow 清单完整
+**Test points:**
+1. Each product appears four times, once per language
+2. Use cases with `has_own_page = 0` do not appear
+3. Archived products do not appear
+4. Every entry carries its alternates language map
+5. The robots disallow list is complete
 
-## Task 8: 库存实时补数据
+## Task 8: patching stock on the client
 
-**Files:** `src/app/api/inventory/route.ts`、`src/components/LiveStock.tsx`、`tests/app/inventory-api.test.ts`
+**Files:** `src/app/api/inventory/route.ts`, `src/components/LiveStock.tsx`, `tests/app/inventory-api.test.ts`
 
-**契约：** `GET /api/inventory?variants=a,b` → `{ items: [{ variantId, stock, priceMinor, currency }] }`
+**Contract:** `GET /api/inventory?variants=a,b` returns `{ items: [{ variantId, stock, priceMinor, currency }] }`
 
-**测试点：**
-1. 返回请求的 variant 的实时库存
-2. 未知 variantId 被忽略而非报错
-3. 缺参数返回 400
-4. variant 数量超过 50 个返回 400（防滥用）
-5. 响应头 `Cache-Control: no-store`
+**Test points:**
+1. Returns live stock for the requested variants
+2. An unknown variantId is ignored rather than raising an error
+3. A missing parameter returns 400
+4. More than 50 variants returns 400, against abuse
+5. The response carries `Cache-Control: no-store`
 
-## 完成标准
+## Acceptance criteria
 
-- `pnpm test` 全绿，`pnpm typecheck`、`pnpm lint` 通过
-- `pnpm build` 生成：4 语言 × (首页 + 列表页 + 商品页) + 4 语言 × 独立工况页
-- 商品页 HTML 中含完整 hreflang 集合、自指 canonical、`Product` JSON-LD
-- `/sitemap.xml` 可访问且不含 `has_own_page = 0` 的工况页
+- `pnpm test` green; `pnpm typecheck` and `pnpm lint` pass
+- `pnpm build` produces 4 languages × (home + listing + product page) plus 4 languages × the use-case landing pages
+- Product page HTML carries the complete hreflang set, a self-referencing canonical, and `Product` JSON-LD
+- `/sitemap.xml` is reachable and contains no `has_own_page = 0` use-case pages
 
 ---
 
-## 执行记录（2026-09-04）
+## Execution record, 2026-09-04
 
-阶段 2 全部 8 个任务已完成并验证。
+All eight tasks completed and verified.
 
-**新增页面**：4 语言 ×（首页 + 列表页 + 商品页 + 工况落地页）= 16 个静态页，另加 `/sitemap.xml`、`/robots.txt`、`/api/inventory`。
+**Pages added**: 4 languages × (home + listing + product page + use-case landing page) = 16 static pages, plus `/sitemap.xml`, `/robots.txt` and `/api/inventory`.
 
-**实现中发现并修复的两个真实缺陷：**
+**Two real defects found and fixed while implementing:**
 
-1. **hreflang 指向 404**（严重）。工况落地页的 slug 逐语言本地化，但初版让所有语言共用英文 slug 拼 hreflang，导致德/法/西的 hreflang 全部指向不存在的页面。根因是 `product_use_cases` 各语言行之间没有共同标识。修复：新增 `group_key` 列（见 spec 4.2.1）与 `getUseCaseAlternates` 查询，逐语言取真实 slug；缺翻译的语言直接省略该 hreflang 条目而非用别的语言顶替。
+1. **hreflang pointing at 404s** (severe). Use-case landing page slugs are localised per language, but the first version built hreflang from the English slug for every language, so the German, French and Spanish hreflang all pointed at pages that do not exist. The root cause was that the per-language rows of `product_use_cases` had nothing identifying them as versions of the same thing. Fixed by adding the `group_key` column (see spec 4.2.1) and a `getUseCaseAlternates` query that resolves each language's real slug; a language missing its translation is omitted from hreflang rather than filled in with another language's slug.
 
-2. **构建期 D1 并发失败**。`generateStaticParams` 读本地 D1 时，多个 Next 构建 worker 并发连同一个 miniflare SQLite 触发 `D1_ERROR: internal error`。修复：`next.config.ts` 设 `experimental.cpus = 1`、`workerThreads = false`，构建串行化。
+2. **D1 concurrency failure during the build.** With `generateStaticParams` reading the local D1, several Next build workers hitting the same miniflare SQLite file concurrently produced `D1_ERROR: internal error`. Fixed by setting `experimental.cpus = 1` and `workerThreads = false` in `next.config.ts`, serialising the build.
 
-**其他偏差：**
+**Other divergences:**
 
-| 偏差 | 原因 |
+| Divergence | Why |
 |---|---|
-| 迁移合并为单个 `0000` 而非追加 `0001` | SQLite 不支持给已有表加无默认值的 NOT NULL 列；项目尚未部署到任何远端，合并是安全的 |
-| `useCaseJsonLd` 更名为 `buildUseCaseJsonLd` | ESLint 的 `react-hooks/rules-of-hooks` 把 `use` 前缀误判为 React Hook |
-| 提前实现根路径重定向（原属阶段 2 计划外） | 已在阶段 1 补齐 |
+| Migrations merged into a single `0000` rather than appending `0001` | SQLite cannot add a NOT NULL column without a default to an existing table, and the project had not been deployed anywhere yet, so merging was safe |
+| `useCaseJsonLd` renamed to `buildUseCaseJsonLd` | ESLint's `react-hooks/rules-of-hooks` mistook the `use` prefix for a React hook |
+| The root path redirect landed early, outside the phase 2 plan | Already covered in phase 1 |
 
-**验证结果**：`pnpm test` 110 个用例全绿（15 个测试文件）、`pnpm typecheck`、`pnpm lint`、`pnpm build` 全部通过。
+**Verification**: `pnpm test` green across 110 cases in 15 test files; `pnpm typecheck`, `pnpm lint` and `pnpm build` all pass.
 
-dev 模式实测：
-- `/sitemap.xml` 16 条，不含 `has_own_page = 0` 的工况，工况页 URL 为各语言本地化 slug
-- `/robots.txt` disallow 清单完整（api/admin/cart/checkout/account/带参 URL）
-- `/api/inventory?variants=...&currency=EUR` 返回实时库存与回落后的真实币种；缺参数返回 400
-- 未成页的工况 URL 返回 404
-- 商品页 HTML 含四语言 hreflang + x-default、自指 canonical、Product/Offer/BreadcrumbList JSON-LD（含 MOQ 的 `eligibleQuantity` 与交期的 `deliveryLeadTime`）
+Checked by hand against the dev server:
+- `/sitemap.xml` lists 16 entries, excludes `has_own_page = 0` use cases, and gives each use-case page its own localised slug
+- `/robots.txt` has the complete disallow list: api, admin, cart, checkout, account, and URLs with query parameters
+- `/api/inventory?variants=...&currency=EUR` returns live stock and reports the currency actually fallen back to; a missing parameter returns 400
+- A use-case URL that was never promoted returns 404
+- Product page HTML carries hreflang in four languages plus x-default, a self-referencing canonical, and Product / Offer / BreadcrumbList JSON-LD including the MOQ's `eligibleQuantity` and the lead time's `deliveryLeadTime`
