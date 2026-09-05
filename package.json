@@ -8,6 +8,34 @@
     "type": "git",
     "url": "git+https://github.com/[YOUR-ORG]/kontor.git"
   },
+  "cloudflare": {
+    "bindings": {
+      "STRIPE_SECRET_KEY": {
+        "description": "Your Stripe **secret key** (`sk_live_…` or `sk_test_…`), from [Stripe → Developers → API keys](https://dashboard.stripe.com/apikeys). Leave blank to deploy the storefront without payments — you can add it later with `wrangler secret put`."
+      },
+      "STRIPE_WEBHOOK_SECRET": {
+        "description": "Signing secret (`whsec_…`) of the Stripe webhook you point at `https://yourdomain.com/api/webhooks/stripe` subscribing to `payment_intent.succeeded`. **Order status depends on this** — without it, paid orders never leave `pending`."
+      },
+      "MAIL_FROM_ADDRESS": {
+        "description": "Address order emails are sent from, e.g. `orders@yourdomain.com`. The domain must be onboarded first: `npx wrangler email sending enable yourdomain.com`."
+      },
+      "NEXT_PUBLIC_SITE_URL": {
+        "description": "Your public site address, e.g. `https://yourdomain.com`. Canonical URLs and hreflang are built from it, so **getting this wrong breaks SEO** — it must be the real domain, not the workers.dev URL."
+      },
+      "DB": {
+        "description": "D1 database holding products, orders and customers. Created for you."
+      },
+      "MEDIA": {
+        "description": "R2 bucket for product images. Created for you."
+      },
+      "NEXT_INC_CACHE_R2_BUCKET": {
+        "description": "R2 bucket backing incremental static regeneration. Created for you."
+      },
+      "SESSIONS": {
+        "description": "KV namespace for admin sessions, guest carts and rate limiting. Created for you."
+      }
+    }
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -19,12 +47,12 @@
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply kontor --local",
-    "db:migrate:remote": "wrangler d1 migrations apply kontor --remote",
+    "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
     "db:seed:build": "tsx src/scripts/write-seed-sql.ts",
     "db:seed:local": "pnpm db:seed:build && wrangler d1 execute kontor --local --file=./drizzle/seed.sql",
-    "db:seed:remote": "pnpm db:seed:build && wrangler d1 execute kontor --remote --file=./drizzle/seed.sql",
+    "db:seed:remote": "pnpm db:seed:build && wrangler d1 execute DB --remote --file=./drizzle/seed.sql",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "deploy": "opennextjs-cloudflare build && pnpm db:migrate:remote && opennextjs-cloudflare deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "admin:create": "tsx src/scripts/create-admin.ts"
   },

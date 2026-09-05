@@ -4,6 +4,20 @@
 
 单租户自部署——一份代码对应一个站点。
 
+## 一键部署
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/[YOUR-ORG]/kontor)
+
+点击后 Cloudflare 会把仓库复制到你的 GitHub 账号，**自动创建所需的 D1 数据库、两个 R2 桶和 KV 命名空间并把 id 写回配置**，跑一遍迁移后完成首次部署。你只需要在设置页填几个值（每一项都有说明）。
+
+部署完成后还要做三件事：
+
+1. **绑定自己的域名**——默认给的是 `*.workers.dev` 地址，而 canonical 与 hreflang 依赖真实域名，SEO 会因此失效。绑好域名后把 `NEXT_PUBLIC_SITE_URL` 改成它。
+2. **启用发信域名**：`npx wrangler email sending enable yourdomain.com`（域名 DNS 需托管在 Cloudflare）
+3. **建后台账号**：`pnpm admin:create you@example.com`（密码从终端输入，不走命令行参数）
+
+想完全手工控制每一步，见下面的「手工部署」。
+
 ## 为什么不是又一个开源商城
 
 | | 通用开源商城 | Kontor |
@@ -76,7 +90,7 @@ pnpm admin:create you@example.com 'your-password'
 - Stripe webhook 驱动订单状态，幂等且带超卖保护
 - 多语言事务邮件（订单确认、发货通知）
 
-## 部署到 Cloudflare
+## 手工部署到 Cloudflare
 
 ```bash
 npx wrangler login
@@ -90,6 +104,8 @@ npx wrangler r2 bucket create kontor-media
 npx wrangler r2 bucket create kontor-inc-cache
 npx wrangler kv namespace create SESSIONS
 ```
+
+数据库可以叫任何名字——迁移脚本用的是**绑定名 `DB`**，不是库名。
 
 配置密钥：
 

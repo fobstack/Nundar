@@ -16,8 +16,14 @@
     "enabled": true
   },
 
-  // 主数据库。database_id 为本地占位值，部署前需替换为 `wrangler d1 create kontor` 的真实输出。
-  // 本地开发与测试走 miniflare 模拟的 D1，不读取该 id。
+  // 主数据库。
+  //
+  // database_id 是本地占位值：本地开发与测试走 miniflare 模拟的 D1，不读取它；
+  // 用 Deploy to Cloudflare 按钮部署时，Cloudflare 会自动建库并把真实 id 写回这里。
+  // 手工部署则跑一次 `wrangler d1 create <name>` 再把 id 填进来。
+  //
+  // 迁移与灌数据的脚本一律用**绑定名 DB** 而不是库名——别人部署时库名可能不同，
+  // 写死库名会让他们的迁移找不到库。
   "d1_databases": [
     {
       "binding": "DB",

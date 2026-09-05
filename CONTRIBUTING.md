@@ -46,6 +46,7 @@ same pull request and explain the new reasoning.
 | Stock | Decremented after payment is confirmed, never at add-to-cart or order creation. |
 | Webhooks | Must be idempotent. Stripe redelivers. |
 | Secrets | Never in the repo. Use `wrangler secret` or `.dev.vars`. |
+| Remote D1 commands | Reference the **binding** (`DB`), never the database name. Someone deploying via the button gets a database named after their own project, and a hardcoded name breaks their migrations. |
 | Prices | Never accepted from the client. Recomputed server-side at checkout, always. |
 | Dependencies | Ask whether the platform already provides it. Every dependency is inherited attack surface. |
 
