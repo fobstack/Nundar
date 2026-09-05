@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Locale } from "@/config/locales";
 import { localePath } from "@/lib/seo";
+import { getStorefrontMessages } from "@/lib/storefront/i18n";
 
 type Status =
   | "pending"
@@ -13,17 +14,6 @@ type Status =
   | "cancelled"
   | "refunded"
   | "oversold";
-
-const MESSAGES: Record<Status, string> = {
-  pending: "Payment is being confirmed. This usually takes a few seconds.",
-  paid: "Payment received. We are preparing your order.",
-  shipped: "Your order is on its way.",
-  delivered: "Your order has been delivered.",
-  cancelled: "This order was cancelled.",
-  refunded: "This order has been refunded.",
-  oversold:
-    "Payment went through but the stock sold out first. We are refunding you and will be in touch.",
-};
 
 /**
  * Order status, polled while pending.
@@ -39,6 +29,7 @@ export function OrderStatus({
   orderNo: string;
   locale: Locale;
 }) {
+  const t = getStorefrontMessages(locale);
   const [status, setStatus] = useState<Status | null>(null);
   const [notFound, setNotFound] = useState(false);
 
@@ -86,7 +77,7 @@ export function OrderStatus({
   if (notFound) {
     return (
       <p className="mt-6 text-sm text-neutral-600">
-        We could not find that order number.
+        {t.orderStatus.notFound}
       </p>
     );
   }
@@ -95,13 +86,12 @@ export function OrderStatus({
     <div className="mt-6">
       <p className="font-mono text-sm text-neutral-500">{orderNo}</p>
       <p className="mt-2">
-        {status ? MESSAGES[status] : "Looking up your order…"}
+        {status ? t.orderStatus[status] : t.orderStatus.lookingUp}
       </p>
 
       {status === "pending" ? (
         <p className="mt-2 text-sm text-neutral-500">
-          You can safely close this page — we will email you once it is
-          confirmed.
+          {t.orderStatus.safeToClose}
         </p>
       ) : null}
 
@@ -109,7 +99,7 @@ export function OrderStatus({
         href={localePath(locale, "products")}
         className="mt-8 inline-block underline underline-offset-4"
       >
-        Continue shopping
+        {t.orderStatus.continueShopping}
       </Link>
     </div>
   );

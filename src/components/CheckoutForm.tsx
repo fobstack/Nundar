@@ -5,6 +5,7 @@ import { cartApi, type CartView } from "@/api/cart-api";
 import type { Currency } from "@/config/currency";
 import type { Locale } from "@/config/locales";
 import { formatMoney } from "@/lib/money";
+import { getStorefrontMessages } from "@/lib/storefront/i18n";
 
 const field = "mt-1 w-full rounded border border-neutral-300 px-3 py-2 text-sm";
 
@@ -15,6 +16,7 @@ export function CheckoutForm({
   locale: Locale;
   currency: Currency;
 }) {
+  const t = getStorefrontMessages(locale);
   const [cart, setCart] = useState<CartView | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,9 +26,9 @@ export function CheckoutForm({
       .queryCart(locale, currency)
       .then(setCart)
       .catch((cause: unknown) =>
-        setError(cause instanceof Error ? cause.message : "Could not load cart"),
+        setError(cause instanceof Error ? cause.message : t.cart.loadFailed),
       );
-  }, [locale, currency]);
+  }, [locale, currency, t.cart.loadFailed]);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -52,7 +54,7 @@ export function CheckoutForm({
       window.location.href = result.checkoutUrl;
     } catch (cause) {
       setError(
-        cause instanceof Error ? cause.message : "Could not start checkout",
+        cause instanceof Error ? cause.message : t.checkout.startFailed,
       );
       setSubmitting(false);
     }
@@ -75,38 +77,38 @@ export function CheckoutForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="text-sm sm:col-span-2">
-          Recipient
+          {t.checkout.recipient}
           <input name="recipient" required className={field} />
         </label>
         <label className="text-sm sm:col-span-2">
-          Email
+          {t.checkout.email}
           <input name="email" type="email" required className={field} />
           <span className="mt-1 block text-xs text-neutral-500">
-            Order confirmation and shipping updates go here.
+            {t.checkout.emailHint}
           </span>
         </label>
         <label className="text-sm sm:col-span-2">
-          Address
+          {t.checkout.address}
           <input name="line1" required className={field} />
         </label>
         <label className="text-sm sm:col-span-2">
-          Address line 2
+          {t.checkout.addressLine2}
           <input name="line2" className={field} />
         </label>
         <label className="text-sm">
-          City
+          {t.checkout.city}
           <input name="city" required className={field} />
         </label>
         <label className="text-sm">
-          State / region
+          {t.checkout.stateRegion}
           <input name="state" className={field} />
         </label>
         <label className="text-sm">
-          Postal code
+          {t.checkout.postalCode}
           <input name="postalCode" required className={field} />
         </label>
         <label className="text-sm">
-          Country code
+          {t.checkout.countryCode}
           <input
             name="country"
             required
@@ -116,14 +118,14 @@ export function CheckoutForm({
           />
         </label>
         <label className="text-sm sm:col-span-2">
-          Phone
+          {t.checkout.phone}
           <input name="phone" className={field} />
         </label>
       </div>
 
       {total ? (
         <div className="flex items-center justify-between border-t border-neutral-200 pt-4">
-          <span className="text-sm text-neutral-500">Total</span>
+          <span className="text-sm text-neutral-500">{t.checkout.total}</span>
           <span className="text-lg font-semibold">{total}</span>
         </div>
       ) : null}
@@ -133,11 +135,11 @@ export function CheckoutForm({
         disabled={submitting || !cart || cart.lines.length === 0}
         className="w-full rounded bg-neutral-900 px-4 py-2 text-white disabled:opacity-40"
       >
-        {submitting ? "Redirecting to payment…" : "Continue to payment"}
+        {submitting ? t.checkout.redirecting : t.checkout.continueToPayment}
       </button>
 
       <p className="text-xs text-neutral-500">
-        Payment is handled by Stripe. Card details never reach this site.
+        {t.checkout.stripeNote}
       </p>
     </form>
   );

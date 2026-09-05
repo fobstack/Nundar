@@ -7,19 +7,23 @@ import type { Currency } from "@/config/currency";
 import type { Locale } from "@/config/locales";
 import { formatMoney } from "@/lib/money";
 import { localePath } from "@/lib/seo";
+import {
+  getStorefrontMessages,
+  type StorefrontMessages,
+} from "@/lib/storefront/i18n";
 
-function issueText(issue: CartIssueView): string {
+function issueText(issue: CartIssueView, t: StorefrontMessages): string {
   switch (issue.kind) {
     case "below_moq":
-      return `Minimum order quantity is ${issue.moq}.`;
+      return t.cart.belowMoq.replace("{n}", String(issue.moq));
     case "insufficient_stock":
-      return `Only ${issue.available} left in stock.`;
+      return t.cart.insufficientStock.replace("{n}", String(issue.available));
     case "unavailable":
-      return "This item is no longer available.";
+      return t.cart.unavailable;
     case "no_price":
-      return "This item has no price for your currency yet.";
+      return t.cart.noPrice;
     default:
-      return "Your cart is empty.";
+      return t.cart.empty;
   }
 }
 
@@ -30,6 +34,7 @@ export function CartPageView({
   locale: Locale;
   currency: Currency;
 }) {
+  const t = getStorefrontMessages(locale);
   const [cart, setCart] = useState<CartView | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,9 +43,9 @@ export function CartPageView({
     try {
       setCart(await cartApi.queryCart(locale, currency));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not load cart");
+      setError(cause instanceof Error ? cause.message : t.cart.loadFailed);
     }
-  }, [locale, currency]);
+  }, [locale, currency, t.cart.loadFailed]);
 
   useEffect(() => {
     let cancelled = false;
@@ -57,7 +62,7 @@ export function CartPageView({
       .catch((cause: unknown) => {
         if (!cancelled) {
           setError(
-            cause instanceof Error ? cause.message : "Could not load cart",
+            cause instanceof Error ? cause.message : t.cart.loadFailed,
           );
         }
       });
@@ -65,7 +70,7 @@ export function CartPageView({
     return () => {
       cancelled = true;
     };
-  }, [locale, currency]);
+  }, [locale, currency, t.cart.loadFailed]);
 
   async function update(variantId: string, quantity: number) {
     setBusy(true);
@@ -74,14 +79,14 @@ export function CartPageView({
       await cartApi.setQuantity(variantId, quantity);
       await refresh();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not update cart");
+      setError(cause instanceof Error ? cause.message : t.cart.updateFailed);
     } finally {
       setBusy(false);
     }
   }
 
   if (!cart) {
-    return <p className="mt-8 text-sm text-neutral-500">Loading…</p>;
+    return <p className="mt-8 text-sm text-neutral-500">{t.cart.loading}</p>;
   }
 
   const empty = cart.lines.length === 0;
@@ -99,7 +104,7 @@ export function CartPageView({
         <ul className="mb-6 space-y-1 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           {cart.issues.map((issue, index) => (
             <li key={`${issue.kind}-${issue.variantId ?? index}`}>
-              {issueText(issue)}
+              {issueText(issue, t)}
             </li>
           ))}
         </ul>
@@ -107,12 +112,12 @@ export function CartPageView({
 
       {empty ? (
         <p className="text-sm text-neutral-500">
-          Your cart is empty.{" "}
+          {t.cart.empty}{" "}
           <Link
             href={localePath(locale, "products")}
             className="underline underline-offset-4"
           >
-            Browse products
+            {t.cart.browseProducts}
           </Link>
         </p>
       ) : (
@@ -148,7 +153,7 @@ export function CartPageView({
                     onClick={() => void update(line.variantId, 0)}
                     className="text-sm text-neutral-500 underline underline-offset-4"
                   >
-                    Remove
+                    {t.cart.remove}
                   </button>
                 </div>
               </li>
@@ -156,7 +161,7 @@ export function CartPageView({
           </ul>
 
           <div className="mt-6 flex items-center justify-between">
-            <span className="text-sm text-neutral-500">Subtotal</span>
+            <span className="text-sm text-neutral-500">{t.cart.subtotal}</span>
             <span className="text-lg font-semibold">
               {formatMoney(cart.subtotalMinor, cart.currency, locale)}
             </span>
@@ -166,7 +171,7 @@ export function CartPageView({
             href={localePath(locale, "checkout")}
             className="mt-6 inline-block rounded bg-neutral-900 px-5 py-2 text-white"
           >
-            Checkout
+            {t.nav.checkout}
           </Link>
         </>
       )}

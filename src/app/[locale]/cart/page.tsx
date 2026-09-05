@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { defaultCurrencyForLocale, isLocale } from "@/config/locales";
+import {
+  DEFAULT_LOCALE,
+  defaultCurrencyForLocale,
+  isLocale,
+} from "@/config/locales";
 import {
   CURRENCY_COOKIE,
   parseCurrencyCookie,
@@ -11,12 +15,23 @@ import { buildSiteUrls } from "@/lib/site-urls";
 import { getStorefrontMessages } from "@/lib/storefront/i18n";
 import { getTheme } from "@/themes/registry";
 
-export const metadata: Metadata = {
-  title: "Cart",
-  // A cart is private to one visitor and worth nothing to search; robots.txt
-  // disallows it too, and both belts are deliberate
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  // metadata cannot call notFound(); the page itself rejects an unknown
+  // locale, so falling back to the default here is enough for the title
+  const t = getStorefrontMessages(isLocale(locale) ? locale : DEFAULT_LOCALE);
+
+  return {
+    title: t.page.cart,
+    // A cart is private to one visitor and worth nothing to search; robots.txt
+    // disallows it too, and both belts are deliberate
+    robots: { index: false, follow: false },
+  };
+}
 
 export default async function CartPage({
   params,

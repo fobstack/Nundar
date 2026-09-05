@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { cartApi } from "@/api/cart-api";
 import type { Locale } from "@/config/locales";
+import { getStorefrontMessages } from "@/lib/storefront/i18n";
 import { localePath } from "@/lib/seo";
 
 /**
@@ -25,6 +26,7 @@ export function AddToCart({
   stock: number;
   locale: Locale;
 }) {
+  const t = getStorefrontMessages(locale);
   const router = useRouter();
   const [quantity, setQuantity] = useState(moq);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +42,7 @@ export function AddToCart({
         router.push(localePath(locale, "cart"));
       });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not add to cart");
+      setError(cause instanceof Error ? cause.message : t.addToCart.failed);
     }
   }
 
@@ -48,7 +50,7 @@ export function AddToCart({
     <div className="mt-3">
       <div className="flex items-center gap-2">
         <label className="text-sm">
-          <span className="sr-only">Quantity</span>
+          <span className="sr-only">{t.addToCart.quantity}</span>
           <input
             type="number"
             min={moq}
@@ -68,13 +70,17 @@ export function AddToCart({
           disabled={outOfStock || pending}
           className="rounded bg-neutral-900 px-4 py-1.5 text-sm text-white disabled:opacity-40"
         >
-          {outOfStock ? "Out of stock" : pending ? "Adding…" : "Add to cart"}
+          {outOfStock
+            ? t.product.outOfStock
+            : pending
+              ? t.addToCart.adding
+              : t.addToCart.add}
         </button>
       </div>
 
       {moq > 1 ? (
         <p className="mt-1 text-xs text-neutral-500">
-          Minimum order quantity: {moq}
+          {t.cart.belowMoq.replace("{n}", String(moq))}
         </p>
       ) : null}
 

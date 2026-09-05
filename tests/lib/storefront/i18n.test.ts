@@ -92,3 +92,68 @@ describe("commerce vocabulary", () => {
     }
   });
 });
+
+describe("the transactional path", () => {
+  /**
+   * The storefront was fully multilingual in its SEO content and entirely
+   * English from add-to-cart onwards: a French buyer read French application
+   * notes, then met "Add to cart", "Your cart is empty" and "Subtotal" in
+   * English at the moment they were about to pay.
+   */
+  const CONVERSION_CRITICAL = [
+    ["addToCart", "add"],
+    ["cart", "empty"],
+    ["cart", "subtotal"],
+    ["cart", "remove"],
+    ["checkout", "continueToPayment"],
+    ["checkout", "total"],
+    ["orderStatus", "pending"],
+    ["orderStatus", "oversold"],
+  ] as const;
+
+  it.each(CONVERSION_CRITICAL)("translates %s.%s in every language", (section, key) => {
+    const values = LOCALES.map(
+      (locale) =>
+        (getStorefrontMessages(locale)[section] as Record<string, string>)[key],
+    );
+
+    for (const value of values) {
+      expect(value.trim().length).toBeGreaterThan(0);
+    }
+    // Four languages must not all say the same thing here
+    expect(new Set(values).size).toBeGreaterThan(1);
+  });
+
+  it("keeps the quantity placeholder in every translation", () => {
+    // A translation that drops {n} silently renders "Minimum order quantity is ."
+    for (const locale of LOCALES) {
+      const t = getStorefrontMessages(locale);
+      expect(t.cart.belowMoq, `${locale}.cart.belowMoq lost {n}`).toContain("{n}");
+      expect(
+        t.cart.insufficientStock,
+        `${locale}.cart.insufficientStock lost {n}`,
+      ).toContain("{n}");
+    }
+  });
+
+  it("covers every order status the state machine can reach", () => {
+    // A status with no message renders undefined on the page a buyer lands on
+    // straight after paying.
+    const statuses = [
+      "pending",
+      "paid",
+      "shipped",
+      "delivered",
+      "cancelled",
+      "refunded",
+      "oversold",
+    ] as const;
+
+    for (const locale of LOCALES) {
+      const messages = getStorefrontMessages(locale).orderStatus;
+      for (const status of statuses) {
+        expect(messages[status], `${locale} is missing ${status}`).toBeTruthy();
+      }
+    }
+  });
+});

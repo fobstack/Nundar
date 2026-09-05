@@ -1,16 +1,27 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { isLocale } from "@/config/locales";
+import { DEFAULT_LOCALE, isLocale } from "@/config/locales";
 import { localePath } from "@/lib/seo";
 import { buildSiteUrls } from "@/lib/site-urls";
 import { getStorefrontMessages } from "@/lib/storefront/i18n";
 import { getTheme } from "@/themes/registry";
 import { defaultCurrencyForLocale } from "@/config/locales";
 
-export const metadata: Metadata = {
-  title: "Order",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  // metadata cannot call notFound(); the page itself rejects an unknown
+  // locale, so falling back to the default here is enough for the title
+  const t = getStorefrontMessages(isLocale(locale) ? locale : DEFAULT_LOCALE);
+
+  return {
+    title: t.page.order,
+    robots: { index: false, follow: false },
+  };
+}
 
 export default async function OrderPage({
   params,
