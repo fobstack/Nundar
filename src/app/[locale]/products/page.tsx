@@ -6,6 +6,7 @@ import { getDbAsync } from "@/db/client";
 import { listActiveProducts } from "@/lib/queries/products";
 import { absoluteUrl, buildAlternates, localePath } from "@/lib/seo";
 import { buildSiteUrls } from "@/lib/site-urls";
+import { getStorefrontMessages } from "@/lib/storefront/i18n";
 import { getTheme } from "@/themes/registry";
 
 export function generateStaticParams() {
@@ -43,13 +44,14 @@ export default async function ProductsPage({
   const products = await listActiveProducts(db, locale, currency);
 
   const theme = getTheme();
+  const t = getStorefrontMessages(locale);
   const urls = {
     ...buildSiteUrls(locale, (target) => localePath(target, "products")),
     product: (slug: string) => localePath(locale, "products", slug),
   };
 
   return (
-    <theme.Shell locale={locale} currency={currency} urls={urls}>
+    <theme.Shell locale={locale} currency={currency} t={t} urls={urls}>
       {/* Structured data stays in the route layer: swapping themes must never
           affect SEO */}
       <JsonLd
@@ -72,6 +74,7 @@ export default async function ProductsPage({
       <theme.ProductListView
         locale={locale}
         currency={currency}
+        t={t}
         products={products}
         urls={urls}
       />

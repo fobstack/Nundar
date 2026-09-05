@@ -4,21 +4,14 @@ import { formatMoney } from "@/lib/money";
 import type { UseCaseViewProps } from "@/themes/contract";
 import { Eyebrow, Panel, ProductPlaceholder, StockDot } from "../components/primitives";
 
-const LABEL = {
-  en: { note: "Application note", part: "The part discussed here", others: "Other applications", view: "View product", perUnit: "per unit", moq: "Minimum order", lead: "Lead time", stock: "Stock", days: "days", request: "Price on request" },
-  de: { note: "Anwendungsnotiz", part: "Das hier besprochene Teil", others: "Weitere Anwendungen", view: "Produkt ansehen", perUnit: "pro Stück", moq: "Mindestmenge", lead: "Lieferzeit", stock: "Bestand", days: "Tage", request: "Preis auf Anfrage" },
-  fr: { note: "Note d'application", part: "La pièce concernée", others: "Autres applications", view: "Voir le produit", perUnit: "à l'unité", moq: "Quantité min.", lead: "Délai", stock: "Stock", days: "jours", request: "Prix sur demande" },
-  es: { note: "Nota de aplicación", part: "La pieza tratada aquí", others: "Otras aplicaciones", view: "Ver producto", perUnit: "por unidad", moq: "Pedido mínimo", lead: "Plazo", stock: "Existencias", days: "días", request: "Precio a consultar" },
-} as const;
-
 export function UseCaseView({
   locale,
   product,
   useCase,
   siblings,
+  t,
   urls,
 }: UseCaseViewProps) {
-  const t = LABEL[locale];
   const cheapest = product.variants
     .filter((variant) => variant.priceMinor !== null)
     .sort((a, b) => (a.priceMinor ?? 0) - (b.priceMinor ?? 0))[0];
@@ -36,13 +29,13 @@ export function UseCaseView({
       {/* Body column, width bound by --measure: this page exists to be read through */}
       <article style={{ gridColumn: "span 8" }}>
         <div style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)", display: "flex", gap: "var(--space-2)" }}>
-          <Link href={urls.products}>{locale === "de" ? "Produkte" : "Products"}</Link>
+          <Link href={urls.products}>{t.nav.products}</Link>
           <span>/</span>
           <Link href={urls.product}>{product.name}</Link>
         </div>
 
         <div style={{ marginTop: "var(--space-6)" }}>
-          <Eyebrow>{t.note}</Eyebrow>
+          <Eyebrow>{t.useCase.note}</Eyebrow>
         </div>
 
         <h1
@@ -95,7 +88,7 @@ export function UseCaseView({
               color: "var(--ink-2)",
             }}
           >
-            {t.part}
+            {t.useCase.thePart}
           </div>
           <div style={{ padding: "var(--space-6)" }}>
             <div
@@ -121,26 +114,26 @@ export function UseCaseView({
                   <span style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.01em" }}>
                     {cheapest.priceMinor !== null && cheapest.priceCurrency
                       ? formatMoney(cheapest.priceMinor, cheapest.priceCurrency, locale)
-                      : t.request}
+                      : t.product.priceOnRequest}
                   </span>
-                  <span style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)" }}>{t.perUnit}</span>
+                  <span style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)" }}>{t.product.perUnit}</span>
                 </div>
 
                 <dl style={{ margin: "var(--space-4) 0 0", display: "flex", flexDirection: "column", gap: 8, fontSize: "var(--text-xs)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <dt style={{ color: "var(--ink-3)" }}>{t.moq}</dt>
+                    <dt style={{ color: "var(--ink-3)" }}>{t.product.minimumOrder}</dt>
                     <dd className="mono" style={{ margin: 0 }}>{cheapest.moq}</dd>
                   </div>
                   {cheapest.leadTimeDaysMin && cheapest.leadTimeDaysMax ? (
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <dt style={{ color: "var(--ink-3)" }}>{t.lead}</dt>
+                      <dt style={{ color: "var(--ink-3)" }}>{t.product.leadTime}</dt>
                       <dd className="mono" style={{ margin: 0 }}>
-                        {cheapest.leadTimeDaysMin}–{cheapest.leadTimeDaysMax} {t.days}
+                        {cheapest.leadTimeDaysMin}–{cheapest.leadTimeDaysMax} {t.product.businessDays}
                       </dd>
                     </div>
                   ) : null}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <dt style={{ color: "var(--ink-3)" }}>{t.stock}</dt>
+                    <dt style={{ color: "var(--ink-3)" }}>{t.product.stock}</dt>
                     <dd style={{ margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
                       <StockDot stock={cheapest.stock} />
                       <span className="mono">{cheapest.stock}</span>
@@ -164,7 +157,7 @@ export function UseCaseView({
                 borderRadius: "var(--radius)",
               }}
             >
-              {t.view}
+              {t.product.viewProduct}
             </Link>
           </div>
         </Panel>
@@ -180,7 +173,7 @@ export function UseCaseView({
                 color: "var(--ink-2)",
               }}
             >
-              {t.others}
+              {t.useCase.otherApplications}
             </div>
             <div style={{ marginTop: "var(--space-3)", display: "flex", flexDirection: "column", gap: "var(--space-3)", fontSize: 15, lineHeight: 1.45 }}>
               {siblings.map((sibling) => (

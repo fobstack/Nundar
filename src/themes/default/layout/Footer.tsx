@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Locale } from "@/config/locales";
 import { LOCALES } from "@/config/locales";
 import type { SiteUrls } from "@/themes/contract";
+import type { StorefrontMessages } from "@/lib/storefront/i18n";
 
 const COPY: Record<Locale, { catalogue: string; ordering: string; company: string; language: string; blurb: string }> = {
   en: {
@@ -34,13 +35,6 @@ const COPY: Record<Locale, { catalogue: string; ordering: string; company: strin
   },
 };
 
-const LOCALE_LABEL: Record<Locale, string> = {
-  en: "English",
-  de: "Deutsch",
-  fr: "Français",
-  es: "Español",
-};
-
 const columnStyle = {
   display: "flex",
   flexDirection: "column" as const,
@@ -54,7 +48,15 @@ const headingStyle = {
   fontSize: "var(--text-xs)",
 };
 
-export function Footer({ locale, urls }: { locale: Locale; urls: SiteUrls }) {
+export function Footer({
+  locale,
+  t,
+  urls,
+}: {
+  locale: Locale;
+  t: StorefrontMessages;
+  urls: SiteUrls;
+}) {
   const copy = COPY[locale];
 
   return (
@@ -98,7 +100,7 @@ export function Footer({ locale, urls }: { locale: Locale; urls: SiteUrls }) {
             const href = urls.localeSwitch[option];
             return href ? (
               <Link key={option} href={href} hrefLang={option} style={{ color: "inherit" }}>
-                {LOCALE_LABEL[option]}
+                {t.language[option]}
               </Link>
             ) : null;
           })}

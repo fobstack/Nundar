@@ -2,26 +2,42 @@ import Link from "next/link";
 import type { Currency } from "@/config/currency";
 import type { Locale } from "@/config/locales";
 import type { SiteUrls } from "@/themes/contract";
+import type { StorefrontMessages } from "@/lib/storefront/i18n";
 import { CurrencyPicker } from "@/components/CurrencyPicker";
 import { LocalePicker } from "@/components/LocalePicker";
 
-const NAV_LABEL: Record<Locale, { products: string; applications: string }> = {
-  en: { products: "Products", applications: "Applications" },
-  de: { products: "Produkte", applications: "Anwendungen" },
-  fr: { products: "Produits", applications: "Applications" },
-  es: { products: "Productos", applications: "Aplicaciones" },
+/** The theme's own voice. Commerce vocabulary comes from `t`, never from here. */
+const COPY: Record<Locale, { applications: string; tagline: string }> = {
+  en: {
+    applications: "Applications",
+    tagline: "Manufacturer direct · Ships worldwide from stock",
+  },
+  de: {
+    applications: "Anwendungen",
+    tagline: "Direkt vom Hersteller · Weltweiter Versand ab Lager",
+  },
+  fr: {
+    applications: "Applications",
+    tagline: "Vente directe usine · Expédition mondiale depuis le stock",
+  },
+  es: {
+    applications: "Aplicaciones",
+    tagline: "Venta directa de fábrica · Envío mundial desde stock",
+  },
 };
 
 export function Header({
   locale,
   currency,
+  t,
   urls,
 }: {
   locale: Locale;
   currency: Currency;
+  t: StorefrontMessages;
   urls: SiteUrls;
 }) {
-  const label = NAV_LABEL[locale];
+  const copy = COPY[locale];
 
   return (
     <header>
@@ -39,7 +55,7 @@ export function Header({
             gap: "var(--space-4)",
           }}
         >
-          <span>Manufacturer direct · Ships worldwide from stock</span>
+          <span>{copy.tagline}</span>
           <div style={{ display: "flex", gap: "var(--space-4)", alignItems: "center" }}>
             <LocalePicker locale={locale} urls={urls.localeSwitch} />
             <span style={{ color: "#4e545c" }}>|</span>
@@ -82,9 +98,9 @@ export function Header({
             }}
           >
             <Link href={urls.products} style={{ color: "var(--ink)" }}>
-              {label.products}
+              {t.nav.products}
             </Link>
-            <span style={{ color: "var(--ink-3)" }}>{label.applications}</span>
+            <span style={{ color: "var(--ink-3)" }}>{copy.applications}</span>
           </nav>
 
           <Link

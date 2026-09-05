@@ -17,6 +17,7 @@ import {
 } from "@/lib/seo";
 import { breadcrumbJsonLd, buildUseCaseJsonLd } from "@/lib/seo/jsonld";
 import { buildSiteUrls } from "@/lib/site-urls";
+import { getStorefrontMessages } from "@/lib/storefront/i18n";
 import { getTheme } from "@/themes/registry";
 
 type PageParams = { locale: string; slug: string; useCaseSlug: string };
@@ -130,6 +131,7 @@ export default async function UseCasePage({
   const slugByLocale = await getUseCaseAlternates(db, slug, locale, useCaseSlug);
 
   const theme = getTheme();
+  const t = getStorefrontMessages(locale);
   const urls = {
     ...buildSiteUrls(locale, (target) => {
       const targetSlug = slugByLocale?.[target];
@@ -143,7 +145,7 @@ export default async function UseCasePage({
   };
 
   return (
-    <theme.Shell locale={locale} currency={currency} urls={urls}>
+    <theme.Shell locale={locale} currency={currency} t={t} urls={urls}>
       <JsonLd
         data={buildUseCaseJsonLd({
           headline: useCase.scenarioTitle,
@@ -157,7 +159,7 @@ export default async function UseCasePage({
       <JsonLd
         data={breadcrumbJsonLd([
           { name: SITE.name, url: absoluteUrl(localePath(locale)) },
-          { name: "Products", url: absoluteUrl(localePath(locale, "products")) },
+          { name: t.nav.products, url: absoluteUrl(localePath(locale, "products")) },
           { name: product.name, url: productUrl },
           { name: useCase.scenarioTitle, url: pageUrl },
         ])}
@@ -166,6 +168,7 @@ export default async function UseCasePage({
       <theme.UseCaseView
         locale={locale}
         currency={currency}
+        t={t}
         product={product}
         useCase={useCase}
         siblings={siblings}

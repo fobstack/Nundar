@@ -6,6 +6,7 @@ import { getDbAsync } from "@/db/client";
 import { listActiveProducts, listUseCasePages } from "@/lib/queries/products";
 import { buildAlternates, localePath } from "@/lib/seo";
 import { buildSiteUrls } from "@/lib/site-urls";
+import { getStorefrontMessages } from "@/lib/storefront/i18n";
 import { getTheme } from "@/themes/registry";
 
 // The home page in all four languages is generated at build time, so a crawler
@@ -62,16 +63,18 @@ export default async function HomePage({
     }));
 
   const theme = getTheme();
+  const t = getStorefrontMessages(locale);
   const urls = {
     ...buildSiteUrls(locale, (target) => localePath(target)),
     product: (slug: string) => localePath(locale, "products", slug),
   };
 
   return (
-    <theme.Shell locale={locale} currency={currency} urls={urls}>
+    <theme.Shell locale={locale} currency={currency} t={t} urls={urls}>
       <theme.HomeView
         locale={locale}
         currency={currency}
+        t={t}
         products={products}
         applications={applications}
         urls={urls}

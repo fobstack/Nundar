@@ -4,8 +4,14 @@
  * Another theme changes the entire site's appearance by redefining these same
  * variables — no component contains a literal colour. The values come from the
  * token artboard in the design files.
+ *
+ * **Everything here is scoped to `.theme-default`, and nothing may be declared
+ * on `:root`.** The registry imports every registered theme statically, so all
+ * of their stylesheets end up in the same bundle regardless of which one THEME
+ * selects. Tokens on `:root` would collide across themes and the last
+ * stylesheet loaded would win, silently, whatever THEME said.
  */
-:root {
+.theme-default {
   /* Color */
   --bg: #fbfbfc;
   --surface: #ffffff;
@@ -56,7 +62,7 @@
   --measure-lead: 60ch;
 }
 
-.theme-root {
+.theme-default {
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font-sans);
@@ -66,23 +72,23 @@
   flex-direction: column;
 }
 
-.theme-root a {
+.theme-default a {
   color: var(--accent);
   text-decoration: none;
 }
 
-.theme-root a:hover {
+.theme-default a:hover {
   color: var(--accent-ink);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
-.theme-root .mono {
+.theme-default .mono {
   font-family: var(--font-mono);
 }
 
 /* Content area: every page shares one horizontal rhythm */
-.theme-root .shell {
+.theme-default .shell {
   max-width: var(--shell-max);
   margin: 0 auto;
   padding-left: var(--shell-pad);
@@ -91,18 +97,18 @@
 }
 
 /* Markdown body, shared by product descriptions and use-case copy */
-.theme-root .prose {
+.theme-default .prose {
   font-size: var(--text-body);
   line-height: 1.75;
   color: #2b2f36;
   max-width: var(--measure);
 }
 
-.theme-root .prose > * + * {
+.theme-default .prose > * + * {
   margin-top: 1em;
 }
 
-.theme-root .prose h2 {
+.theme-default .prose h2 {
   font-size: var(--text-h2);
   font-weight: 600;
   letter-spacing: -0.015em;
@@ -110,48 +116,48 @@
   margin-bottom: 0;
 }
 
-.theme-root .prose h3 {
+.theme-default .prose h3 {
   font-size: var(--text-h3);
   font-weight: 600;
   margin-top: 1.6em;
   margin-bottom: 0;
 }
 
-.theme-root .prose ul,
-.theme-root .prose ol {
+.theme-default .prose ul,
+.theme-default .prose ol {
   padding-left: 22px;
 }
 
-.theme-root .prose li + li {
+.theme-default .prose li + li {
   margin-top: 0.5em;
 }
 
-.theme-root .prose blockquote {
+.theme-default .prose blockquote {
   margin: 1.6em 0;
   padding: 20px 24px;
   border-left: 3px solid var(--accent);
   background: var(--surface);
 }
 
-.theme-root .prose table {
+.theme-default .prose table {
   border-collapse: collapse;
   width: 100%;
   font-size: var(--text-sm);
 }
 
-.theme-root .prose th,
-.theme-root .prose td {
+.theme-default .prose th,
+.theme-default .prose td {
   border-bottom: 1px solid var(--line);
   padding: 10px 12px;
   text-align: left;
 }
 
-.theme-root .prose th {
+.theme-default .prose th {
   color: var(--ink-3);
   font-weight: 600;
 }
 
-.theme-root .prose code {
+.theme-default .prose code {
   font-family: var(--font-mono);
   font-size: 0.92em;
   background: var(--surface-sunken);
@@ -159,7 +165,7 @@
 }
 
 @media (max-width: 900px) {
-  :root {
+  .theme-default {
     --text-display: 36px;
     --text-h1: 26px;
     --text-h2: 21px;

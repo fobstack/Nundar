@@ -1,5 +1,6 @@
 import type { Theme } from "./contract";
 import { defaultTheme } from "./default";
+import { editorialTheme } from "./editorial";
 import { resolveThemeName } from "./resolve";
 
 /**
@@ -19,6 +20,7 @@ import { resolveThemeName } from "./resolve";
  */
 const THEMES: Record<string, Theme> = {
   default: defaultTheme,
+  editorial: editorialTheme,
 };
 
 export const DEFAULT_THEME_NAME = "default";

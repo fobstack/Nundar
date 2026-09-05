@@ -1,0 +1,196 @@
+/*
+ * Design tokens for the editorial theme.
+ *
+ * Deliberately the inverse of the default theme on every axis: a serif display
+ * face instead of a grotesque, warm paper instead of cool white, soft shadows
+ * instead of hairline borders, and generous radii instead of near-square
+ * corners. If a component only reads tokens, swapping these two themes changes
+ * everything visible and nothing structural — which is the property the theme
+ * contract exists to guarantee.
+ *
+ * **Everything here is scoped to `.theme-editorial`, and nothing may be
+ * declared on `:root`.** The registry imports every registered theme
+ * statically, so all of their stylesheets end up in the same bundle regardless
+ * of which one THEME selects. Tokens on the document root would collide across
+ * themes and the last stylesheet loaded would win, silently, whatever THEME
+ * said.
+ */
+.theme-editorial {
+  /* Color — warm paper, ink, a single rust accent */
+  --bg: #fdfaf5;
+  --surface: #ffffff;
+  --surface-sunken: #f6f0e7;
+  --line: #e8ded0;
+  --line-strong: #d3c4ae;
+  --ink: #241d16;
+  --ink-2: #574a3d;
+  --ink-3: #8b7c6b;
+  --ink-inverse: #fdfaf5;
+  --accent: #a03c1e;
+  --accent-ink: #7d2d14;
+  --accent-soft: #f8ebe4;
+  --ok: #3d6b2e;
+  --warn: #8a5a00;
+  --danger: #a3271a;
+
+  /* Type — a serif for reading, a grotesque for data */
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia,
+    "Times New Roman", serif;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --text-display: 64px;
+  --text-h1: 40px;
+  --text-h2: 29px;
+  --text-h3: 22px;
+  --text-lg: 19px;
+  --text-body: 17px;
+  --text-sm: 15px;
+  --text-xs: 13px;
+  --text-eyebrow: 12px;
+
+  /* Space — 4px base, but roomier than default at the large end */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 36px;
+  --space-12: 56px;
+  --space-16: 80px;
+  --space-24: 120px;
+
+  /* Geometry — soft corners and shadows, the opposite of default's hairlines */
+  --radius: 14px;
+  --radius-sm: 8px;
+  --shadow: 0 1px 2px rgba(36, 29, 22, 0.05), 0 8px 24px rgba(36, 29, 22, 0.07);
+  --shadow-lift: 0 2px 4px rgba(36, 29, 22, 0.06), 0 16px 40px rgba(36, 29, 22, 0.1);
+  --shell-max: 1120px;
+  --shell-pad: 32px;
+  --measure: 64ch;
+  --measure-lead: 54ch;
+}
+
+.theme-editorial {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: 1.65;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  -webkit-font-smoothing: antialiased;
+}
+
+.theme-editorial a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.theme-editorial a:hover {
+  color: var(--accent);
+}
+
+.theme-editorial .serif {
+  font-family: var(--font-serif);
+}
+
+.theme-editorial .mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.theme-editorial .shell {
+  max-width: var(--shell-max);
+  margin: 0 auto;
+  padding-left: var(--shell-pad);
+  padding-right: var(--shell-pad);
+  width: 100%;
+}
+
+/* Long-form body copy. The use-case landing page is the reason this theme
+   exists, so its reading measure is the tightest constraint here. */
+.theme-editorial .prose {
+  font-family: var(--font-serif);
+  font-size: 19px;
+  line-height: 1.75;
+  max-width: var(--measure);
+  color: var(--ink-2);
+}
+
+.theme-editorial .prose > * + * {
+  margin-top: 1.1em;
+}
+
+.theme-editorial .prose h2 {
+  font-family: var(--font-serif);
+  font-size: var(--text-h2);
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--ink);
+  margin-top: 1.8em;
+}
+
+.theme-editorial .prose h3 {
+  font-family: var(--font-serif);
+  font-size: var(--text-h3);
+  font-weight: 600;
+  color: var(--ink);
+  margin-top: 1.5em;
+}
+
+.theme-editorial .prose ul,
+.theme-editorial .prose ol {
+  padding-left: 1.3em;
+}
+
+.theme-editorial .prose li + li {
+  margin-top: 0.4em;
+}
+
+.theme-editorial .prose blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: var(--space-6);
+  font-style: italic;
+  color: var(--ink-2);
+}
+
+.theme-editorial .prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+}
+
+.theme-editorial .prose th,
+.theme-editorial .prose td {
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.theme-editorial .prose th {
+  color: var(--ink-3);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: var(--text-xs);
+}
+
+.theme-editorial .prose code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--surface-sunken);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+@media (max-width: 900px) {
+  .theme-editorial {
+    --text-display: 40px;
+    --text-h1: 30px;
+    --text-h2: 24px;
+    --shell-pad: 20px;
+  }
+}

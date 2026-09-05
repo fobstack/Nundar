@@ -9,6 +9,10 @@ declare global {
     // types`; this merges in the test-only bindings
     interface Env {
       TEST_MIGRATIONS: D1Migration[];
+      /** Each theme's tokens.css, keyed by theme directory name */
+      THEME_STYLESHEETS: Record<string, string>;
+      /** Each theme's layout/Shell.tsx source, keyed by theme directory name */
+      THEME_SHELLS: Record<string, string>;
     }
   }
 }

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { isLocale } from "@/config/locales";
 import { localePath } from "@/lib/seo";
 import { buildSiteUrls } from "@/lib/site-urls";
+import { getStorefrontMessages } from "@/lib/storefront/i18n";
 import { getTheme } from "@/themes/registry";
 import { defaultCurrencyForLocale } from "@/config/locales";
 
@@ -22,6 +23,7 @@ export default async function OrderPage({
   }
 
   const theme = getTheme();
+  const t = getStorefrontMessages(locale);
   // The order number belongs to this order alone, so switching language stays on it
   const urls = buildSiteUrls(locale, (target) =>
     localePath(target, "orders", orderNo),
@@ -31,9 +33,10 @@ export default async function OrderPage({
     <theme.Shell
       locale={locale}
       currency={defaultCurrencyForLocale(locale)}
+      t={t}
       urls={urls}
     >
-      <theme.OrderView locale={locale} orderNo={orderNo} urls={urls} />
+      <theme.OrderView locale={locale} t={t} orderNo={orderNo} urls={urls} />
     </theme.Shell>
   );
 }

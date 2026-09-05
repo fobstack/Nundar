@@ -8,6 +8,7 @@ import {
 } from "@/lib/currency-preference";
 import { localePath } from "@/lib/seo";
 import { buildSiteUrls } from "@/lib/site-urls";
+import { getStorefrontMessages } from "@/lib/storefront/i18n";
 import { getTheme } from "@/themes/registry";
 
 export const metadata: Metadata = {
@@ -36,11 +37,12 @@ export default async function CheckoutPage({
   );
 
   const theme = getTheme();
+  const t = getStorefrontMessages(locale);
   const urls = buildSiteUrls(locale, (target) => localePath(target, "checkout"));
 
   return (
-    <theme.Shell locale={locale} currency={currency} urls={urls}>
-      <theme.CheckoutView locale={locale} currency={currency} urls={urls} />
+    <theme.Shell locale={locale} currency={currency} t={t} urls={urls}>
+      <theme.CheckoutView locale={locale} currency={currency} t={t} urls={urls} />
     </theme.Shell>
   );
 }

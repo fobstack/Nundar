@@ -80,21 +80,26 @@ Everything runs on Workers: D1 for data, R2 for images, KV for sessions and cart
 
 ## Theming
 
-The storefront ships a theme system modelled on how Astro handles themes. Routes fetch data and emit SEO metadata; themes decide only what things look like:
+The storefront ships a theme system modelled on how Astro handles themes. Routes fetch data, emit SEO metadata and supply interface strings; themes decide only what things look like:
 
 ```
 src/themes/
 ├── contract.ts        what every view receives — TypeScript enforces completeness
 ├── registry.ts        theme selection, via the THEME environment variable
-└── default/
-    ├── tokens.css     colour, type, spacing — redefine these and the whole site changes
-    ├── layout/        shell, header, footer
-    └── views/         one component per page type
+├── default/           technical: hairline borders, sharp corners, catalogue-first
+│   ├── tokens.css     colour, type, spacing — redefine these and the whole site changes
+│   ├── layout/        shell, header, footer
+│   └── views/         one component per page type
+└── editorial/         serif, warm paper, soft shadows, application-notes-first
 ```
+
+Two themes ship, and they are deliberately opposites — serif against grotesque, shadows against hairlines, a home page that leads with application notes against one that leads with the catalogue. The second exists to keep the contract honest: a contract with one implementation is only a guess.
 
 **SEO logic never lives in a theme.** `hreflang`, canonicals and structured data stay in the route layer, so a broken theme can make the site ugly but cannot damage its indexing.
 
-To build your own: copy `src/themes/default`, register it, set `THEME=yourtheme`, rebuild.
+**Interface strings never live in a theme either.** Breadcrumbs and commerce vocabulary come from a shared catalogue, so a theme author who speaks no German can still ship a German-correct storefront. A theme owns its voice — hero copy, section headings — and nothing else. The rule: if getting it wrong is a bug, it is shared; if getting it different is a design choice, it belongs to the theme.
+
+To build your own: copy a theme directory, rename its scope class in `tokens.css` and `layout/Shell.tsx` to match the new name, register it, set `THEME=yourtheme`, rebuild.
 
 ## Quick start
 

@@ -3,16 +3,7 @@ import { formatMoney } from "@/lib/money";
 import type { ProductListViewProps } from "@/themes/contract";
 import { ProductPlaceholder } from "../components/primitives";
 
-const LABEL = {
-  en: { title: "Products", from: "from · per unit", request: "Price on request", empty: "No products yet." },
-  de: { title: "Produkte", from: "ab · pro Stück", request: "Preis auf Anfrage", empty: "Noch keine Produkte." },
-  fr: { title: "Produits", from: "à partir de · à l'unité", request: "Prix sur demande", empty: "Aucun produit." },
-  es: { title: "Productos", from: "desde · por unidad", request: "Precio a consultar", empty: "Aún no hay productos." },
-} as const;
-
-export function ProductListView({ locale, products, urls }: ProductListViewProps) {
-  const t = LABEL[locale];
-
+export function ProductListView({ locale, products, t, urls }: ProductListViewProps) {
   return (
     <div className="shell" style={{ paddingTop: "var(--space-12)" }}>
       <h1
@@ -23,11 +14,11 @@ export function ProductListView({ locale, products, urls }: ProductListViewProps
           letterSpacing: "-0.02em",
         }}
       >
-        {t.title}
+        {t.nav.products}
       </h1>
 
       {products.length === 0 ? (
-        <p style={{ marginTop: "var(--space-6)", color: "var(--ink-3)" }}>{t.empty}</p>
+        <p style={{ marginTop: "var(--space-6)", color: "var(--ink-3)" }}>{t.list.empty}</p>
       ) : (
         <div style={{ marginTop: "var(--space-8)", display: "flex", flexDirection: "column" }}>
           {/* Rows, not cards: engineering buyers compare specifications across
@@ -81,11 +72,11 @@ export function ProductListView({ locale, products, urls }: ProductListViewProps
                 <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.01em" }}>
                   {product.fromPriceMinor !== null && product.priceCurrency
                     ? formatMoney(product.fromPriceMinor, product.priceCurrency, locale)
-                    : t.request}
+                    : t.product.priceOnRequest}
                 </div>
                 {product.fromPriceMinor !== null ? (
                   <div style={{ fontSize: "var(--text-eyebrow)", color: "var(--ink-3)", marginTop: 2 }}>
-                    {t.from}
+                    {`${t.product.from} · ${t.product.perUnit}`}
                   </div>
                 ) : null}
               </div>

@@ -8,6 +8,7 @@ import { getProductDetail, listProductSlugs } from "@/lib/queries/products";
 import { absoluteUrl, buildAlternates, localePath } from "@/lib/seo";
 import { breadcrumbJsonLd, productJsonLd } from "@/lib/seo/jsonld";
 import { buildSiteUrls } from "@/lib/site-urls";
+import { getStorefrontMessages } from "@/lib/storefront/i18n";
 import { getTheme } from "@/themes/registry";
 
 type PageParams = { locale: string; slug: string };
@@ -75,6 +76,7 @@ export default async function ProductPage({
 
   const productUrl = absoluteUrl(localePath(locale, "products", slug));
   const theme = getTheme();
+  const t = getStorefrontMessages(locale);
 
   // The slug is language-independent, so switching language stays on this product
   const urls = {
@@ -84,7 +86,7 @@ export default async function ProductPage({
   };
 
   return (
-    <theme.Shell locale={locale} currency={currency} urls={urls}>
+    <theme.Shell locale={locale} currency={currency} t={t} urls={urls}>
       {/* Structured data stays in the route layer: swapping themes must never
           affect SEO */}
       <JsonLd
@@ -98,7 +100,7 @@ export default async function ProductPage({
       <JsonLd
         data={breadcrumbJsonLd([
           { name: SITE.name, url: absoluteUrl(localePath(locale)) },
-          { name: "Products", url: absoluteUrl(localePath(locale, "products")) },
+          { name: t.nav.products, url: absoluteUrl(localePath(locale, "products")) },
           { name: product.name, url: productUrl },
         ])}
       />
@@ -106,6 +108,7 @@ export default async function ProductPage({
       <theme.ProductDetailView
         locale={locale}
         currency={currency}
+        t={t}
         product={product}
         urls={urls}
       />

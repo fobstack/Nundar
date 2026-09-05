@@ -21,6 +21,9 @@
 # MAIL_FROM_ADDRESS=
 
 # Theme, resolved at build time. Leave empty for the default.
-# Copy src/themes/default under a new name, register it in
+# Ships with two: "default" (technical, hairline borders, catalogue-first) and
+# "editorial" (serif, warm paper, soft shadows, application-notes-first).
+# To add your own: copy a theme directory under a new name, rename its scope
+# class in tokens.css and layout/Shell.tsx to match, register it in
 # src/themes/registry.ts, then put that name here.
 THEME=

@@ -13,8 +13,6 @@ const COPY = {
     all: "All products",
     applications: "Application notes",
     applicationsAside: "Written by the engineers who build the parts",
-    from: "from",
-    request: "Price on request",
   },
   de: {
     eyebrow: "Direkt vom Hersteller",
@@ -25,8 +23,6 @@ const COPY = {
     all: "Alle Produkte",
     applications: "Anwendungsnotizen",
     applicationsAside: "Geschrieben von den Ingenieuren, die die Teile bauen",
-    from: "ab",
-    request: "Preis auf Anfrage",
   },
   fr: {
     eyebrow: "Vente directe usine",
@@ -37,8 +33,6 @@ const COPY = {
     all: "Tous les produits",
     applications: "Notes d'application",
     applicationsAside: "Rédigées par les ingénieurs qui fabriquent les pièces",
-    from: "à partir de",
-    request: "Prix sur demande",
   },
   es: {
     eyebrow: "Venta directa de fábrica",
@@ -49,13 +43,11 @@ const COPY = {
     all: "Todos los productos",
     applications: "Notas de aplicación",
     applicationsAside: "Escritas por los ingenieros que fabrican las piezas",
-    from: "desde",
-    request: "Precio a consultar",
   },
 } as const;
 
-export function HomeView({ locale, products, applications, urls }: HomeViewProps) {
-  const t = COPY[locale];
+export function HomeView({ locale, products, applications, t, urls }: HomeViewProps) {
+  const copy = COPY[locale];
 
   return (
     <>
@@ -74,7 +66,7 @@ export function HomeView({ locale, products, applications, urls }: HomeViewProps
           }}
         >
           <div style={{ gridColumn: "span 7" }}>
-            <Eyebrow>{t.eyebrow}</Eyebrow>
+            <Eyebrow>{copy.eyebrow}</Eyebrow>
             <h1
               style={{
                 margin: "var(--space-4) 0 0",
@@ -86,7 +78,7 @@ export function HomeView({ locale, products, applications, urls }: HomeViewProps
                 textWrap: "pretty",
               }}
             >
-              {t.headline}
+              {copy.headline}
             </h1>
             <p
               style={{
@@ -97,10 +89,10 @@ export function HomeView({ locale, products, applications, urls }: HomeViewProps
                 maxWidth: "48ch",
               }}
             >
-              {t.lead}
+              {copy.lead}
             </p>
             <div style={{ marginTop: "var(--space-8)", display: "flex", gap: "var(--space-3)" }}>
-              <ButtonLink href={urls.products}>{t.browse}</ButtonLink>
+              <ButtonLink href={urls.products}>{copy.browse}</ButtonLink>
             </div>
           </div>
 
@@ -115,7 +107,7 @@ export function HomeView({ locale, products, applications, urls }: HomeViewProps
                   color: "var(--ink-2)",
                 }}
               >
-                {t.catalogue}
+                {copy.catalogue}
               </div>
               <ul
                 style={{
@@ -134,8 +126,8 @@ export function HomeView({ locale, products, applications, urls }: HomeViewProps
                     </Link>
                     <span className="mono" style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)", flexShrink: 0 }}>
                       {product.fromPriceMinor !== null && product.priceCurrency
-                        ? `${t.from} ${formatMoney(product.fromPriceMinor, product.priceCurrency, locale)}`
-                        : t.request}
+                        ? `${t.product.from} ${formatMoney(product.fromPriceMinor, product.priceCurrency, locale)}`
+                        : t.product.priceOnRequest}
                     </span>
                   </li>
                 ))}
@@ -147,7 +139,7 @@ export function HomeView({ locale, products, applications, urls }: HomeViewProps
 
       {applications.length > 0 ? (
         <div className="shell" style={{ marginTop: "var(--space-16)" }}>
-          <SectionHead title={t.applications} aside={t.applicationsAside} bordered={false} />
+          <SectionHead title={copy.applications} aside={copy.applicationsAside} bordered={false} />
           <div
             style={{
               marginTop: "var(--space-6)",
@@ -177,7 +169,7 @@ export function HomeView({ locale, products, applications, urls }: HomeViewProps
       ) : null}
 
       <div className="shell" style={{ marginTop: "var(--space-16)" }}>
-        <SectionHead title={t.catalogue} aside={<Link href={urls.products}>{t.all} →</Link>} />
+        <SectionHead title={copy.catalogue} aside={<Link href={urls.products}>{copy.all} →</Link>} />
       </div>
     </>
   );
