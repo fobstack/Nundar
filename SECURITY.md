@@ -57,6 +57,44 @@ These are deliberate and should not be "simplified" away:
 - **Logs never contain PII.** Order failures log an order id, never an email or
   address.
 
+- **Every public API is rate-limited** by the Cloudflare-set `cf-connecting-ip`
+  (never `x-forwarded-for`, which any client can forge). Checkout is the
+  tightest at 10 per 10 minutes because each call creates an order row and a
+  Stripe session — unlimited, it is a way to inflate the database, exhaust the
+  Stripe quota and generate real charges.
+- **Security headers are set on every response**: `X-Frame-Options: DENY` (a
+  storefront has no reason to be framed, and an overlay that looks like the real
+  Add-to-cart button is exactly how clickjacking works), `nosniff`,
+  `strict-origin-when-cross-origin` referrer policy (order numbers live in URLs
+  and must not leak to third parties), a restrictive `Permissions-Policy`, HSTS,
+  and a CSP whose `script-src` excludes `unsafe-inline`.
+- **Admin passwords are never accepted as command-line arguments.**
+  `pnpm admin:create` reads from stdin and refuses a positional password:
+  arguments are visible in `ps` output to every user on the machine and are
+  written to shell history.
+
+## Known residual risks
+
+Stated plainly rather than left for an auditor to find:
+
+- **Order numbers are enumerable in principle.** The format is
+  `SC-YYMMDD-XXXXXX` with six hex characters. `/api/orders/status` returns only
+  the order number and status — no addresses, amounts or emails — and is rate
+  limited, but a determined attacker could learn that a given order exists. The
+  alternative, requiring login to see order status, would break guest checkout,
+  which is the majority of cross-border trade orders.
+- **`style-src` allows `unsafe-inline`.** The theme system uses inline styles
+  deliberately so themes can be restyled without touching stylesheets. This
+  weakens CSS-injection defence but not script injection.
+- **Currency preference on static pages is applied client-side**, so the first
+  paint shows the locale default. This is a correctness-visible trade of static
+  generation, not a security issue, but it is worth knowing when reading the
+  price-rendering code.
+- **The exchange-rate feed is a third-party dependency.** If ECB serves wrong
+  data, prices recompute from it. The 2% drift threshold and the buffer limit
+  the blast radius, and a fetch failure keeps the previous snapshot, but no
+  sanity band on the rate itself is enforced yet.
+
 ## Dependency posture
 
 Runtime dependencies are deliberately minimal — Next.js, React, Drizzle and Zod.

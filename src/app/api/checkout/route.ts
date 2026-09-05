@@ -9,6 +9,12 @@ import { readCart } from "@/lib/cart/cart";
 import { priceCart } from "@/lib/cart/pricing";
 import { createPendingOrder } from "@/lib/orders/orders";
 import { SITE } from "@/config/site";
+import {
+  checkRateLimit,
+  clientIdentifier,
+  RATE_LIMITS,
+  rateLimitedResponse,
+} from "@/lib/security/rate-limit";
 import { createCheckoutSession } from "@/lib/stripe/client";
 
 const addressSchema = z.object({
@@ -36,6 +42,19 @@ const bodySchema = z.object({
  * 金额全部由 priceCart 依据数据库当前数据重算——请求体里没有、也不接受任何金额。
  */
 export async function POST(request: Request) {
+  const { env } = getCloudflareContext();
+
+  // 结账是成本最高的公开接口：每次都会建单并向 Stripe 创建会话。
+  // 不限流时可被用来撑爆 D1、耗尽 Stripe 配额并产生真实账单。
+  const limit = await checkRateLimit(
+    env.SESSIONS,
+    `checkout:${clientIdentifier(request)}`,
+    RATE_LIMITS.checkout,
+  );
+  if (!limit.allowed) {
+    return rateLimitedResponse(limit);
+  }
+
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return Response.json(
@@ -44,7 +63,6 @@ export async function POST(request: Request) {
     );
   }
 
-  const { env } = getCloudflareContext();
   const secretKey = (env as unknown as { STRIPE_SECRET_KEY?: string })
     .STRIPE_SECRET_KEY;
 

@@ -1,6 +1,13 @@
 import { eq } from "drizzle-orm";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { getDb } from "@/db/client";
 import * as schema from "@/db/schema";
+import {
+  checkRateLimit,
+  clientIdentifier,
+  RATE_LIMITS,
+  rateLimitedResponse,
+} from "@/lib/security/rate-limit";
 
 /**
  * 查订单状态，供支付成功页轮询。
@@ -11,6 +18,17 @@ import * as schema from "@/db/schema";
  * 只返回单号与状态，不返回金额、地址等信息：单号可能被猜到或分享。
  */
 export async function GET(request: Request) {
+  // 单号是可枚举的（日期 + 6 位十六进制），限流把批量探测的成本抬起来
+  const { env } = getCloudflareContext();
+  const limit = await checkRateLimit(
+    env.SESSIONS,
+    `order-status:${clientIdentifier(request)}`,
+    RATE_LIMITS.orderStatus,
+  );
+  if (!limit.allowed) {
+    return rateLimitedResponse(limit);
+  }
+
   const orderNo = new URL(request.url).searchParams.get("orderNo") ?? "";
 
   if (!orderNo) {

@@ -13,6 +13,12 @@ import {
 } from "@/lib/cart/cart";
 import { CART_COOKIE, CART_COOKIE_MAX_AGE } from "@/lib/cart/cookie";
 import { priceCart } from "@/lib/cart/pricing";
+import {
+  checkRateLimit,
+  clientIdentifier,
+  RATE_LIMITS,
+  rateLimitedResponse,
+} from "@/lib/security/rate-limit";
 
 const mutationSchema = z.object({
   action: z.enum(["add", "set", "remove"]),
@@ -65,6 +71,17 @@ export async function GET(request: Request) {
 
 /** 改购物车。只接受 variantId 与数量，价格永远由服务端算 */
 export async function POST(request: Request) {
+  const { env } = getCloudflareContext();
+
+  const limit = await checkRateLimit(
+    env.SESSIONS,
+    `cart:${clientIdentifier(request)}`,
+    RATE_LIMITS.cart,
+  );
+  if (!limit.allowed) {
+    return rateLimitedResponse(limit);
+  }
+
   const parsed = mutationSchema.safeParse(
     await request.json().catch(() => null),
   );
@@ -91,7 +108,6 @@ export async function POST(request: Request) {
     });
   }
 
-  const { env } = getCloudflareContext();
   const { action, variantId, quantity } = parsed.data;
 
   try {
