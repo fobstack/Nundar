@@ -1,30 +1,36 @@
 import type { NextConfig } from "next";
 
 /**
- * 安全响应头。
+ * Security response headers.
  *
- * Next.js 默认不加这些头，但商城站每一条都对应一个真实攻击面：
- * 被 iframe 嵌套可做点击劫持（诱导点到真实的加购/结账按钮），
- * MIME 嗅探可把上传的文件当脚本执行，Referrer 外泄会把订单号带给第三方。
+ * Next.js sets none of these by default, and on a storefront each one closes a
+ * real attack surface: being framed enables clickjacking (an overlay that
+ * tricks a visitor into hitting the genuine add-to-cart or checkout button),
+ * MIME sniffing can get an uploaded file executed as a script, and a leaked
+ * referrer hands order numbers to third parties.
  */
 const SECURITY_HEADERS = [
-  // 禁止被任何站点嵌套。商城没有任何需要被 iframe 引用的场景，
-  // 而"看起来像自己站点"的覆盖层正是点击劫持的做法。
+  // Refuse framing by anyone. A storefront has no legitimate reason to be
+  // embedded, and an overlay that "looks like the real site" is precisely how
+  // clickjacking works.
   { key: "X-Frame-Options", value: "DENY" },
 
-  // 关闭 MIME 嗅探：浏览器一律按声明的 Content-Type 处理
+  // No MIME sniffing: the browser must honour the declared Content-Type
   { key: "X-Content-Type-Options", value: "nosniff" },
 
-  // 跨源只发送来源，不带路径——订单号在 URL 里，不该泄漏给第三方
+  // Cross-origin, send the origin only and never the path — order numbers live
+  // in URLs and must not reach third parties
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
 
-  // 本站不需要这些能力，显式关掉可减少被注入脚本利用的空间
+  // The site needs none of these capabilities; denying them explicitly narrows
+  // what an injected script could reach for
   {
     key: "Permissions-Policy",
     value: "camera=(), microphone=(), geolocation=(), payment=()",
   },
 
-  // 一年 HSTS 并包含子域。上线前确认所有子域都能走 HTTPS 再启用 preload。
+  // One year of HSTS, subdomains included. Confirm every subdomain serves
+  // HTTPS before adding preload.
   {
     key: "Strict-Transport-Security",
     value: "max-age=31536000; includeSubDomains",
@@ -32,14 +38,16 @@ const SECURITY_HEADERS = [
 ];
 
 /**
- * CSP。
+ * Content Security Policy.
  *
- * 'unsafe-inline' 出现在 style-src 是因为主题大量使用内联 style——那是刻意的
- * 设计（属性面板可编辑、换主题只改 token）。script-src 不给 'unsafe-inline'，
- * 脚本注入这条主要路径仍然被堵死。
+ * 'unsafe-inline' appears in style-src because themes lean on inline styles,
+ * which is a deliberate design choice: a theme is swapped by redefining tokens
+ * rather than by shipping a stylesheet pipeline. script-src grants no
+ * 'unsafe-inline', so the main script-injection path stays closed.
  *
- * connect-src 放行 Stripe 与 ECB：前者是结账跳转前的校验请求，后者是汇率源。
- * frame-src 放行 Stripe：托管结账页可能以 3DS 弹窗形式出现。
+ * connect-src allows Stripe and the ECB: the first for the validation call made
+ * before redirecting to checkout, the second as the exchange-rate source.
+ * frame-src allows Stripe because hosted checkout may raise a 3DS dialog.
  */
 const CSP = [
   "default-src 'self'",
@@ -56,14 +64,16 @@ const CSP = [
 ].join("; ");
 
 /**
- * 改这个文件时注意：`experimental` 与 `headers()` 都是必需的，不要因为只关心
- * 其中一半就整体重写——曾经加安全响应头时覆盖掉 experimental，导致构建期
- * D1 并发崩溃回归。
+ * When editing this file: `experimental` and `headers()` are both required.
+ * Do not rewrite the file wholesale because you only care about one of them —
+ * adding the security headers once overwrote `experimental` and brought back a
+ * D1 concurrency crash at build time.
  */
 const nextConfig: NextConfig = {
   experimental: {
-    // 构建期 generateStaticParams 要读本地 D1；多个构建 worker 并发连同一个
-    // miniflare SQLite 会触发 D1 internal error，故限制为单 worker 串行构建
+    // generateStaticParams reads the local D1 during the build. Several build
+    // workers hitting the same miniflare SQLite file concurrently trigger a D1
+    // internal error, so the build is pinned to a single serial worker.
     cpus: 1,
     workerThreads: false,
   },
@@ -83,6 +93,7 @@ const nextConfig: NextConfig = {
 
 export default nextConfig;
 
-// 让 next dev 也能拿到 D1 / R2 / KV 绑定，否则本地开发取不到 Cloudflare 上下文
+// Give `next dev` the D1 / R2 / KV bindings too; without this the local server
+// has no Cloudflare context at all
 import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 initOpenNextCloudflareForDev();

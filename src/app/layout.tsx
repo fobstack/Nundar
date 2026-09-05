@@ -17,8 +17,8 @@ export const metadata: Metadata = {
   description: "Open-source commerce engine for Cloudflare",
 };
 
-// 显式声明 props，而非依赖 Next 构建期生成的全局 LayoutProps，
-// 这样未构建时 tsc --noEmit 也能通过
+// Props are declared explicitly rather than relying on the global LayoutProps
+// Next generates during a build, so `tsc --noEmit` passes without one
 export default function RootLayout({
   children,
 }: {

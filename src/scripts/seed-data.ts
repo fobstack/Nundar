@@ -11,7 +11,7 @@ type TranslationSeed = {
 type FeatureSeed = { groupKey: string; title: string; body: string };
 
 type UseCaseSeed = {
-  /** 跨语言标识：同一条内容的各语言版本必须使用同一个 groupKey */
+  /** Cross-language key: every language version of one entry shares a groupKey */
   groupKey: string;
   scenarioTitle: string;
   scenarioSlug: string;
@@ -38,8 +38,9 @@ export type ProductSeed = {
 };
 
 /**
- * 示例商品取工业阀门：它天然带 MOQ、交货周期与多种使用工况，
- * 能完整演示这套系统面向长尾词的内容结构。
+ * The sample product is an industrial valve: it naturally carries an MOQ, a lead
+ * time and several distinct use cases, so it exercises the whole long-tail
+ * content structure this system is built around.
  */
 export const SEED_PRODUCTS: ProductSeed[] = [
   {

@@ -19,7 +19,8 @@ const createSchema = z.object({
 const targetSchema = z.object({ targetId: z.string().min(1) });
 
 export async function createAdminAction(formData: FormData) {
-  // 账号管理是 owner 专属：staff 能造账号就等于 staff 能自我提权
+  // Account management is owner-only: if staff can create accounts, staff can
+  // promote themselves
   const session = await requireOwner();
 
   const input = createSchema.parse({

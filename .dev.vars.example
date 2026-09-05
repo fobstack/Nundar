@@ -1,23 +1,26 @@
-# 本地开发用的环境变量模板。复制为 .dev.vars 后填写真实值（.dev.vars 已被 gitignore）。
+# Template for local environment variables. Copy to .dev.vars and fill in real
+# values — .dev.vars is gitignored.
 #
 #   cp .dev.vars.example .dev.vars
 #
-# 阶段 1（当前）：本地开发与测试不需要任何密钥——D1 / R2 / KV 都由 miniflare 在本地模拟，
-# 迁移经 wrangler 应用，drizzle-kit 只生成 SQL 不连远端。
+# Local development and tests need no secrets at all: D1, R2 and KV are
+# simulated by miniflare, migrations are applied through wrangler, and
+# drizzle-kit only generates SQL without connecting to anything.
 #
-# 以下变量在后续阶段启用，届时取消注释并填值：
+# The variables below are needed once you deploy. Uncomment and fill them in:
 
-# 阶段 4 · Stripe 支付
+# Stripe payments
 # STRIPE_SECRET_KEY=
 # STRIPE_WEBHOOK_SECRET=
 # NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
 
-# 阶段 3 · 后台会话签名密钥（用 openssl rand -base64 32 生成）
+# Admin session signing key (generate with: openssl rand -base64 32)
 # SESSION_SECRET=
 
-# 阶段 5 · 事务邮件发件地址
+# From address for transactional email
 # MAIL_FROM_ADDRESS=
 
-# 主题（构建时生效）。留空用 default。
-# 复制 src/themes/default 改名后在 src/themes/registry.ts 注册，再把名字填这里。
+# Theme, resolved at build time. Leave empty for the default.
+# Copy src/themes/default under a new name, register it in
+# src/themes/registry.ts, then put that name here.
 THEME=

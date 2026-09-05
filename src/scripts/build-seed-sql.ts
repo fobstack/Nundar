@@ -3,8 +3,9 @@ import { toMinor } from "@/lib/money";
 import { SEED_PRODUCTS } from "./seed-data";
 
 /**
- * SQL 字符串字面量转义：单引号翻倍，null 转 NULL。
- * 种子文案里含撇号（如法语 d'actionneur），转义写错会生成语法错误的 SQL。
+ * Escape a SQL string literal: double the single quotes, map null to NULL.
+ * The seed copy contains apostrophes (French d'actionneur, for one), and getting
+ * this wrong emits SQL that will not parse.
  */
 export function sqlString(value: string | null): string {
   if (value === null) {
@@ -14,11 +15,12 @@ export function sqlString(value: string | null): string {
 }
 
 /**
- * 由 SEED_PRODUCTS 生成种子 SQL，供 wrangler d1 execute 灌库。
- * 一律用 INSERT OR IGNORE，重复执行不产生重复行，与 seedDatabase 的幂等语义一致。
+ * Build the seed SQL from SEED_PRODUCTS, for `wrangler d1 execute`.
+ * Everything is INSERT OR IGNORE, so running it twice produces no duplicate
+ * rows — the same idempotency seedDatabase gives.
  *
- * 本模块刻意不引入 node:fs，以便测试能在 Workers 运行时里直接跑；
- * 落盘由 write-seed-sql.ts 负责。
+ * This module deliberately does not import node:fs, so the tests can run it
+ * inside the Workers runtime. Writing the file is write-seed-sql.ts's job.
  */
 export function buildSeedSql(now: number): string {
   const statements: string[] = [];

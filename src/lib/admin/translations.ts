@@ -5,9 +5,9 @@ import * as schema from "@/db/schema";
 
 export type FieldStatus = {
   field: string;
-  /** 源语言（默认语言）下是否有内容 */
+  /** Whether the source (default) language has content */
   sourceFilled: boolean;
-  /** 目标语言下是否有内容 */
+  /** Whether the target language has content */
   targetFilled: boolean;
 };
 
@@ -15,7 +15,7 @@ export type ContentBlockStatus = {
   groupKey: string;
   sourceTitle: string | null;
   targetTitle: string | null;
-  /** 源语言有、目标语言没有 —— 待翻译 */
+  /** Present in the source language, absent in the target — awaiting translation */
   missing: boolean;
 };
 
@@ -27,11 +27,11 @@ export type ProductTranslationStatus = {
   fields: FieldStatus[];
   features: ContentBlockStatus[];
   useCases: ContentBlockStatus[];
-  /** 0–100，源语言有内容的条目中已翻译的比例 */
+  /** 0-100: the share of entries with source content that have been translated */
   completeness: number;
 };
 
-/** 特性与工况共有的结构：靠 groupKey 跨语言对应 */
+/** The shape features and use cases share: groupKey is what links them across languages */
 type TranslatableBlock = {
   productId: string;
   locale: string;
@@ -51,12 +51,15 @@ function filled(value: string | null | undefined): boolean {
 }
 
 /**
- * 统计某目标语言相对源语言（默认语言）的翻译完整度。
+ * Measure how complete a target language is against the source (default) one.
  *
- * 多语言站真正的成本不是建站，是持续维护 N 个语言版本的内容同步：
- * 加了一条工况后，没有这个视图就不知道哪几门语言还没跟上，长期必然内容漂移。
+ * The real cost of a multilingual site is not building it, it is keeping N
+ * language versions in sync afterwards. Add one use case and, without this
+ * view, nobody knows which languages have not caught up — over time the
+ * versions inevitably drift apart.
  *
- * 完整度只统计"源语言有内容"的条目——源语言本身就空的字段不该算作缺翻译。
+ * Completeness counts only entries that have source content. A field left empty
+ * in the source language is not a missing translation.
  */
 export async function getTranslationStatus(
   db: Db,
@@ -140,13 +143,13 @@ export async function getTranslationStatus(
       fields,
       features: featureStatus,
       useCases: useCaseStatus,
-      // 源语言没有任何内容时视为无需翻译，记 100 而非 0/0
+      // Nothing in the source language means nothing to translate: 100, not 0/0
       completeness: expected === 0 ? 100 : Math.round((done / expected) * 100),
     };
   });
 }
 
-/** 各语言的整体完整度概览，用于工作台首屏 */
+/** Per-language completeness overview, for the translation workbench's landing view */
 export async function getLocaleCoverage(
   db: Db,
 ): Promise<{ locale: Locale; completeness: number }[]> {

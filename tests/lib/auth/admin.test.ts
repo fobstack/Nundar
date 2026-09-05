@@ -72,7 +72,7 @@ describe("authenticateAdmin", () => {
     expect(wrongPassword.ok).toBe(false);
     expect(unknownAccount.ok).toBe(false);
     if (wrongPassword.ok || unknownAccount.ok) return;
-    // 区分二者会让攻击者枚举出哪些邮箱是有效账号
+    // Distinguishing them would let an attacker enumerate which emails are accounts
     expect(wrongPassword.reason).toBe(unknownAccount.reason);
   });
 
@@ -90,7 +90,7 @@ describe("authenticateAdmin", () => {
 
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    // 即使密码正确，锁定期内也不放行
+    // Even a correct password is refused while the lockout holds
     expect(result.reason).toBe("locked");
   });
 
@@ -108,7 +108,8 @@ describe("authenticateAdmin", () => {
       .set({ passwordHash: "pbkdf2-sha256$1000$c2FsdA==$ZGlnZXN0" })
       .where(eq(schema.adminUsers.id, "admin-1"));
 
-    // 旧哈希对不上这个密码，登录应失败且不改写
+    // The stored hash does not match this password: login fails and nothing is
+    // rewritten
     const failed = await authenticateAdmin(
       createDb(env.DB),
       env.SESSIONS,

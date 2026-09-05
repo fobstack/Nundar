@@ -46,9 +46,10 @@ async function parse<T>(response: Response): Promise<T> {
 }
 
 export const cartApi = {
-  /** 读购物车并按当前数据定价 */
+  /** Read the cart and price it against current data */
   queryCart: async (locale: Locale, currency: Currency): Promise<CartView> => {
-    // GET 加缓存戳，避免浏览器或中间代理返回过期的购物车
+    // A cache-buster on the GET, so neither the browser nor an intermediary
+    // hands back a stale cart
     const params = new URLSearchParams({
       locale,
       currency,
@@ -57,7 +58,7 @@ export const cartApi = {
     return parse<CartView>(await fetch(`/api/cart?${params}`));
   },
 
-  /** 加入购物车 */
+  /** Add a line to the cart */
   addToCart: async (variantId: string, quantity: number) =>
     parse<{ lines: { variantId: string; quantity: number }[] }>(
       await fetch("/api/cart", {
@@ -67,7 +68,7 @@ export const cartApi = {
       }),
     ),
 
-  /** 设置某行数量，0 表示删除 */
+  /** Set a line's quantity; 0 removes it */
   setQuantity: async (variantId: string, quantity: number) =>
     parse<{ lines: { variantId: string; quantity: number }[] }>(
       await fetch("/api/cart", {
@@ -77,7 +78,7 @@ export const cartApi = {
       }),
     ),
 
-  /** 移除某行 */
+  /** Remove a line */
   removeLine: async (variantId: string) =>
     parse<{ lines: { variantId: string; quantity: number }[] }>(
       await fetch("/api/cart", {
@@ -87,7 +88,7 @@ export const cartApi = {
       }),
     ),
 
-  /** 创建订单并取得 Stripe 托管结账地址 */
+  /** Create the order and get back the Stripe hosted checkout URL */
   startCheckout: async (
     locale: Locale,
     currency: Currency,

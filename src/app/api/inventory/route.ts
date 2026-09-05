@@ -10,7 +10,8 @@ import {
   rateLimitedResponse,
 } from "@/lib/security/rate-limit";
 
-/** 一次最多查 50 个 SKU：单页 SKU 数远低于此，更大的请求只可能是滥用 */
+/** At most 50 SKUs per call: a page carries far fewer, so a larger request can
+ * only be abuse. */
 const MAX_VARIANTS = 50;
 
 const querySchema = z.object({
@@ -62,7 +63,7 @@ export async function GET(request: Request) {
   return Response.json(
     { items },
     {
-      // 库存必须实时，缓存会让这个接口失去存在意义
+      // Stock has to be live; caching would defeat the point of this endpoint
       headers: { "Cache-Control": "no-store" },
     },
   );

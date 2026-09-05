@@ -12,10 +12,13 @@ export type CronOutcome =
   | { ok: false; reason: string };
 
 /**
- * 每日汇率任务：拉 ECB 汇率 → 落库 → 按阈值重算自动价。
+ * The daily rates job: fetch from the ECB, store the snapshot, recompute the
+ * automatic prices whose drift passed the threshold.
  *
- * 拉取失败不抛出，而是返回失败结果并保留上一次快照——汇率取不到是常态
- * （ECB 周末与节假日不更新、网络抖动），绝不能因此让价格异常或整个 Worker 崩溃。
+ * A failed fetch does not throw. It returns a failure result and leaves the
+ * previous snapshot in place, because not getting rates is routine — the ECB
+ * skips weekends and holidays, and networks wobble. Neither should distort
+ * prices or take the Worker down.
  */
 export async function runExchangeRateCron(
   db: Db,
@@ -32,7 +35,7 @@ export async function runExchangeRateCron(
   } catch (error) {
     return {
       ok: false,
-      // 只保留错误信息本身，不带任何请求上下文，避免 PII 进日志
+      // Keep the message alone, with no request context, so no PII reaches the logs
       reason: error instanceof Error ? error.message : String(error),
     };
   }

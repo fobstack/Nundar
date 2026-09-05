@@ -3,14 +3,19 @@ import { defaultTheme } from "./default";
 import { resolveThemeName } from "./resolve";
 
 /**
- * 主题注册表。
+ * The theme registry.
  *
- * 构建时选主题：`.dev.vars` 或部署环境里设 `THEME=<目录名>`，重新构建即生效。
- * 之所以不做运行时切换：单租户自部署场景下主题定了就不常动，而运行时切换
- * 需要把所有主题打进 Worker 包并处理静态页缓存失效，代价远大于收益。
+ * Themes are chosen at build time: set `THEME=<directory>` in `.dev.vars` or in
+ * the deployment environment and rebuild.
  *
- * 新增主题：复制 src/themes/default 改名，实现 contract.ts 的 Theme 接口
- * （TypeScript 会强制你实现全部 View），在这里注册。
+ * There is deliberately no runtime switching. In a single-tenant self-hosted
+ * shop the theme is chosen once and rarely changed, whereas switching at
+ * runtime would mean bundling every theme into the Worker and invalidating the
+ * static page cache — far more cost than the flexibility is worth.
+ *
+ * To add a theme: copy src/themes/default under a new name, implement the Theme
+ * interface from contract.ts (TypeScript will insist on every view), and
+ * register it here.
  */
 const THEMES: Record<string, Theme> = {
   default: defaultTheme,

@@ -14,4 +14,4 @@ Describe the situation, not the solution.
 **Scope check**
 Nundar is a single-tenant storefront template. Multi-tenant SaaS features,
 marketplace/multi-vendor flows and B2B quotation are deliberately out of scope —
-see the "明确不做的事" section of the design spec.
+see the "Out of scope" section of the design spec.

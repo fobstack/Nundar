@@ -3,12 +3,14 @@ import { localePath } from "@/lib/seo";
 import type { SiteUrls } from "@/themes/contract";
 
 /**
- * 组装交给主题的站点路径。
+ * Assemble the site paths handed to a theme.
  *
- * 路径一律在这里算好再传给主题：主题不拼 URL，将来改路由结构不用逐个主题去改，
- * 也杜绝了主题作者写出漏掉语言前缀的链接。
+ * Paths are always computed here rather than inside themes. Themes never build
+ * URLs, so changing the route structure does not mean editing every theme, and
+ * a theme author cannot accidentally emit a link that drops the locale prefix.
  *
- * `pathFor` 决定切换语言时落到哪个页面——留在当前内容上，而不是粗暴回首页。
+ * `pathFor` decides where a language switch lands: on the equivalent page,
+ * not bounced back to the home page.
  */
 export function buildSiteUrls(
   locale: Locale,

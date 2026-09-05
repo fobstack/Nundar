@@ -1,26 +1,31 @@
 /**
- * 欧洲央行每日参考汇率。
+ * The European Central Bank's daily reference rates.
  *
- * 选它而非商业汇率 API 的决定性理由：免费、无需 API key、权威——开源使用者
- * fork 后无需注册任何第三方服务即可运行。
+ * Chosen over a commercial rates API for one decisive reason: it is free,
+ * needs no API key, and is authoritative. Anyone who forks this project can run
+ * it without signing up for a third-party service.
  *
- * 数据以 EUR 为基准报价；本项目基准币种是 USD，需经 EUR 交叉换算。
- * ECB 周末与欧洲节假日不更新，届时返回的是最近一个工作日的数据，这对
- * 「偏离阈值才重算」的策略无影响。
+ * Rates are quoted against EUR. This project's base currency is USD, so the
+ * conversion crosses through EUR.
+ *
+ * The ECB does not publish on weekends or European holidays, in which case the
+ * most recent working day's data comes back. That is harmless here, because
+ * prices only move when drift exceeds a threshold.
  */
 export const ECB_DAILY_URL =
   "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml";
 
 export type EcbRates = {
-  /** ECB 的参考日期，格式 YYYY-MM-DD */
+  /** The ECB reference date, as YYYY-MM-DD */
   date: string;
-  /** 以 EUR 为基准的报价，含 EUR 自身（值为 1） */
+  /** Quotes against EUR, including EUR itself at 1 */
   ratesFromEur: Record<string, number>;
 };
 
 /**
- * 解析 ECB 的 XML。
- * Workers 运行时没有 DOMParser，且该 XML 结构固定简单，用正则提取即可。
+ * Parse the ECB's XML.
+ * The Workers runtime has no DOMParser, and this document's structure is fixed
+ * and simple enough that a regular expression is the honest tool here.
  */
 export function parseEcbRates(xml: string): EcbRates {
   const ratesFromEur: Record<string, number> = { EUR: 1 };
@@ -47,8 +52,8 @@ export function parseEcbRates(xml: string): EcbRates {
 }
 
 /**
- * 把 EUR 基准的报价换算成任意基准币种的报价。
- * 结果含义：1 单位 base 等于多少单位 quote。
+ * Re-base EUR-quoted rates onto any base currency.
+ * The result reads as: one unit of base equals this many units of quote.
  */
 export function ratesFromBase(
   ratesFromEur: Record<string, number>,
@@ -66,7 +71,7 @@ export function ratesFromBase(
       continue;
     }
     const quoteFromEur = ratesFromEur[quote];
-    // 源数据没有的币种直接跳过，不猜测、不填 0
+    // A currency the source does not carry is skipped — never guessed, never zeroed
     if (quoteFromEur) {
       result[quote] = quoteFromEur / baseFromEur;
     }
@@ -75,7 +80,7 @@ export function ratesFromBase(
   return result;
 }
 
-/** 拉取并解析当前 ECB 汇率 */
+/** Fetch and parse the current ECB rates */
 export async function fetchEcbRates(
   fetchImpl: typeof fetch = fetch,
 ): Promise<EcbRates> {

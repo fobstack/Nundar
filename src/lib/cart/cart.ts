@@ -5,12 +5,12 @@ export type CartLine = {
 
 export const CART_TTL_SECONDS = 60 * 60 * 24 * 30;
 
-/** 单行数量上限：正常订单不会到这个量级，超过只可能是脚本刷单 */
+/** Per-line ceiling: real orders never reach this, so anything above it is scripted abuse */
 const MAX_LINE_QUANTITY = 10_000;
 
 const KEY_PREFIX = "cart:";
 
-/** 购物车 id 必须不可猜测——它是拿到别人购物车内容的唯一凭据 */
+/** The cart id must be unguessable — it is the only credential protecting a cart */
 export function newCartId(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(16));
   return [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -30,10 +30,11 @@ function isValidLine(value: unknown): value is CartLine {
 }
 
 /**
- * 读购物车。
+ * Read a cart.
  *
- * 存的只有 variantId 与数量，**绝不存价格**——价格永远在结账时按 D1 当前数据
- * 重算，否则前端可以把价格改成任意值提交。
+ * Only variant ids and quantities are stored — **never prices**. Every total is
+ * recomputed at checkout from current database values. Storing a price here
+ * would let the client submit whatever amount it liked.
  */
 export async function readCart(
   kv: KVNamespace,
@@ -53,7 +54,7 @@ export async function readCart(
     if (!Array.isArray(parsed)) {
       return [];
     }
-    // 脏数据丢弃即可，不该让整个购物车页面报错
+    // Drop malformed entries rather than failing the whole cart page
     return parsed.filter(isValidLine).map((line) => ({
       variantId: line.variantId,
       quantity: line.quantity,

@@ -15,7 +15,7 @@ type OrderLine = {
   unitPriceMinor: number;
 };
 
-/** 商品名来自数据库，进 HTML 前必须转义，否则可被构造成注入 */
+/** Product names come from the database and must be escaped before reaching HTML */
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")

@@ -1,13 +1,16 @@
 /**
- * 后台界面语言。
+ * The admin interface language.
  *
- * **这与前台的内容语言（en/de/fr/es）是两套东西**，刻意不复用同一份配置：
- * 前台语言面向海外买家、由 URL 前缀决定、影响 SEO；后台语言面向运营，
- * 由 cookie 决定、与 SEO 无关。把两者混为一谈，将来加一门买家语言就会
- * 莫名其妙地要求补一份后台翻译。
+ * **This is a different thing from the storefront's content languages**
+ * (en/de/fr/es), and deliberately does not share their configuration. A
+ * storefront language faces overseas buyers, is chosen by the URL prefix, and
+ * affects SEO. The admin language faces whoever runs the shop, is chosen by a
+ * cookie, and has nothing to do with SEO. Conflating them means that adding a
+ * buyer language would inexplicably demand another admin translation.
  *
- * 不引入 i18n 库：后台文案约 150 条、只有中英两种、几乎不需要复数规则，
- * 而数字与日期本地化用运行时内置的 Intl 即可。
+ * No i18n library: the admin has around 150 strings in two languages, needs
+ * almost no plural rules, and the runtime's built-in Intl handles number and
+ * date formatting.
  */
 export const ADMIN_LOCALES = ["zh", "en"] as const;
 
@@ -31,10 +34,11 @@ export function parseAdminLocale(
 }
 
 /**
- * 文案字典。
+ * The string dictionary.
  *
- * 用嵌套对象而非扁平点号键：TypeScript 能对整棵树做补全和穷尽检查，
- * 漏翻一条在编译期就报错，不用等运行时看到空白。
+ * A nested object rather than flat dotted keys, because TypeScript can complete
+ * and exhaustively check the whole tree: a missing translation is a compile
+ * error instead of a blank spot discovered at runtime.
  */
 const MESSAGES = {
   zh: {
@@ -312,12 +316,15 @@ const MESSAGES = {
 } as const;
 
 /**
- * 中文是字典的权威结构，英文必须一一对应。
+ * The Chinese dictionary defines the authoritative shape; English must match it
+ * key for key.
  *
- * 把字面量类型放宽成 string 再做结构比对：`as const` 会让每条中文成为
- * 字面量类型（"概览"），直接约束英文就会要求英文也等于那个中文字符串。
- * 这里只校验**结构**，不校验取值。漏翻一条会在编译期报错，
- * 而不是等运行时页面上显示 undefined。
+ * Literal types are widened to string before the shapes are compared. `as
+ * const` turns every Chinese string into a literal type, so constraining
+ * English against it directly would demand that English equal that exact
+ * Chinese string. This checks the **structure** only, never the values. A
+ * missing translation fails to compile rather than rendering undefined on a
+ * page.
  */
 type Widen<T> = T extends string
   ? string
@@ -331,7 +338,7 @@ export function getAdminMessages(locale: AdminLocale): AdminMessages {
   return CATALOGUE[locale];
 }
 
-/** 按后台界面语言格式化日期，用运行时内置的 Intl，不引入日期库 */
+/** Format a date in the admin language, using the runtime's Intl rather than a date library */
 export function formatAdminDate(
   epochSeconds: number,
   locale: AdminLocale,

@@ -50,7 +50,8 @@ export default async function ProductsPage({
 
   return (
     <theme.Shell locale={locale} currency={currency} urls={urls}>
-      {/* 结构化数据留在路由层：换主题绝不该影响 SEO */}
+      {/* Structured data stays in the route layer: swapping themes must never
+          affect SEO */}
       <JsonLd
         data={{
           "@context": "https://schema.org",

@@ -19,7 +19,8 @@ describe("resolveThemeName", () => {
   });
 
   it("falls back and reports it for an unknown name", () => {
-    // 主题名拼错时整站白屏，比用默认主题渲染糟糕得多
+    // A blank site because a theme name was misspelled is far worse than the same
+    // site rendered with the default theme
     expect(resolveThemeName("typo", REGISTERED, "default")).toEqual({
       name: "default",
       fellBack: true,

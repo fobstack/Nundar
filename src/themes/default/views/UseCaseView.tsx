@@ -33,7 +33,7 @@ export function UseCaseView({
         gap: "var(--space-12)",
       }}
     >
-      {/* 正文列：宽度受 --measure 约束，这页存在的意义就是被读完 */}
+      {/* Body column, width bound by --measure: this page exists to be read through */}
       <article style={{ gridColumn: "span 8" }}>
         <div style={{ fontSize: "var(--text-xs)", color: "var(--ink-3)", display: "flex", gap: "var(--space-2)" }}>
           <Link href={urls.products}>{locale === "de" ? "Produkte" : "Products"}</Link>
@@ -81,7 +81,7 @@ export function UseCaseView({
         ) : null}
       </article>
 
-      {/* 商品栏：这页既要能读，也要能转化 */}
+      {/* Product rail: the page has to convert as well as read well */}
       <aside style={{ gridColumn: "span 4" }}>
         <Panel padded={false}>
           <div

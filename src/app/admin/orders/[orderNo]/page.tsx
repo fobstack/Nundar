@@ -103,7 +103,8 @@ export default async function AdminOrderPage({
       <section className="mt-8">
         <h2 className="text-sm font-medium text-neutral-500">Actions</h2>
 
-        {/* 按状态机决定哪些操作可用，不给出会被后端拒绝的按钮 */}
+        {/* The state machine decides which actions exist; never offer a button the
+            server will refuse */}
         <div className="mt-3 flex flex-wrap items-end gap-4">
           {canTransition(order.status, "shipped") ? (
             <form action={shipOrderAction} className="flex items-end gap-2">

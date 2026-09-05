@@ -81,7 +81,7 @@ export async function getOrder(
       string
     >;
   } catch {
-    // 地址脏数据不该让整个订单详情页打不开
+    // A malformed address must not make the order page unopenable
     shippingAddress = {};
   }
 
@@ -116,7 +116,7 @@ async function currentStatus(db: Db, orderId: string): Promise<OrderStatus> {
   return order.status as OrderStatus;
 }
 
-/** 发货：记录物流单号并流转状态 */
+/** Ship: record the tracking number and advance the state */
 export async function shipOrder(
   db: Db,
   orderId: string,
@@ -127,7 +127,7 @@ export async function shipOrder(
 
   const tracking = trackingNo.trim();
   if (!tracking) {
-    // 没有单号的"已发货"对客服和客户都没有意义
+    // "Shipped" without a tracking number helps neither support nor the buyer
     throw new Error("Tracking number is required when shipping an order");
   }
 
@@ -156,10 +156,12 @@ export async function cancelOrder(db: Db, orderId: string): Promise<void> {
 }
 
 /**
- * 退款：状态流转 + 把库存还回去。
+ * Refund: advance the state and return the stock.
  *
- * 只有真正扣过库存的状态（paid 之后）才需要归还；oversold 的单从未扣成，
- * 归还会凭空多出库存，所以按 inventory_adjustments 的实际记录来回滚。
+ * Only orders that actually took stock (anything past paid) have stock to give
+ * back. An oversold order never took it, and returning it would conjure stock
+ * out of nothing — so the rollback follows what inventory_adjustments actually
+ * recorded rather than what the order says it bought.
  */
 export async function refundOrder(db: Db, orderId: string): Promise<void> {
   assertTransition(await currentStatus(db, orderId), "refunded");

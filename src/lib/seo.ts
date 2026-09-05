@@ -1,7 +1,7 @@
 import { SITE } from "@/config/site";
 import { DEFAULT_LOCALE, LOCALES, type Locale } from "@/config/locales";
 
-/** 拼出带语言前缀的站内路径，自动清理多余斜杠 */
+/** Build a locale-prefixed internal path, collapsing stray slashes */
 export function localePath(locale: Locale, ...segments: string[]): string {
   const parts = segments
     .flatMap((segment) => segment.split("/"))
@@ -22,11 +22,15 @@ export type Alternates = {
 };
 
 /**
- * 生成 canonical 与完整 hreflang 集合。
+ * Build the canonical URL and the complete set of hreflang alternates.
  *
- * 每个页面都必须输出全部语言版本加 x-default：缺失会让 Google 把不同语言版本
- * 判为互相重复的内容，直接影响收录。canonical 一律自指——工况落地页尤其不能
- * 指向商品页，否则等于主动放弃该页排名。
+ * Every page must emit all language versions plus x-default. Omitting them
+ * lets Google treat the translations as duplicates of one another, which
+ * costs indexing outright.
+ *
+ * The canonical is always self-referencing. Application landing pages in
+ * particular must not point at the product page: doing so forfeits the very
+ * ranking the page exists to win.
  */
 export function buildAlternates(
   currentLocale: Locale,
@@ -46,10 +50,12 @@ export function buildAlternates(
 }
 
 /**
- * 当各语言的路径片段不同（如本地化的工况 slug）时构造 alternates。
+ * Build alternates when the path segment differs per language, as it does for
+ * localised application slugs.
  *
- * 缺该语言 slug 时直接省略该 hreflang 条目——用别的语言 slug 顶替会指向 404，
- * 比缺条目更糟。
+ * If a language has no slug, its hreflang entry is omitted entirely.
+ * Substituting another language's slug would point crawlers at a 404, which is
+ * worse than a missing entry.
  */
 export function buildAlternatesFromMap(
   currentLocale: Locale,

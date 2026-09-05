@@ -8,10 +8,11 @@ import {
 } from "./i18n";
 
 /**
- * 读取后台界面语言与对应文案。
+ * Read the admin interface language and its strings.
  *
- * 与 i18n.ts 分开：那边是纯数据与纯函数（可在任意环境测），
- * 这边依赖 next/headers，只能在服务端组件里用。
+ * Kept apart from i18n.ts, which is pure data and pure functions testable
+ * anywhere. This file depends on next/headers and works only inside server
+ * components.
  */
 export async function getAdminLocale(): Promise<AdminLocale> {
   const store = await cookies();

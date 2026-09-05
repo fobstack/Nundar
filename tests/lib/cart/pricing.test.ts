@@ -68,7 +68,7 @@ describe("priceCart", () => {
   it("rejects a quantity below the SKU's MOQ", async () => {
     const result = await priceCart(
       createDb(env.DB),
-      [{ variantId: THREADED, quantity: 3 }], // MOQ 是 10
+      [{ variantId: THREADED, quantity: 3 }], // the MOQ is 10
       "en",
       "USD",
     );
@@ -85,7 +85,7 @@ describe("priceCart", () => {
   it("rejects a quantity above available stock", async () => {
     const result = await priceCart(
       createDb(env.DB),
-      [{ variantId: THREADED, quantity: 500 }], // 库存 120
+      [{ variantId: THREADED, quantity: 500 }], // 120 in stock
       "en",
       "USD",
     );
@@ -148,8 +148,8 @@ describe("priceCart", () => {
     const result = await priceCart(
       createDb(env.DB),
       [
-        { variantId: THREADED, quantity: 1 }, // 低于 MOQ
-        { variantId: "ghost", quantity: 1 }, // 不存在
+        { variantId: THREADED, quantity: 1 }, // below the MOQ
+        { variantId: "ghost", quantity: 1 }, // does not exist
       ],
       "en",
       "USD",
@@ -170,7 +170,7 @@ describe("priceCart", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    // 种子数据只有 USD 定价，不能按欧元收款
+    // The seed data is priced in USD only, so nothing may be charged in euros
     expect(result.currency).toBe("USD");
   });
 

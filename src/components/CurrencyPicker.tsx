@@ -9,19 +9,22 @@ import {
 } from "@/lib/currency-preference";
 
 /**
- * 币种切换。
+ * Currency switcher.
  *
- * 写 cookie 后整页重载：动态页由服务端读 cookie 渲染，静态页由 LiveStock
- * 在 hydration 后按新币种拉价格覆盖。两条路径都不需要为币种额外生成静态页。
+ * Writes the cookie and reloads. Dynamic pages are re-rendered by the server
+ * from that cookie; static pages have their prices replaced by LiveStock after
+ * hydration. Neither path requires generating a static page per currency.
  */
-/** cookie 只在整页重载时变化，无需订阅变更 */
+/** The cookie only changes across a full reload, so there is nothing to subscribe to */
 function subscribeToNothing(): () => void {
   return () => {};
 }
 
 export function CurrencyPicker({ currency }: { currency: Currency }) {
-  // 静态页按语言默认币种生成，服务端读不到 cookie。useSyncExternalStore 允许
-  // 服务端与客户端给出不同快照，既显示用户的真实选择又不产生 hydration 警告。
+  // Static pages are generated in each language's default currency, and the
+  // server cannot read the cookie. useSyncExternalStore permits the server and
+  // client snapshots to differ, so the buyer's actual choice shows without a
+  // hydration warning.
   const selected = useSyncExternalStore(
     subscribeToNothing,
     () => readCurrencyCookieFromDocument() ?? currency,

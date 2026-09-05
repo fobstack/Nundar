@@ -1,9 +1,10 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "nundar",
-  // 自定义入口：复用 OpenNext 的 fetch handler，另加 Cron 的 scheduled handler
+  // Custom entry: reuses OpenNext's fetch handler and adds the cron scheduled handler
   "main": "src/worker.ts",
-  // 不要超过本地 workerd 二进制支持的最新日期，否则 vitest-pool-workers 起不来
+  // Must not exceed the newest date the local workerd binary supports, or
+  // vitest-pool-workers refuses to start
   "compatibility_date": "2026-08-22",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
 
@@ -16,14 +17,18 @@
     "enabled": true
   },
 
-  // 主数据库。
+  // The primary database.
   //
-  // database_id 是本地占位值：本地开发与测试走 miniflare 模拟的 D1，不读取它；
-  // 用 Deploy to Cloudflare 按钮部署时，Cloudflare 会自动建库并把真实 id 写回这里。
-  // 手工部署则跑一次 `wrangler d1 create <name>` 再把 id 填进来。
+  // database_id is a local placeholder: development and tests run against
+  // miniflare's simulated D1 and never read it. Deploying with the Deploy to
+  // Cloudflare button provisions the database and writes the real id back here.
+  // Deploying by hand means running `wrangler d1 create <name>` and pasting the
+  // returned id in.
   //
-  // 迁移与灌数据的脚本一律用**绑定名 DB** 而不是库名——别人部署时库名可能不同，
-  // 写死库名会让他们的迁移找不到库。
+  // Migration and seed scripts always reference the **binding** DB, never the
+  // database name: someone else's deployment may name the database differently,
+  // and a hardcoded name would send their migrations looking for a database
+  // that does not exist.
   "d1_databases": [
     {
       "binding": "DB",
@@ -34,21 +39,21 @@
   ],
 
   "r2_buckets": [
-    // 商品图原图与预生成尺寸变体
+    // Product originals and their pre-generated size variants
     {
-      // 不能叫 IMAGES：那是 Cloudflare Images 产品的保留绑定名，
-      // 用它会让 wrangler types 生成 ImagesBinding 而非 R2Bucket
+      // Must not be called IMAGES: that name is reserved by Cloudflare Images,
+      // and using it makes `wrangler types` emit ImagesBinding instead of R2Bucket
       "binding": "MEDIA",
       "bucket_name": "nundar-media"
     },
-    // OpenNext 的 ISR 增量缓存
+    // OpenNext's incremental (ISR) cache
     {
       "binding": "NEXT_INC_CACHE_R2_BUCKET",
       "bucket_name": "nundar-inc-cache"
     }
   ],
 
-  // 游客购物车、后台 session、限流计数
+  // Guest carts, admin sessions, rate-limit counters
   "kv_namespaces": [
     {
       "binding": "SESSIONS",
@@ -56,11 +61,12 @@
     }
   ],
 
-  // 事务邮件（订单确认、发货通知）。发件域名需先执行：
+  // Transactional email (order confirmation, shipping notice). The sending
+  // domain must be enabled first:
   // npx wrangler email sending enable <yourdomain.com>
   "send_email": [{ "name": "EMAIL" }],
 
-  // OpenNext 的重验证队列需要 Worker 自引用
+  // OpenNext's revalidation queue requires the Worker to reference itself
   "services": [
     {
       "binding": "WORKER_SELF_REFERENCE",
@@ -68,8 +74,8 @@
     }
   ],
 
-  // ISR 三件套：队列去重时间型重验证，分片 tag cache 支撑按需 revalidate，
-  // BucketCachePurge 负责缓存清除
+  // The ISR trio: the queue deduplicates time-based revalidation, the sharded
+  // tag cache backs on-demand revalidation, and BucketCachePurge does the purging
   "durable_objects": {
     "bindings": [
       { "name": "NEXT_CACHE_DO_QUEUE", "class_name": "DOQueueHandler" },
@@ -89,7 +95,8 @@
     }
   ],
 
-  // 每日 06:00 UTC 拉取 ECB 汇率并按阈值触发价格重算（handler 在阶段 3 实现）
+  // Daily at 06:00 UTC: pull ECB rates and recompute prices whose drift passed
+  // the threshold
   "triggers": {
     "crons": ["0 6 * * *"]
   }

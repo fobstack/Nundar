@@ -79,7 +79,8 @@ describe("getTranslationStatus", () => {
   });
 
   it("does not count a field the source language leaves empty", async () => {
-    // 源语言本身没有 summary 时，目标语言缺 summary 不算缺翻译
+    // When the source language has no summary, the target language missing one is
+    // not a missing translation
     await env.DB.exec(
       `UPDATE product_translations SET summary = NULL WHERE product_id = '${PRODUCT_ID}'`,
     );

@@ -120,7 +120,7 @@ describe("listUseCasePages", () => {
   it("returns only use cases flagged to have their own page", async () => {
     const pages = await listUseCasePages(createDb(env.DB));
 
-    expect(pages).toHaveLength(4); // 四语言各一条
+    expect(pages).toHaveLength(4); // one per language
     expect(pages.every((p) => p.productSlug === SLUG)).toBe(true);
     expect(pages.map((p) => p.locale).sort()).toEqual(["de", "en", "es", "fr"]);
   });
@@ -140,7 +140,8 @@ describe("getUseCaseAlternates", () => {
       "offshore-seawater-lines",
     );
 
-    // hreflang 必须指向该语言下真实存在的 slug，指向英文 slug 会得到 404
+    // hreflang must point at a slug that exists in that language; pointing at the
+    // English one gives a 404
     expect(alternates).toEqual({
       en: "offshore-seawater-lines",
       de: "offshore-seewasserleitungen",

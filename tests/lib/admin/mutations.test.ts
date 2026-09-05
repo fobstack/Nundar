@@ -138,7 +138,8 @@ describe("updateBasePrice", () => {
 
     await updateBasePrice(createDb(env.DB), THREADED, 20000);
 
-    // 基准价变了，旧的 auto 价必须失效，否则会一直挂着按旧基准算出的价格
+    // Once the base price changes the old auto prices must go, or the site keeps
+    // displaying amounts derived from a price that no longer exists
     const eur = await price("EUR");
     expect(eur).toBeUndefined();
   });
@@ -302,7 +303,8 @@ describe("createProduct", () => {
       .from(schema.products)
       .where(eq(schema.products.id, created.id));
 
-    // 新商品先落草稿：没有图、没有其他语言内容就上架，等于让爬虫抓到残缺页
+    // A new product starts as a draft: publishing before it has images or other
+    // languages means the crawler's first look is at an incomplete page
     expect(product.status).toBe("draft");
     expect(product.slug).toBe("gate-valve-dn80");
   });

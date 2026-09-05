@@ -6,7 +6,7 @@ import {
   text,
 } from "drizzle-orm/sqlite-core";
 
-/** 汇率快照，由 Cron Trigger 每日拉取（拉取逻辑在阶段 3 实现） */
+/** Exchange-rate snapshots, refreshed daily by the cron trigger */
 export const exchangeRates = sqliteTable(
   "exchange_rates",
   {

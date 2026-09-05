@@ -1,16 +1,20 @@
 import { BASE_CURRENCY, isCurrency, type Currency } from "@/config/currency";
 
 /**
- * 币种偏好存 cookie。
+ * Currency preference, stored in a cookie.
  *
- * 语言由 URL 前缀唯一决定，币种则与语言解耦——同一门语言的买家可能要看不同币种。
- * 绝不依据 IP 自动切换：爬虫多从美国 IP 抓取，自动改写会让其他版本无法被正确索引。
+ * Language is determined solely by the URL prefix; currency is deliberately
+ * decoupled from it, because buyers reading the same language may want
+ * different currencies.
+ *
+ * Never switch automatically by IP. Crawlers mostly fetch from US addresses,
+ * so rewriting content by IP would leave the other versions unindexed.
  */
 export const CURRENCY_COOKIE = "nundar_currency";
 
 export const CURRENCY_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
-/** 从 cookie 字符串里解析币种偏好，非法值一律忽略 */
+/** Parse the preference out of a cookie string; anything unrecognised is ignored */
 export function parseCurrencyCookie(
   raw: string | undefined | null,
   fallback: Currency = BASE_CURRENCY,
@@ -21,7 +25,7 @@ export function parseCurrencyCookie(
   return isCurrency(raw) ? raw : fallback;
 }
 
-/** 浏览器端读取偏好；服务端渲染阶段返回 null 由调用方回落 */
+/** Read the preference in the browser; returns null during SSR so callers fall back */
 export function readCurrencyCookieFromDocument(): Currency | null {
   if (typeof document === "undefined") {
     return null;

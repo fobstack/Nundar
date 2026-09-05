@@ -64,7 +64,8 @@ describe("listCustomers", () => {
 
     const [customer] = await listCustomers(createDb(env.DB));
 
-    // 把 USD 与 EUR 金额相加得到的数字没有意义，会误导运营
+    // Adding a USD amount to a EUR one produces a number that means nothing and
+    // would only mislead
     expect(customer.spentByCurrency).toEqual({ USD: 10_000, EUR: 8_000 });
   });
 
@@ -76,7 +77,7 @@ describe("listCustomers", () => {
 
     const [customer] = await listCustomers(createDb(env.DB));
     expect(customer.spentByCurrency).toEqual({ USD: 10_000 });
-    // 但订单数仍然全部计入，运营需要看到取消的单
+    // The order count still includes everything: cancelled orders need to be visible
     expect(customer.orderCount).toBe(3);
   });
 
@@ -150,7 +151,8 @@ describe("getDashboardStats", () => {
   });
 
   it("flags a SKU whose stock has fallen below its own MOQ", async () => {
-    // 起订量 10、库存 4 → 实际已经没人能下单，这才是真正的缺货
+    // MOQ 10 against 4 in stock: nobody can order it, which is what out of stock
+    // actually means here
     await env.DB.exec(
       "UPDATE product_variants SET stock = 4 WHERE id = 'seed-variant-dn50-threaded'",
     );

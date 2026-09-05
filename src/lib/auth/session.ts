@@ -5,15 +5,15 @@ export type AdminSession = {
   role: AdminRole;
 };
 
-/** cookie 名不暴露技术栈与用途 */
+/** A cookie name that gives away neither the stack nor its purpose */
 export const SESSION_COOKIE = "nundar_admin";
 
-/** 会话有效期一个工作日；后台是高权限入口，不做长期免登录 */
+/** One working day. The admin is the highest-privilege entry point, so no long-lived sessions */
 export const SESSION_TTL_SECONDS = 60 * 60 * 8;
 
 const KEY_PREFIX = "session:";
 
-/** 生成 256 位随机 token，用 base64url 编码以便进 cookie */
+/** A 256-bit random token, base64url-encoded so it can live in a cookie */
 function newToken(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
   return btoa(String.fromCharCode(...bytes))
@@ -28,8 +28,9 @@ export async function createSession(
 ): Promise<string> {
   const token = newToken();
 
-  // 会话内容存服务端，cookie 里只放不可推导的随机 token——
-  // 把角色等信息塞进 cookie 会让权限可被客户端伪造
+  // Session contents stay server-side; the cookie carries nothing but an
+  // unguessable random token. Putting the role in the cookie would let the
+  // client choose its own privileges.
   await kv.put(`${KEY_PREFIX}${token}`, JSON.stringify(session), {
     expirationTtl: SESSION_TTL_SECONDS,
   });
@@ -60,7 +61,7 @@ export async function readSession(
     }
     return null;
   } catch {
-    // 存储值损坏视为未登录，不抛异常
+    // A corrupt stored value means not signed in, not an exception
     return null;
   }
 }
@@ -75,7 +76,8 @@ export async function destroySession(
   await kv.delete(`${KEY_PREFIX}${token}`);
 }
 
-/** 组装会话 cookie；生产环境必须带 Secure，本地 http 下则不能带否则浏览器丢弃 */
+/** Build the session cookie. Secure is required in production and must be omitted
+ * on local http, where the browser would otherwise discard it. */
 export function sessionCookie(token: string, isSecure: boolean): string {
   const attrs = [
     `${SESSION_COOKIE}=${token}`,

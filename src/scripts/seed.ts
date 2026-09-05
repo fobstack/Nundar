@@ -5,8 +5,9 @@ import { toMinor } from "@/lib/money";
 import { SEED_PRODUCTS } from "./seed-data";
 
 /**
- * 写入种子数据。幂等：所有写入走 onConflictDoNothing，
- * 重复执行不会产生重复行，便于本地反复重置环境。
+ * Load the seed data. Idempotent: every write uses onConflictDoNothing, so
+ * running it repeatedly produces no duplicate rows and resetting a local
+ * environment stays cheap.
  */
 export async function seedDatabase(db: Db): Promise<void> {
   const now = Math.floor(Date.now() / 1000);
@@ -88,7 +89,8 @@ export async function seedDatabase(db: Db): Promise<void> {
         })
         .onConflictDoNothing();
 
-      // 只写基准币种，EUR/GBP 由阶段 3 的定价引擎按汇率生成
+      // Only the base currency is seeded; EUR and GBP are derived from exchange
+      // rates by the pricing engine
       await db
         .insert(schema.variantPrices)
         .values({

@@ -8,7 +8,8 @@ import { buildAlternates, localePath } from "@/lib/seo";
 import { buildSiteUrls } from "@/lib/site-urls";
 import { getTheme } from "@/themes/registry";
 
-// 四门语言的首页在构建期静态生成，爬虫拿到的是完整内容
+// The home page in all four languages is generated at build time, so a crawler
+// receives complete content
 export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
 }
@@ -50,7 +51,8 @@ export default async function HomePage({
     products.map((product) => [product.slug, product.name]),
   );
 
-  // 首页给工况落地页导流：它们是长尾词矩阵的主力，藏在商品页里传不到权重
+  // The home page links to the use-case landing pages: they carry the long-tail
+  // matrix, and buried inside product pages they receive no authority at all
   const applications = useCasePages
     .filter((page) => page.locale === locale)
     .map((page) => ({

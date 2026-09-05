@@ -28,7 +28,7 @@ describe("orderConfirmationEmail", () => {
   });
 
   it("always ships a plain-text part alongside the HTML", () => {
-    // 只发 HTML 会被部分客户端显示为空白，也会拉高垃圾邮件评分
+    // HTML alone renders blank in some clients and pushes up the spam score
     expect(mail.text.length).toBeGreaterThan(0);
     expect(mail.html.length).toBeGreaterThan(0);
   });

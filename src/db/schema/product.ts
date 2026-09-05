@@ -8,7 +8,8 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-/** 商品主表：只放语言无关的数据，翻译内容一律进 productTranslations */
+/** The product table: language-independent data only. Everything translatable
+ * lives in productTranslations. */
 export const products = sqliteTable(
   "products",
   {
@@ -25,7 +26,7 @@ export const products = sqliteTable(
   ],
 );
 
-/** 商品翻译：展示内容与 SEO meta，每语言一行 */
+/** Product translations: display content and SEO metadata, one row per language */
 export const productTranslations = sqliteTable(
   "product_translations",
   {
@@ -46,8 +47,8 @@ export const productTranslations = sqliteTable(
 );
 
 /**
- * 产品特性：对应"产品是什么样"类长尾词
- * 例：high temperature resistant ball valve
+ * Product features: the "what is it like" family of long-tail terms.
+ * For example: high temperature resistant ball valve
  */
 export const productFeatures = sqliteTable(
   "product_features",
@@ -58,8 +59,10 @@ export const productFeatures = sqliteTable(
       .references(() => products.id, { onDelete: "cascade" }),
     locale: text("locale").notNull(),
     /**
-     * 跨语言标识：同一条特性的各语言版本共用一个 group_key。
-     * 没有它就无法判断德语的哪一条对应英语的哪一条，翻译完整度也就无从统计。
+     * Cross-language key: every language version of one feature shares a
+     * group_key. Without it there is no way to tell which German row
+     * corresponds to which English one, and translation completeness cannot be
+     * measured at all.
      */
     groupKey: text("group_key").notNull(),
     sortOrder: integer("sort_order").notNull().default(0),
@@ -81,8 +84,9 @@ export const productFeatures = sqliteTable(
 );
 
 /**
- * 使用工况：对应"产品用在哪"类长尾词，可提升为独立落地页
- * 例：ball valve for offshore oil platform
+ * Use cases: the "where is it used" family of long-tail terms, each of which can
+ * be promoted to a landing page of its own.
+ * For example: ball valve for offshore oil platform
  */
 export const productUseCases = sqliteTable(
   "product_use_cases",
@@ -93,9 +97,10 @@ export const productUseCases = sqliteTable(
       .references(() => products.id, { onDelete: "cascade" }),
     locale: text("locale").notNull(),
     /**
-     * 跨语言标识：同一个工况的各语言版本共用一个 group_key。
-     * hreflang 必须指向该工况在目标语言下的本地化 slug，没有它就只能错误地
-     * 让所有语言共用同一个 slug，指向不存在的页面。
+     * Cross-language key: every language version of one use case shares a
+     * group_key. hreflang has to point at that use case's localised slug in the
+     * target language; without this key the only option left is to share one
+     * slug across all languages, pointing at pages that do not exist.
      */
     groupKey: text("group_key").notNull(),
     sortOrder: integer("sort_order").notNull().default(0),
@@ -110,7 +115,7 @@ export const productUseCases = sqliteTable(
       table.productId,
       table.locale,
     ),
-    // 同一商品同一语言下，独立落地页的 slug 不得重复
+    // Within one product and language, landing-page slugs must be unique
     uniqueIndex("product_use_cases_slug_unique").on(
       table.productId,
       table.locale,
@@ -135,7 +140,7 @@ export const productVariants = sqliteTable(
     stock: integer("stock").notNull().default(0),
     weightGrams: integer("weight_grams"),
     optionValues: text("option_values").notNull(), // JSON
-    /** 最小起订量，默认 1 表示不设限制 */
+    /** Minimum order quantity; 1 means no minimum */
     moq: integer("moq").notNull().default(1),
     leadTimeDaysMin: integer("lead_time_days_min"),
     leadTimeDaysMax: integer("lead_time_days_max"),
@@ -146,7 +151,8 @@ export const productVariants = sqliteTable(
   ],
 );
 
-/** 多币种价格：base 手填，auto 由汇率换算，manual 手动覆盖后不再自动重算 */
+/** Prices per currency: base is entered by hand, auto is derived from exchange
+ * rates, and manual is an override that recalculation never touches again. */
 export const variantPrices = sqliteTable(
   "variant_prices",
   {
@@ -162,7 +168,8 @@ export const variantPrices = sqliteTable(
   (table) => [primaryKey({ columns: [table.variantId, table.currency] })],
 );
 
-/** 商品图：alt 按语言存，多语言站的 alt 也是排名信号 */
+/** Product images. Alt text is stored per language, because on a multilingual
+ * site alt text is a ranking signal too. */
 export const productImages = sqliteTable(
   "product_images",
   {

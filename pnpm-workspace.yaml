@@ -1,6 +1,7 @@
 allowBuilds:
-  # workerd 是 Workers 本地运行时，esbuild 是其构建依赖，两者必须允许执行安装脚本，
-  # 否则 wrangler dev 与 vitest-pool-workers 都无法启动。
+  # workerd is the local Workers runtime and esbuild is its build dependency.
+  # Both must be allowed to run install scripts, otherwise neither `wrangler dev`
+  # nor vitest-pool-workers can start.
   esbuild: true
   workerd: true
   sharp: false

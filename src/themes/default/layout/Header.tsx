@@ -25,7 +25,8 @@ export function Header({
 
   return (
     <header>
-      {/* Utility bar：语言与币种切换只在这里出现，不干扰主导航 */}
+      {/* Utility bar: language and currency switching lives only here, so it does
+          not compete with the main navigation */}
       <div style={{ background: "var(--ink)", color: "#a8aeb6", fontSize: "var(--text-xs)" }}>
         <div
           className="shell"

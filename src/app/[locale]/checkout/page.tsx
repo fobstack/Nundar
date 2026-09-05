@@ -12,7 +12,8 @@ import { getTheme } from "@/themes/registry";
 
 export const metadata: Metadata = {
   title: "Checkout",
-  // 结账页是用户私有数据且无 SEO 价值；robots.txt 也已 disallow，双保险
+  // Checkout is private to one visitor and worth nothing to search; robots.txt
+  // disallows it too, and both belts are deliberate
   robots: { index: false, follow: false },
 };
 
@@ -26,7 +27,8 @@ export default async function CheckoutPage({
     notFound();
   }
 
-  // 动态页可以直接读 cookie 里的币种偏好；静态页则由 LiveStock 客户端覆盖
+  // A dynamic page can read the currency preference from the cookie directly;
+  // static pages get theirs from LiveStock on the client
   const store = await cookies();
   const currency = parseCurrencyCookie(
     store.get(CURRENCY_COOKIE)?.value,

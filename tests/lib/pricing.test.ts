@@ -23,7 +23,7 @@ describe("applyPsychologicalRounding", () => {
 
 describe("convertPrice", () => {
   it("applies rate, buffer, then psychological rounding", () => {
-    // 9900 * 0.92 = 9108; * 1.03 = 9381.24 → 9381 → .99 取整 → 9399
+    // 9900 * 0.92 = 9108; * 1.03 = 9381.24 -> 9381 -> rounded to .99 -> 9399
     expect(convertPrice({ baseMinor: 9900, rate: 0.92 })).toBe(9399);
   });
 
@@ -42,19 +42,19 @@ describe("convertPrice", () => {
 
 describe("needsRecalculation", () => {
   it("stays put while the rate drifts under the threshold", () => {
-    // 0.92 → 0.93 是 1.09% 偏离，低于 2% 阈值
+    // 0.92 -> 0.93 is 1.09% of drift, under the 2% threshold
     expect(needsRecalculation({ rateUsed: 0.92, currentRate: 0.93 })).toBe(
       false,
     );
   });
 
   it("triggers once the rate drifts beyond the threshold", () => {
-    // 0.92 → 0.95 是 3.26% 偏离
+    // 0.92 -> 0.95 is 3.26% of drift
     expect(needsRecalculation({ rateUsed: 0.92, currentRate: 0.95 })).toBe(true);
   });
 
   it("triggers symmetrically when the rate falls", () => {
-    // 0.92 → 0.88 是 4.35% 偏离
+    // 0.92 -> 0.88 is 4.35% of drift
     expect(needsRecalculation({ rateUsed: 0.92, currentRate: 0.88 })).toBe(true);
   });
 

@@ -22,7 +22,7 @@ export default async function OrderPage({
   }
 
   const theme = getTheme();
-  // 单号是这一单专有的，切语言留在同一张订单上
+  // The order number belongs to this order alone, so switching language stays on it
   const urls = buildSiteUrls(locale, (target) =>
     localePath(target, "orders", orderNo),
   );

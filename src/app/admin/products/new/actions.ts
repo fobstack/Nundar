@@ -42,6 +42,7 @@ export async function createProductAction(formData: FormData) {
   });
 
   revalidatePath("/admin/products");
-  // 建完直接进编辑页：还有翻译、工况、图片要补，停在列表页只会多一次点击
+  // Straight into the edit page: translations, use cases and images still need
+  // filling in, and stopping at the list only costs another click
   redirect(`/admin/products/${created.slug}`);
 }

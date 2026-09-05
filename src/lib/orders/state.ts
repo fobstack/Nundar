@@ -11,12 +11,15 @@ export const ORDER_STATUSES = [
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
 /**
- * 订单状态机。
+ * The order state machine.
  *
- * 只允许这里定义的流转，其余一律拒绝——状态随意改写是电商系统最容易埋下
- * 对账与履约事故的地方（例如未付款就发货、已退款又被标记为已送达）。
+ * Only the transitions defined here are permitted; everything else is refused.
+ * Letting status be rewritten freely is where commerce systems bury their
+ * reconciliation and fulfilment incidents — shipping before payment clears, or
+ * marking a refunded order as delivered.
  *
- * oversold：支付成功但库存已被买走，只能退款或人工取消，绝不能继续发货。
+ * oversold: payment succeeded but the stock had already been sold. Such an
+ * order can only be refunded or cancelled by hand. It must never ship.
  */
 const TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   pending: ["paid", "cancelled", "oversold"],

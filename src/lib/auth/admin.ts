@@ -15,10 +15,11 @@ export type LoginResult =
   | { ok: false; reason: "invalid" | "locked" };
 
 /**
- * 校验后台登录。
+ * Verify an admin login.
  *
- * 账号不存在与密码错误返回同一个 reason，避免通过错误信息枚举出有效账号。
- * 无论哪种失败都计入限流计数。
+ * An unknown account and a wrong password return the same reason, so the error
+ * message cannot be used to enumerate valid accounts. Either kind of failure
+ * counts towards the rate limit.
  */
 export async function authenticateAdmin(
   db: Db,
@@ -45,7 +46,8 @@ export async function authenticateAdmin(
 
   await clearAttempts(kv, key);
 
-  // 存量哈希参数过旧时，趁着手上有明文密码顺手升级
+  // If the stored hash uses outdated parameters, upgrade it now while the
+  // plaintext password is in hand
   if (needsRehash(user.passwordHash)) {
     await db
       .update(schema.adminUsers)

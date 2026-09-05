@@ -78,7 +78,8 @@ describe("sendTransactionalEmail", () => {
       content: CONTENT,
     });
 
-    // 货已付、订单已改，不能因为通知发不出去就整体失败
+    // The money is taken and the order has changed; an undeliverable notice must
+    // not fail the whole operation
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.reason).toMatch(/domain not verified/);

@@ -48,7 +48,7 @@ export function CheckoutForm({
         phone: String(data.get("phone") ?? "") || undefined,
       });
 
-      // 卡号在 Stripe 托管页填写，永不经过本站
+      // Card details are entered on Stripe's hosted page and never touch this site
       window.location.href = result.checkoutUrl;
     } catch (cause) {
       setError(

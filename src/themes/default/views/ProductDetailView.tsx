@@ -130,7 +130,8 @@ export function ProductDetailView({
         ) : null}
       </div>
 
-      {/* SKU 卡片：每个规格自带价格、起订量、交期、库存与加购 */}
+      {/* SKU cards: each variant carries its own price, MOQ, lead time, stock and
+          add-to-cart */}
       <div
         className="shell"
         style={{

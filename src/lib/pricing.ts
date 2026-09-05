@@ -4,9 +4,11 @@ import { multiplyMinor } from "@/lib/money";
 export type RoundingStrategy = "ending99" | "integer";
 
 /**
- * 心理价位取整，一律向上取整——向下取整会侵蚀已算好的汇率缓冲。
- * ending99：取到不小于原值的、以 99 分结尾的最小金额
- * integer：取到不小于原值的整单位金额
+ * Psychological rounding, always upwards — rounding down would eat into the
+ * exchange buffer that was just applied.
+ *
+ * ending99: the smallest amount >= the input that ends in 99 minor units
+ * integer:  the smallest whole unit >= the input
  */
 export function applyPsychologicalRounding(
   minor: number,
@@ -24,7 +26,7 @@ export function applyPsychologicalRounding(
   return candidate >= minor ? candidate : (wholeUnits + 1) * unit + 99;
 }
 
-/** 基准价 → 目标币种价格：汇率 → 缓冲 → 心理价位取整 */
+/** Base price to target currency: rate, then buffer, then psychological rounding */
 export function convertPrice(input: {
   baseMinor: number;
   rate: number;
@@ -47,9 +49,12 @@ export function convertPrice(input: {
 }
 
 /**
- * 判断是否需要按新汇率重算价格。
- * 汇率每日更新，但价格只在偏离超过阈值时才动——否则静态页需每日全量再生成，
- * 且 JSON-LD 价格与结算价格频繁漂移会触发 Google Merchant 警告。
+ * Decide whether a price should be recomputed at the current rate.
+ *
+ * Rates refresh daily, but prices only move once the drift passes a threshold.
+ * Otherwise every static page would regenerate every day, and the price in the
+ * JSON-LD would keep drifting away from the settled price, which is what
+ * triggers Google Merchant mismatch warnings.
  */
 export function needsRecalculation(input: {
   rateUsed: number;
@@ -59,7 +64,7 @@ export function needsRecalculation(input: {
   const { rateUsed, currentRate } = input;
   const threshold = input.threshold ?? PRICING.recalcThreshold;
 
-  // 从未记录过计算汇率（新价格或历史数据缺失），必须算一次
+  // No rate was ever recorded — a new price, or missing history. Compute once.
   if (!rateUsed || rateUsed <= 0) {
     return true;
   }

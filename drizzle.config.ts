@@ -1,7 +1,8 @@
 import { defineConfig } from "drizzle-kit";
 
-// 只用 drizzle-kit 生成迁移 SQL；迁移的应用一律交给 wrangler d1 migrations apply，
-// 因此这里不配置 d1-http driver，也就不需要任何 Cloudflare 凭据。
+// drizzle-kit is used only to generate migration SQL; applying migrations is
+// always `wrangler d1 migrations apply`. That is why no d1-http driver is
+// configured here — and why this file needs no Cloudflare credentials at all.
 export default defineConfig({
   out: "./drizzle/migrations",
   schema: "./src/db/schema/index.ts",

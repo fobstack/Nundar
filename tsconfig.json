@@ -13,7 +13,7 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
-    // cloudflare:test 的类型（env / applyD1Migrations 等），供测试文件使用
+    // cloudflare:test types (env, applyD1Migrations, ...) used by the test files
     "types": ["@cloudflare/vitest-pool-workers/types"],
     "plugins": [
       {
@@ -32,7 +32,8 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  // src/worker.ts 导入的是构建产物 .open-next/worker.js，而该产物由本次构建后段生成，
-  // 类型检查阶段必然不存在；它只是薄接线层，逻辑都在可测的 src/lib 中
+  // src/worker.ts imports .open-next/worker.js, a build artefact produced later
+  // in the same build and therefore absent while typechecking. It is a thin
+  // wiring layer; the logic it wires up lives in the testable src/lib.
   "exclude": ["node_modules", "src/worker.ts"]
 }

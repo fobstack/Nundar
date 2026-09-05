@@ -30,7 +30,8 @@ export function ProductListView({ locale, products, urls }: ProductListViewProps
         <p style={{ marginTop: "var(--space-6)", color: "var(--ink-3)" }}>{t.empty}</p>
       ) : (
         <div style={{ marginTop: "var(--space-8)", display: "flex", flexDirection: "column" }}>
-          {/* 行式而非卡片式：工程采购横向比参数，卡片会把参数藏起来 */}
+          {/* Rows, not cards: engineering buyers compare specifications across
+              items, and cards hide exactly those specifications */}
           {products.map((product) => (
             <article
               key={product.id}

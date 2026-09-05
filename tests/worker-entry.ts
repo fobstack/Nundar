@@ -1,10 +1,11 @@
 /**
- * 测试专用的 Worker 入口。
+ * A Worker entry point used only by the tests.
  *
- * vitest-pool-workers 需要一个可加载的主入口才能启动隔离运行时，而生产入口
- * `.open-next/worker.js` 是 `opennextjs-cloudflare build` 的产物，跑单元测试时
- * 并不存在。用这个空壳入口把测试与构建产物解耦：测试只用绑定（D1/KV/R2），
- * 不经由 SELF 发请求。
+ * vitest-pool-workers needs a loadable main entry to start its isolated
+ * runtime, and the production entry `.open-next/worker.js` is a build artefact
+ * that does not exist while unit tests run. This stub decouples the tests from
+ * the build: they use the bindings (D1, KV, R2) directly and never send a
+ * request through SELF.
  */
 const testWorker = {
   async fetch(): Promise<Response> {

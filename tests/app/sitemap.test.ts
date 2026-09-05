@@ -51,7 +51,8 @@ describe("buildSitemapEntries", () => {
     const entries = await buildSitemapEntries(createDb(env.DB));
     const urls = entries.map((e) => e.url).join(" ");
 
-    // food-grade-dosing 的 has_own_page = 0，只作为商品页内板块存在
+    // food-grade-dosing has has_own_page = 0 and exists only as a section of the
+    // product page
     expect(urls).not.toContain("food-grade-dosing");
   });
 
@@ -62,7 +63,7 @@ describe("buildSitemapEntries", () => {
     const urls = entries.map((e) => e.url).join(" ");
 
     expect(urls).not.toContain("stainless-ball-valve-dn50");
-    // 首页与列表页仍在
+    // The home page and the listing are still there
     expect(urls).toContain(`${SITE.url}/en`);
   });
 

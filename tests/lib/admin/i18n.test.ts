@@ -19,8 +19,9 @@ describe("admin locales", () => {
   });
 
   it("is a different set from the storefront content languages", () => {
-    // 后台界面语言面向运营，前台内容语言面向买家。混用会导致
-    // 加一门买家语言就莫名其妙要求补一份后台翻译
+    // The admin language faces whoever runs the shop; the storefront languages
+    // face buyers. Conflating them means adding a buyer language inexplicably
+    // demands another admin translation
     expect([...ADMIN_LOCALES]).not.toEqual([...LOCALES]);
     expect((LOCALES as readonly string[]).includes("zh")).toBe(false);
   });
@@ -50,7 +51,7 @@ describe("parseAdminLocale", () => {
 });
 
 describe("message catalogue", () => {
-  /** 递归收集所有叶子路径，用来比对两种语言的结构 */
+  /** Collect every leaf path recursively, to compare the two languages' shapes */
   function paths(value: unknown, prefix = ""): string[] {
     if (typeof value !== "object" || value === null) {
       return [prefix];
@@ -64,7 +65,8 @@ describe("message catalogue", () => {
     const zh = paths(getAdminMessages("zh")).sort();
     const en = paths(getAdminMessages("en")).sort();
 
-    // 结构不一致意味着某一门语言漏了文案，页面会显示 undefined
+    // A shape mismatch means one language is missing a string and the page renders
+    // undefined
     expect(en).toEqual(zh);
   });
 
@@ -83,7 +85,8 @@ describe("message catalogue", () => {
     const zh = getAdminMessages("zh");
     const en = getAdminMessages("en");
 
-    // 只比对确定该不同的条目：像 "SKU" 这类术语两语言相同是正常的
+    // Compare only entries that must differ: terms like "SKU" are legitimately
+    // identical in both languages
     expect(zh.nav.overview).not.toBe(en.nav.overview);
     expect(zh.orders.refund).not.toBe(en.orders.refund);
     expect(zh.settings.owner).not.toBe(en.settings.owner);
@@ -91,7 +94,7 @@ describe("message catalogue", () => {
 });
 
 describe("formatAdminDate", () => {
-  const timestamp = 1_788_000_000; // 2026-09-05 前后
+  const timestamp = 1_788_000_000; // around 2026-09-05
 
   it("formats in the admin's own locale conventions", () => {
     const zh = formatAdminDate(timestamp, "zh");
@@ -99,12 +102,13 @@ describe("formatAdminDate", () => {
 
     expect(zh.length).toBeGreaterThan(0);
     expect(en.length).toBeGreaterThan(0);
-    // en-GB 用斜杠分隔日期，zh-CN 用斜杠但顺序不同——至少格式串应有差异
+    // en-GB and zh-CN both use slashes but order the parts differently, so the
+    // formatted strings must at least differ
     expect(zh).not.toBe(en);
   });
 
   it("uses the runtime's built-in Intl rather than a date library", () => {
-    // 有日期库时这个断言无意义；这里确认输出确实来自 Intl
+    // Confirms the output really comes from Intl rather than a hand-rolled format
     const viaIntl = new Intl.DateTimeFormat("en-GB", {
       year: "numeric",
       month: "2-digit",

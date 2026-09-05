@@ -14,10 +14,11 @@ type LiveItem = {
 };
 
 /**
- * 用实时数据覆盖静态页里的库存与价格。
+ * Replace the stock and price baked into a static page with live values.
  *
- * 静态页给爬虫和首屏提供完整内容，但其中的库存必然会过期；hydration 后拉一次
- * 真实数据覆盖，避免“页面显示有货、下单才发现没货”。
+ * The static page gives crawlers and the first paint complete content, but the
+ * stock number in it is guaranteed to go stale. One fetch after hydration
+ * replaces it, so the page never promises stock that checkout then refuses.
  */
 export function LiveStock({
   variantIds,
@@ -35,8 +36,9 @@ export function LiveStock({
       return;
     }
 
-    // 静态页是按语言默认币种生成的；用户切过币种时以 cookie 为准。
-    // 静态页无法为每个币种各生成一份，所以币种只能在客户端覆盖。
+    // Static pages are generated in each language's default currency, and the
+    // cookie wins when the buyer has switched. Generating one static page per
+    // currency is not viable, so currency can only be applied client-side.
     const preferred = readCurrencyCookieFromDocument() ?? currency;
 
     const controller = new AbortController();
@@ -57,7 +59,8 @@ export function LiveStock({
         }
       })
       .catch(() => {
-        // 拉取失败就保留静态页原值，不给用户报错——静态值只是可能过期，并非错误
+        // A failed fetch keeps the static values and raises nothing: they may be
+        // stale, but stale is not wrong
       });
 
     return () => controller.abort();

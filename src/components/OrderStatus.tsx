@@ -26,10 +26,11 @@ const MESSAGES: Record<Status, string> = {
 };
 
 /**
- * 订单状态显示，pending 时轮询。
+ * Order status, polled while pending.
  *
- * 用户从 Stripe 跳回来时 webhook 可能还没到，订单还是 pending——
- * 此时显示"处理中"并轮询，而不是谎报成功或谎报失败。
+ * When a buyer returns from Stripe the webhook may not have arrived yet and the
+ * order is still pending. Showing "processing" and polling is the honest answer
+ * there — claiming either success or failure would be a lie.
  */
 export function OrderStatus({
   orderNo,
@@ -63,12 +64,13 @@ export function OrderStatus({
         if (cancelled) return;
         setStatus(data.status);
 
-        // 只有 pending 需要继续等；最多轮询 2 分钟后停下，避免无限请求
+        // Only pending needs waiting on, and polling stops after two minutes
+        // rather than running forever
         if (data.status === "pending" && attempts < 40) {
           setTimeout(poll, 3000);
         }
       } catch {
-        // 网络抖动不该让页面报错，下一轮重试即可
+        // A network wobble should not surface as an error; the next poll retries
         if (!cancelled && attempts < 40) {
           setTimeout(poll, 3000);
         }

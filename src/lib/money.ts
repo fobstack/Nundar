@@ -5,15 +5,17 @@ function factorFor(currency: Currency): number {
   return 10 ** CURRENCY_MINOR_UNITS[currency];
 }
 
-/** 四舍五入且对 .5 一律远离零取整，避免 Math.round 对负数的偏向 */
+/** Round half away from zero — Math.round biases negatives towards positive infinity */
 function roundHalfAwayFromZero(value: number): number {
   return value < 0 ? -Math.round(-value) : Math.round(value);
 }
 
 /**
- * 把带小数的金额转成最小货币单位整数。
- * 先乘再修正浮点误差：1.005 * 100 在 IEEE754 下是 100.49999999999999，
- * 直接 round 会得到 100，故先用 toFixed 收敛有效位。
+ * Convert a decimal amount into an integer number of minor units.
+ *
+ * Multiply first, then settle the floating-point error: in IEEE 754,
+ * 1.005 * 100 is 100.49999999999999, so rounding directly yields 100.
+ * toFixed collapses the significant digits before rounding.
  */
 export function toMinor(amount: number, currency: Currency): number {
   if (!Number.isFinite(amount)) {
@@ -32,7 +34,7 @@ export function fromMinor(minor: number, currency: Currency): number {
   return minor / factorFor(currency);
 }
 
-/** 最小单位整数乘以系数（汇率、缓冲），结果仍为整数 */
+/** Multiply minor units by a factor (a rate, a buffer); the result stays an integer */
 export function multiplyMinor(minor: number, factor: number): number {
   if (!Number.isInteger(minor)) {
     throw new Error(`Minor amount must be an integer, received: ${minor}`);

@@ -19,7 +19,7 @@ import { createCheckoutSession } from "@/lib/stripe/client";
 
 const addressSchema = z.object({
   recipient: z.string().min(1).max(120),
-  // 邮箱是唯一的订单通知渠道，结账时必填
+  // Email is the only channel an order notification has, so checkout requires it
   email: z.string().email().max(200),
   line1: z.string().min(1).max(200),
   line2: z.string().max(200).optional(),
@@ -37,15 +37,17 @@ const bodySchema = z.object({
 });
 
 /**
- * 创建订单并返回 Stripe 的 client_secret。
+ * Create the order and return Stripe's client_secret.
  *
- * 金额全部由 priceCart 依据数据库当前数据重算——请求体里没有、也不接受任何金额。
+ * Every amount is recomputed by priceCart from current database values. The
+ * request body carries no amount, and none would be accepted if it did.
  */
 export async function POST(request: Request) {
   const { env } = getCloudflareContext();
 
-  // 结账是成本最高的公开接口：每次都会建单并向 Stripe 创建会话。
-  // 不限流时可被用来撑爆 D1、耗尽 Stripe 配额并产生真实账单。
+  // Checkout is the most expensive public endpoint: every call writes an order
+  // and opens a Stripe session. Without a limit it can be used to bloat D1,
+  // exhaust the Stripe quota, and run up a real bill.
   const limit = await checkRateLimit(
     env.SESSIONS,
     `checkout:${clientIdentifier(request)}`,
@@ -86,7 +88,8 @@ export async function POST(request: Request) {
   );
 
   if (!priced.ok) {
-    // 把全部问题一次性返回，让前端能逐行提示（缺货、低于起订量等）
+    // Return every problem at once, so the client can annotate each line — out of
+    // stock, below the minimum order quantity, and so on
     return Response.json({ error: "cart_invalid", issues: priced.issues }, {
       status: 409,
     });

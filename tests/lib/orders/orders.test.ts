@@ -199,7 +199,7 @@ describe("markOrderPaid", () => {
     });
 
     expect(result.status).toBe("oversold");
-    // 库存不足时绝不能扣成负数
+    // Insufficient stock must never decrement below zero
     expect(await stockOf(THREADED)).toBe(2);
   });
 

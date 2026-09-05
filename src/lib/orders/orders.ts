@@ -18,7 +18,7 @@ export type ShippingAddress = {
 
 type SuccessfulCart = Extract<PricedCart, { ok: true }>;
 
-/** 对外可读单号：日期 + 随机段，不暴露订单总量 */
+/** Public order number: a date plus a random suffix, so it leaks no order volume */
 function newOrderNo(): string {
   const date = new Date().toISOString().slice(2, 10).replace(/-/g, "");
   const suffix = crypto.randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase();
@@ -30,10 +30,15 @@ function nowSeconds(): number {
 }
 
 /**
- * 创建待支付订单。
+ * Create an order awaiting payment.
  *
- * 刻意**不扣库存**：加购或下单即扣会被恶意刷单占光库存。库存在支付确认后才扣，
- * 代价是极小概率超卖，由 markOrderPaid 的条件扣减兜住并转人工退款。
+ * Deliberately does **not** decrement stock. Decrementing at add-to-cart or at
+ * order creation lets anyone drain the catalogue with scripted orders. Stock
+ * comes off only once payment confirms.
+ *
+ * The cost of that choice is a small chance of overselling, which
+ * markOrderPaid catches with a conditional decrement and routes to a manual
+ * refund.
  */
 export async function createPendingOrder(
   db: Db,
@@ -67,7 +72,8 @@ export async function createPendingOrder(
     createdAt: nowSeconds(),
   });
 
-  // 快照商品名、SKU 与单价：商品之后改名改价下架都不影响历史订单
+  // Snapshot name, SKU and unit price: renaming, repricing or delisting the
+  // product later must not alter what a historical order says it was
   for (const line of input.cart.lines) {
     await db.insert(schema.orderItems).values({
       id: crypto.randomUUID(),
@@ -89,11 +95,13 @@ export type PaymentResult = {
 };
 
 /**
- * 支付成功后的处理：幂等 + 条件扣减库存 + 状态流转。
+ * Handle a confirmed payment: idempotency, conditional stock decrement, state
+ * transition.
  *
- * Stripe 会重投同一事件，所以先用 stripe_events 的主键去重；库存扣减用
- * `WHERE stock >= qty` 的条件更新，任一行扣不动就把整单标记为 oversold
- * 交人工处理并退款，绝不把库存扣成负数。
+ * Stripe redelivers events, so the stripe_events primary key deduplicates
+ * first. The decrement is a conditional update (`WHERE stock >= qty`); if any
+ * line cannot be satisfied the whole order is marked oversold for a manual
+ * refund. Stock is never allowed to go negative.
  */
 export async function markOrderPaid(
   db: Db,
@@ -115,7 +123,7 @@ export async function markOrderPaid(
     throw new Error(`Order ${input.orderId} not found`);
   }
 
-  // 重复投递：直接回报当前状态，绝不重复扣库存
+  // Redelivery: report the current status and decrement nothing a second time
   if (existingEvent) {
     return { status: order.status as OrderStatus, alreadyProcessed: true };
   }
@@ -142,7 +150,7 @@ export async function markOrderPaid(
         ),
       );
 
-    // 条件不满足时影响行数为 0，说明这一行库存已被别人买走
+    // Zero rows changed means the condition failed: someone else bought it first
     const changed = (result as unknown as { meta?: { changes?: number } }).meta
       ?.changes;
     if (changed === 0) {
@@ -154,7 +162,8 @@ export async function markOrderPaid(
   }
 
   if (oversold) {
-    // 回滚已扣的行：D1 没有跨语句事务时的补偿写法
+    // Compensate the lines already decremented — D1 has no transaction
+    // spanning these statements, so the rollback is manual
     for (const done of decremented) {
       await db
         .update(schema.productVariants)

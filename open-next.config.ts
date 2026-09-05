@@ -6,14 +6,15 @@ import doQueue from "@opennextjs/cloudflare/overrides/queue/do-queue";
 import doShardedTagCache from "@opennextjs/cloudflare/overrides/tag-cache/do-sharded-tag-cache";
 
 export default defineCloudflareConfig({
-  // 商品页与工况页为 ISR，增量缓存放 R2 并叠加区域缓存降低回源
+  // Product and use-case pages are ISR; the incremental cache lives in R2 with a
+  // regional cache in front to cut origin traffic
   incrementalCache: withRegionalCache(r2IncrementalCache, {
     mode: "long-lived",
     bypassTagCacheOnCacheHit: true,
   }),
-  // 去重时间型重验证，避免同一页面被并发重复再生成
+  // Deduplicates time-based revalidation so one page is not regenerated twice at once
   queue: doQueue,
-  // 支撑后台改内容后按需 revalidate 对应商品页
+  // Lets an admin edit revalidate exactly the product pages it touched
   tagCache: doShardedTagCache({ baseShardSize: 12, regionalCache: true }),
   enableCacheInterception: true,
   cachePurge: purgeCache({ type: "direct" }),

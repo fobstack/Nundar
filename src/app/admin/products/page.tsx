@@ -25,7 +25,8 @@ export default async function AdminProductsPage() {
       (t) => t.productId === productId && t.locale === DEFAULT_LOCALE,
     )?.name ?? "(untranslated)";
 
-  // 翻译完整度是多语言站最容易失控的地方，列表页就要能一眼看出缺哪几门语言
+  // Translation completeness is where a multilingual site quietly falls apart, so
+  // the list itself has to show which languages are behind
   const missingLocales = (productId: string) =>
     LOCALES.filter(
       (locale) =>

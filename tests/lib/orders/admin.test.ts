@@ -226,7 +226,7 @@ describe("refundOrder", () => {
     const stockBeforeRefund = await stockOf(THREADED);
     await refundOrder(createDb(env.DB), created.id);
 
-    // 超卖单从未真正扣成库存，退款时不能凭空加回去
+    // An oversold order never took the stock, so a refund must not conjure it back
     expect(await stockOf(THREADED)).toBe(stockBeforeRefund);
   });
 

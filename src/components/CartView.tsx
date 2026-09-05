@@ -45,7 +45,8 @@ export function CartPageView({
   useEffect(() => {
     let cancelled = false;
 
-    // 在 effect 里同步 setState 会触发级联渲染；先取数据、组件仍挂载时再设值
+    // Calling setState synchronously inside an effect cascades renders; fetch
+    // first and set state only if the component is still mounted
     cartApi
       .queryCart(locale, currency)
       .then((next) => {
@@ -93,7 +94,7 @@ export function CartPageView({
         </p>
       ) : null}
 
-      {/* 购物车里的问题逐条列出，用户才知道该改哪一行 */}
+      {/* Every problem listed line by line, so the buyer knows which one to fix */}
       {cart.issues.length > 0 ? (
         <ul className="mb-6 space-y-1 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           {cart.issues.map((issue, index) => (

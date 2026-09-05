@@ -6,8 +6,9 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      // 交易与私有页面无 SEO 价值；带查询参数的筛选页会产生无限 URL 组合，
-      // 放任爬取只会浪费爬虫预算
+      // Transactional and private pages are worth nothing to search, and filtered
+      // pages with query parameters generate unbounded URL combinations that
+      // would burn the crawl budget for no return
       disallow: [
         "/api/",
         "/admin",

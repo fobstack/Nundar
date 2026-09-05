@@ -41,7 +41,7 @@ export default async function AdminCustomersPage() {
                 </td>
                 <td className="px-3 py-2">{customer.orderCount}</td>
                 <td className="px-3 py-2">
-                  {/* 每个币种单独一行：合并显示会误导 */}
+                  {/* One row per currency: merging them would mislead */}
                   {Object.entries(customer.spentByCurrency).length === 0
                     ? "—"
                     : Object.entries(customer.spentByCurrency).map(

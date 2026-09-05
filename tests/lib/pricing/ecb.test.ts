@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseEcbRates, ratesFromBase } from "@/lib/pricing/ecb";
 
-// ECB 每日参考汇率的真实响应结构（截取）
+// An excerpt of the ECB daily reference rates, in its real response shape
 const SAMPLE = `<?xml version="1.0" encoding="UTF-8"?>
 <gesmes:Envelope xmlns:gesmes="http://www.gesmes.org/xml/2002-08-01" xmlns="http://www.ecb.int/vocabulary/2002-08-01/eurofxref">
 	<gesmes:subject>Reference rates</gesmes:subject>

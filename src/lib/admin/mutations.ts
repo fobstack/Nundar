@@ -4,14 +4,14 @@ import { DEFAULT_LOCALE, type Locale } from "@/config/locales";
 import type { Db } from "@/db/client";
 import * as schema from "@/db/schema";
 
-/** URL 片段允许的字符：小写字母、数字、连字符 */
+/** Characters a URL segment may contain: lowercase letters, digits, hyphens */
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 function nowSeconds(): number {
   return Math.floor(Date.now() / 1000);
 }
 
-/** 内容变更后推进 updated_at，sitemap 的 lastModified 才会跟着动 */
+/** Bump updated_at after a content change, so the sitemap's lastModified follows */
 async function touchProduct(db: Db, productId: string): Promise<void> {
   await db
     .update(schema.products)
@@ -20,11 +20,13 @@ async function touchProduct(db: Db, productId: string): Promise<void> {
 }
 
 /**
- * 创建商品。
+ * Create a product.
  *
- * 只要求最小可用集合：slug + 默认语言的名称 + 一个 SKU。其余内容（其他语言、
- * 特性、工况、图片、多币种价格）在编辑页逐步补齐——建商品时就要求填全，
- * 会让运营在录入阶段就卡住。
+ * Asks for the minimum that can exist: a slug, a name in the default language,
+ * and one SKU. Everything else — other languages, features, use cases, images,
+ * prices in other currencies — is filled in from the edit page. Demanding it
+ * all up front stalls whoever is entering the catalogue before they have
+ * anything to show for it.
  */
 export async function createProduct(
   db: Db,
@@ -78,8 +80,9 @@ export async function createProduct(
   await db.insert(schema.products).values({
     id: productId,
     slug,
-    // 新商品先落草稿：还没有图、没有其他语言内容就直接上架，
-    // 等于让爬虫先抓到一个残缺页面
+    // A new product starts as a draft. Publishing before it has images or
+    // content in the other languages means the crawler's first look at the page
+    // is at an incomplete one.
     status: "draft",
     createdAt: now,
     updatedAt: now,
@@ -111,7 +114,8 @@ export async function createProduct(
   return { id: productId, slug };
 }
 
-/** 上下架。草稿转在售前要求至少有默认语言的名称，避免出现无标题页面。 */
+/** Publish and unpublish. Going live requires at least a name in the default
+ * language, so no page ships without a title. */
 export async function setProductStatus(
   db: Db,
   productId: string,
@@ -192,10 +196,12 @@ export async function saveProductTranslation(
 }
 
 /**
- * 改基准价。
+ * Change the base price.
  *
- * 同时删掉该 SKU 的全部 auto 价：它们是按旧基准价算出来的，留着就等于挂着错价。
- * manual 价不动——那是运营针对具体市场的决定，优先于基准价换算。
+ * Also drops every auto price for that SKU: they were derived from the old base
+ * price, and leaving them in place means displaying prices that are simply
+ * wrong. Manual prices are untouched — those are a decision made about a
+ * specific market, and they outrank any conversion from the base.
  */
 export async function updateBasePrice(
   db: Db,
@@ -232,7 +238,7 @@ export async function updateBasePrice(
     );
 }
 
-/** 手动覆盖某币种价格；此后该行不再参与汇率重算 */
+/** Override the price in one currency; that row stops taking part in rate recalculation */
 export async function setManualPrice(
   db: Db,
   variantId: string,
@@ -266,7 +272,7 @@ export async function setManualPrice(
     });
 }
 
-/** 撤销手动定价，交还给汇率自动换算（下次 cron 会补上） */
+/** Drop a manual price and hand the row back to rate conversion; the next cron run fills it in */
 export async function clearManualPrice(
   db: Db,
   variantId: string,
@@ -321,10 +327,10 @@ export async function updateVariantLogistics(
 }
 
 /**
- * 切换工况是否生成独立落地页。
+ * Toggle whether a use case gets a landing page of its own.
  *
- * 开启时必须有合法 slug——没有 slug 就没有 URL，页面会 404，
- * 而 sitemap 又会把它收录进去，等于给爬虫送死链。
+ * Turning it on requires a valid slug. Without one there is no URL, the page
+ * 404s, and the sitemap lists it anyway — handing the crawler a dead link.
  */
 export async function updateUseCasePage(
   db: Db,

@@ -1,12 +1,14 @@
-// 构建产物，由 opennextjs-cloudflare build 生成；因此本文件排除在 tsc 之外
-// （见 tsconfig.json 的 exclude），逻辑一律放在可测的 src/lib 里，此处只做接线。
+// The import below is a build artefact produced by `opennextjs-cloudflare
+// build`, which is why this file is excluded from tsc (see tsconfig.json). All
+// logic lives in the testable src/lib; this file is wiring only.
 import { default as handler } from "../.open-next/worker.js";
 import { createDb } from "@/db/client";
 import { runExchangeRateCron } from "@/lib/pricing/cron";
 
 /**
- * 自定义 Worker 入口：复用 OpenNext 生成的 fetch handler，另加 Cron 的 scheduled handler。
- * 见 https://opennext.js.org/cloudflare/howtos/custom-worker
+ * Custom Worker entry point: reuses the fetch handler OpenNext generates and
+ * adds the cron scheduled handler.
+ * See https://opennext.js.org/cloudflare/howtos/custom-worker
  */
 const worker = {
   fetch: handler.fetch,
@@ -34,7 +36,8 @@ const worker = {
 
 export default worker;
 
-// DO Queue 与 DO Tag Cache 的类在生成的 worker 里，必须从自定义入口再导出一次
+// The DO Queue and DO Tag Cache classes live in the generated worker and must be
+// re-exported from the custom entry point
 export {
   DOQueueHandler,
   DOShardedTagCache,

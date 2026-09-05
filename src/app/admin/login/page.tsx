@@ -13,7 +13,7 @@ import {
 
 export const metadata: Metadata = {
   title: "Admin sign in",
-  // 后台页面绝不能进索引
+  // Admin pages must never be indexed
   robots: { index: false, follow: false },
 };
 
@@ -38,7 +38,8 @@ async function signIn(formData: FormData) {
     value: token,
     httpOnly: true,
     sameSite: "lax",
-    // 本地 http 下带 Secure 会被浏览器丢弃，登录就会一直失败
+    // On local http the browser discards a Secure cookie, and login then fails
+    // forever with no visible cause
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: SESSION_TTL_SECONDS,

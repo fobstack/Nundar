@@ -37,13 +37,16 @@ export type PricedCart =
   | { ok: false; issues: CartIssue[] };
 
 /**
- * 按数据库当前数据给购物车定价并校验。
+ * Price and validate a cart against current database values.
  *
- * 这是结账前的唯一权威计算：价格、库存、MOQ 全部在这里重新取值，
- * 前端传来的任何金额都不参与。所有问题一次性返回，避免用户改一个报一个。
+ * This is the one authoritative calculation before checkout: price, stock and
+ * MOQ are all re-read here, and no amount supplied by the client takes part.
+ * Every problem is reported at once, rather than surfacing one more each time
+ * the buyer fixes something.
  *
- * 币种回落：请求币种缺价时整单回落到基准币种并如实返回——
- * 绝不能按美元金额向用户收欧元。
+ * Currency fallback: if any line lacks a price in the requested currency, the
+ * whole order falls back to the base currency and says so. Charging a dollar
+ * amount in euros is never acceptable.
  */
 export async function priceCart(
   db: Db,
@@ -90,8 +93,9 @@ export async function priceCart(
       ),
     );
 
-  // 整单只用一个币种结算：只要有任一行缺请求币种的价格，全单回落到基准币种，
-  // 否则会出现同一订单里混着两种币种的金额
+  // One currency settles the whole order: a single line missing the requested
+  // currency falls the entire order back to the base currency, because mixing
+  // two currencies inside one order produces a meaningless total
   const everyLineHasRequested = variantIds.every((variantId) =>
     priceRows.some(
       (price) => price.variantId === variantId && price.currency === currency,

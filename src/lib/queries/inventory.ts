@@ -11,10 +11,12 @@ export type LiveInventoryItem = {
 };
 
 /**
- * 取指定 SKU 的实时库存与价格。
+ * Live stock and price for a set of SKUs.
  *
- * 商品页是静态生成的，页面里的库存数字必然会过期——若直接照它下单，会出现
- * “页面显示有货、下单才发现没货”。前端 hydration 后调用本查询覆盖显示。
+ * Product pages are statically generated, so the stock number baked into the
+ * HTML is guaranteed to go stale. Ordering against it produces the worst
+ * version of that: the page said in stock, and checkout says otherwise. The
+ * client calls this after hydration and patches the displayed values.
  */
 export async function getLiveInventory(
   db: Db,

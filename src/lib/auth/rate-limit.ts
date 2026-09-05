@@ -1,12 +1,14 @@
 /**
- * 登录限流：KV 计数 + TTL 自动过期。
+ * Login rate limiting: a KV counter that expires by TTL.
  *
- * 后台是全站最高权限入口，没有限流的话账号密码登录等于把爆破成本降到零。
- * 计数键按邮箱而非 IP——攻击者换 IP 的成本远低于换目标账号。
+ * The admin is the highest-privilege entry point on the site, and without a
+ * limit, password login costs an attacker nothing to brute-force. The counter
+ * is keyed on the email address rather than the IP, because changing IP is far
+ * cheaper for an attacker than changing which account they are attacking.
  */
 export const MAX_ATTEMPTS = 5;
 
-/** 锁定窗口：达到上限后需等待这么久，或成功登录后清零 */
+/** Lockout window: how long to wait after hitting the limit. A successful login clears it. */
 export const LOCKOUT_SECONDS = 15 * 60;
 
 export function attemptKey(email: string): string {
@@ -20,7 +22,8 @@ export async function recordFailedAttempt(
   const current = Number((await kv.get(key)) ?? 0);
   const next = current + 1;
 
-  // 每次失败都刷新 TTL：持续爆破会持续锁定，而非到点自动解锁
+  // Every failure refreshes the TTL, so sustained brute force stays locked out
+  // instead of unlocking on a fixed schedule
   await kv.put(key, String(next), { expirationTtl: LOCKOUT_SECONDS });
 
   return next;

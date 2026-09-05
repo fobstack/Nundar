@@ -30,7 +30,7 @@ async function cartIdFromCookies(): Promise<string> {
   return (await cookies()).get(CART_COOKIE)?.value ?? "";
 }
 
-/** 读购物车并按当前数据定价 */
+/** Read the cart and price it against current data */
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const locale = LOCALES.includes(
@@ -69,7 +69,8 @@ export async function GET(request: Request) {
   );
 }
 
-/** 改购物车。只接受 variantId 与数量，价格永远由服务端算 */
+/** Modify the cart. Accepts variant ids and quantities only; prices are always
+ * computed by the server. */
 export async function POST(request: Request) {
   const { env } = getCloudflareContext();
 

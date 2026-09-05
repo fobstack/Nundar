@@ -26,13 +26,14 @@ describe("listActiveProducts", () => {
   it("returns the lowest price in minor units for the requested currency", async () => {
     const products = await listActiveProducts(createDb(env.DB), "en", "USD");
 
-    // 两个 SKU 定价 99 与 168 美元，列表页取最低价
+    // Two SKUs priced at USD 99 and 168; the listing shows the lower one
     expect(products[0].fromPriceMinor).toBe(9900);
     expect(products[0].priceCurrency).toBe("USD");
   });
 
   it("falls back to the base currency and reports it, instead of mislabelling the amount", async () => {
-    // 种子数据只有 USD 定价；请求 EUR 时不能把 9900 当成 €99 展示
+    // The seed data is priced in USD only: asking for EUR must not display 9900
+    // as EUR 99
     const products = await listActiveProducts(createDb(env.DB), "de", "EUR");
 
     expect(products[0].fromPriceMinor).toBe(9900);

@@ -76,7 +76,8 @@ describe("clientIdentifier", () => {
       headers: { "x-forwarded-for": "1.2.3.4" },
     });
 
-    // 用可伪造的头做限流身份，等于让攻击者自选身份绕过限流
+    // Keying a limit on a forgeable header lets an attacker pick their own identity
+    // and walk straight past it
     expect(clientIdentifier(request)).toBe("local");
   });
 
@@ -122,7 +123,7 @@ describe("configured limits", () => {
   });
 
   it("leaves headroom for the order status page to poll", () => {
-    // 成功页每 3 秒轮询一次、最多 2 分钟 → 约 40 次
+    // The success page polls every 3 seconds for up to 2 minutes: about 40 calls
     expect(RATE_LIMITS.orderStatus.limit).toBeGreaterThanOrEqual(40);
   });
 

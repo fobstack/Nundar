@@ -126,7 +126,7 @@ describe("deleteAdmin", () => {
   it("refuses to let you remove your own account", async () => {
     const ownerId = await seedOwner();
 
-    // 删掉自己会把自己锁在门外
+    // Deleting yourself locks you out
     await expect(
       deleteAdmin(createDb(env.DB), {
         targetId: ownerId,
@@ -146,7 +146,8 @@ describe("deleteAdmin", () => {
       (admin) => admin.role === "staff",
     )!;
 
-    // staff 也不该能删掉唯一的 owner —— 店铺会永远失去设置与账号管理能力
+    // Staff must not be able to delete the only owner either: the shop would lose
+    // settings and account management permanently
     await expect(
       deleteAdmin(createDb(env.DB), {
         targetId: ownerId,

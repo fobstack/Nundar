@@ -57,7 +57,8 @@ describe("recalculatePrices", () => {
     const prices = await pricesFor(THREADED);
     const eur = prices.find((p) => p.currency === "EUR");
 
-    // 9900 * 0.86 = 8514; * 1.03 缓冲 = 8769.42 → 8769 → .99 取整 → 8799
+    // 9900 * 0.86 = 8514; with the 1.03 buffer = 8769.42 -> 8769 -> rounded to
+    // .99 -> 8799
     expect(eur?.amountMinor).toBe(8799);
     expect(eur?.source).toBe("auto");
     expect(eur?.rateUsed).toBe(0.86);
@@ -90,7 +91,7 @@ describe("recalculatePrices", () => {
     await recalculatePrices(createDb(env.DB));
     const before = (await pricesFor(THREADED)).find((p) => p.currency === "EUR");
 
-    // 0.86 → 0.867 是 0.81% 偏离，低于 2% 阈值
+    // 0.86 -> 0.867 is 0.81% of drift, under the 2% threshold
     await refreshExchangeRates(createDb(env.DB), { EUR: 0.867 });
     const result = await recalculatePrices(createDb(env.DB));
 
@@ -104,7 +105,7 @@ describe("recalculatePrices", () => {
     await refreshExchangeRates(createDb(env.DB), { EUR: 0.86 });
     await recalculatePrices(createDb(env.DB));
 
-    // 0.86 → 0.95 是 10.5% 偏离
+    // 0.86 -> 0.95 is 10.5% of drift
     await refreshExchangeRates(createDb(env.DB), { EUR: 0.95 });
     await recalculatePrices(createDb(env.DB));
 

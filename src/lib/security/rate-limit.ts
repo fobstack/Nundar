@@ -1,35 +1,42 @@
 /**
- * 通用限流器（KV 固定窗口计数）。
+ * General-purpose rate limiter, a fixed-window counter in KV.
  *
- * 公开接口不限流，等于把创建订单、枚举单号这类操作的成本降到零：
- * 结账接口每次调用都会在 D1 建单并向 Stripe 创建会话，无限流时可被用来
- * 撑爆数据库、耗尽 Stripe 配额，甚至产生真实账单。
+ * Leaving public endpoints unlimited makes creating orders and enumerating
+ * order numbers free: every checkout call writes an order to D1 and opens a
+ * Stripe session, so without a limit it can be used to bloat the database,
+ * exhaust the Stripe quota, and run up a real bill.
  *
- * 用固定窗口而非滑动窗口：KV 没有原子递增，滑动窗口需要读改写多个键，
- * 在边缘上代价高且仍非原子。固定窗口在窗口边界允许约两倍突发，
- * 对"阻止自动化滥用"这个目标足够。
+ * Fixed window rather than sliding: KV has no atomic increment, and a sliding
+ * window needs a read-modify-write across several keys — expensive at the edge
+ * and still not atomic. A fixed window allows roughly a double burst at the
+ * window boundary, which is fine for the actual goal of stopping automated
+ * abuse.
  */
 export type RateLimitRule = {
-  /** 窗口内允许的次数 */
+  /** Requests allowed within the window */
   limit: number;
-  /** 窗口长度（秒） */
+  /** Window length, in seconds */
   windowSeconds: number;
 };
 
 export type RateLimitResult = {
   allowed: boolean;
-  /** 本窗口剩余次数，已超限时为 0 */
+  /** Requests left in this window; 0 once the limit is reached */
   remaining: number;
-  /** 建议客户端等待的秒数，未超限时为 0 */
+  /** Seconds the client should wait; 0 while under the limit */
   retryAfterSeconds: number;
 };
 
 /**
- * 取限流身份。
+ * Derive the identity a limit is counted against.
  *
- * Cloudflare 在边缘注入 `cf-connecting-ip`，它由平台设置、客户端无法伪造；
- * `x-forwarded-for` 可被任意伪造，绝不能用作限流身份。
- * 本地开发没有该头，退化为共享桶——只影响本地体验，不影响线上正确性。
+ * Cloudflare injects `cf-connecting-ip` at the edge: it is set by the platform
+ * and a client cannot forge it. `x-forwarded-for` can be set to anything and
+ * must never be used as a rate-limit identity — doing so would let an attacker
+ * pick their own bucket.
+ *
+ * Local development has no such header and falls back to a shared bucket, which
+ * affects only the local experience, never production correctness.
  */
 export function clientIdentifier(request: Request): string {
   return request.headers.get("cf-connecting-ip") ?? "local";
@@ -54,7 +61,8 @@ export async function checkRateLimit(
   }
 
   await kv.put(bucket, String(current + 1), {
-    // TTL 略长于窗口，确保计数在窗口结束后自动消失，无需清理任务
+    // TTL slightly outlives the window so counters expire by themselves and no
+    // cleanup job is needed
     expirationTtl: rule.windowSeconds + 60,
   });
 
@@ -65,7 +73,7 @@ export async function checkRateLimit(
   };
 }
 
-/** 超限时的标准响应。带 Retry-After，让守规矩的客户端知道该等多久。 */
+/** The standard over-limit response. Retry-After tells a well-behaved client how long to wait. */
 export function rateLimitedResponse(result: RateLimitResult): Response {
   return Response.json(
     { error: "rate_limited" },
@@ -79,14 +87,14 @@ export function rateLimitedResponse(result: RateLimitResult): Response {
   );
 }
 
-/** 各接口的限流额度。数值按"正常用户绝不会触碰、自动化滥用必然触碰"来定。 */
+/** Per-endpoint budgets, set so a real user never reaches them and a script always does. */
 export const RATE_LIMITS = {
-  /** 结账会建单并调 Stripe，成本最高 */
+  /** Checkout creates an order and calls Stripe, so it is the most expensive */
   checkout: { limit: 10, windowSeconds: 60 * 10 },
-  /** 改购物车是高频正常操作，额度放宽 */
+  /** Editing a cart is normal and frequent, so the budget is generous */
   cart: { limit: 120, windowSeconds: 60 },
-  /** 查订单状态：成功页会轮询，但单个 IP 不该查很多单号 */
+  /** Order status: the success page polls, but one IP should not look up many orders */
   orderStatus: { limit: 60, windowSeconds: 60 },
-  /** 查库存价格：商品页每次加载一次 */
+  /** Stock and price: one call per product page load */
   inventory: { limit: 120, windowSeconds: 60 },
 } as const satisfies Record<string, RateLimitRule>;

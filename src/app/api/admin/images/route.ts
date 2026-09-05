@@ -14,10 +14,11 @@ const metaSchema = z.object({
 });
 
 /**
- * 上传商品图。
+ * Upload a product image.
  *
- * alt 文本强制必填：它既是无障碍要求，也是图片排名信号。
- * 允许上传无 alt 的图，等于默认放弃这部分流量。
+ * Alt text is mandatory: it is both an accessibility requirement and an image
+ * ranking signal. Allowing an upload without it means giving that traffic away
+ * by default.
  */
 export async function POST(request: Request) {
   await requireAdmin();
@@ -76,7 +77,7 @@ export async function POST(request: Request) {
     sortOrder: existing.length,
   });
 
-  // 第一张图自动成为主图，省掉一次多余操作
+  // The first image becomes the primary one, saving a redundant step
   if (existing.length === 0) {
     await db
       .update(schema.products)

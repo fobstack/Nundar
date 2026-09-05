@@ -17,20 +17,22 @@ type StripeEvent = {
 };
 
 /**
- * Stripe webhook。
+ * The Stripe webhook.
  *
- * 这是订单状态的唯一可信来源——用户支付后浏览器崩溃、断网都很常见，
- * 前端的"支付成功"回调不可靠。
+ * This is the only trustworthy source of order status. Browsers crash and
+ * connections drop right after payment all the time, so a client-side "payment
+ * succeeded" callback cannot be relied on.
  *
- * 处理失败必须返回非 2xx，让 Stripe 重投；重复投递由 markOrderPaid 的
- * 幂等检查兜住。
+ * A failure here must return a non-2xx so Stripe redelivers; the redelivery is
+ * absorbed by markOrderPaid's idempotency check.
  */
 export async function POST(request: Request) {
   const { env } = getCloudflareContext();
   const secret = (env as unknown as { STRIPE_WEBHOOK_SECRET?: string })
     .STRIPE_WEBHOOK_SECRET;
 
-  // 必须读原始文本再验签：JSON 解析后再序列化会改变字节，签名就对不上了
+  // Read the raw text before verifying: parsing and re-serialising the JSON
+  // changes the bytes and the signature no longer matches
   const rawBody = await request.text();
   const signature = request.headers.get("stripe-signature") ?? "";
 
@@ -41,7 +43,8 @@ export async function POST(request: Request) {
   );
 
   if (!verification.ok) {
-    // 验签失败一律 400 且不重试——这不是暂时性故障，而是伪造或配置错误
+    // A failed signature is a 400 with no retry: this is not a transient fault but
+    // either a forgery or a misconfiguration
     console.error(`[stripe] rejected webhook: ${verification.reason}`);
     return new Response("Invalid signature", { status: 400 });
   }
@@ -54,7 +57,8 @@ export async function POST(request: Request) {
   }
 
   if (event.type !== "payment_intent.succeeded") {
-    // 其他事件当前不处理，但要回 200，否则 Stripe 会一直重投
+    // Other events are not handled but must still return 200, or Stripe redelivers
+    // them forever
     return new Response("Ignored", { status: 200 });
   }
 
@@ -74,19 +78,21 @@ export async function POST(request: Request) {
     });
 
     if (result.status === "oversold") {
-      // 已扣款但库存不足：进人工队列处理退款，仍回 200 避免 Stripe 重投
+      // Paid but the stock was gone: queue it for a manual refund and still return
+      // 200, so Stripe stops redelivering
       console.error(`[stripe] order ${orderId} oversold, needs manual refund`);
       return Response.json({ status: result.status });
     }
 
-    // 首次确认支付时发订单确认邮件；重复投递不再重发
+    // Send the confirmation email on the first confirmation only; redeliveries do
+    // not send it again
     if (!result.alreadyProcessed && result.status === "paid") {
       await sendOrderConfirmation(orderId);
     }
 
     return Response.json({ status: result.status });
   } catch (error) {
-    // 处理失败返回 5xx，Stripe 会重投；日志不带任何客户信息
+    // A failure returns 5xx and Stripe redelivers; the log carries no customer data
     console.error(
       "[stripe] failed to process payment:",
       error instanceof Error ? error.message : String(error),
@@ -96,10 +102,12 @@ export async function POST(request: Request) {
 }
 
 /**
- * 发订单确认邮件。
+ * Send the order confirmation email.
  *
- * 发信失败只记日志，不影响 webhook 的返回值——钱已经收了、库存已经扣了，
- * 因为邮件发不出去就返回 5xx 会让 Stripe 反复重投，反而更糟。
+ * A send failure is logged and nothing more; it never changes what the webhook
+ * returns. The money is taken and the stock is decremented, so returning 5xx
+ * over an undeliverable email would only make Stripe redeliver an event that
+ * was already handled correctly.
  */
 async function sendOrderConfirmation(orderId: string): Promise<void> {
   const db = getDb();

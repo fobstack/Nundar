@@ -17,8 +17,9 @@ import {
 import { toMinor } from "@/lib/money";
 
 /**
- * 后台改动后必须让前台静态页重新生成，否则改了内容线上还是旧的。
- * 商品页、工况页、列表页、首页与 sitemap 都受影响。
+ * An admin edit has to regenerate the storefront's static pages, or the change
+ * is invisible in production. The product page, its use-case pages, the listing,
+ * the home page and the sitemap are all affected.
  */
 function revalidateProduct(slug: string) {
   for (const locale of LOCALES) {

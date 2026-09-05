@@ -7,10 +7,12 @@ import type { Locale } from "@/config/locales";
 import { localePath } from "@/lib/seo";
 
 /**
- * 加购控件。
+ * The add-to-cart control.
  *
- * 数量初始值即为 MOQ、步进也按 MOQ 递增，避免用户选出 MOQ=10 时的 13 件这种
- * 无效数量。服务端仍会二次校验——前端校验只是体验，绕过它照样会被结账拦下。
+ * The quantity starts at the MOQ and steps by it, so a buyer cannot land on
+ * something like 13 units when the minimum is 10. The server validates again
+ * regardless: this check exists for the experience, and bypassing it still
+ * fails at checkout.
  */
 export function AddToCart({
   variantId,

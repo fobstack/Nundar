@@ -1,14 +1,16 @@
 /**
- * Stripe webhook 签名校验（WebCrypto 实现，不依赖 Stripe SDK）。
+ * Stripe webhook signature verification, on WebCrypto, without the Stripe SDK.
  *
- * Stripe 的 Stripe-Signature 头形如 `t=<timestamp>,v1=<hex hmac>`，签名对象是
- * `${timestamp}.${rawBody}`，算法 HMAC-SHA256。
+ * Stripe's Stripe-Signature header has the form `t=<timestamp>,v1=<hex hmac>`.
+ * The signed payload is `${timestamp}.${rawBody}` and the algorithm is
+ * HMAC-SHA256.
  *
- * 校验签名是这个端点的生命线：不校验就等于任何人都能伪造"支付成功"，
- * 白拿货。时间戳窗口则用来阻断重放。
+ * Verification is this endpoint's whole reason to exist: without it, anyone can
+ * forge "payment succeeded" and take goods for free. The timestamp window is
+ * what blocks replay.
  */
 
-/** 容忍的时钟偏差与投递延迟 */
+/** Tolerated clock skew and delivery delay */
 const TOLERANCE_SECONDS = 5 * 60;
 
 export type VerificationResult =
@@ -57,7 +59,7 @@ async function hmacHex(secret: string, payload: string): Promise<string> {
     .join("");
 }
 
-/** 定长比较，避免用比较耗时反推正确签名 */
+/** Constant-time comparison, so timing cannot be used to recover the signature */
 function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) {
     return false;
@@ -91,7 +93,7 @@ export async function verifyStripeSignature(
 
   const expected = await hmacHex(secret, `${timestamp}.${rawBody}`);
 
-  // 轮换密钥期间 Stripe 会带多个 v1，任一匹配即通过
+  // During a secret rotation Stripe sends several v1 signatures; any match passes
   const matched = signatures.some((candidate) =>
     timingSafeEqual(candidate, expected),
   );

@@ -5,9 +5,10 @@ import type { Db } from "@/db/client";
 import * as schema from "@/db/schema";
 
 /**
- * 在候选价格行中挑出该 SKU 该币种的生效价。
- * 请求币种缺价时回落到基准币种，并如实返回回落后的币种——
- * 否则会把美元金额挂上欧元符号展示。
+ * Pick the effective price for a SKU in a currency from the candidate rows.
+ * When the requested currency has no price the base currency is used, and the
+ * currency actually returned is the one fallen back to — otherwise a dollar
+ * amount ends up displayed behind a euro sign.
  */
 function resolvePrice(
   rows: { currency: string; amountMinor: number }[],
@@ -31,23 +32,25 @@ export type ProductListItem = {
   slug: string;
   name: string;
   summary: string | null;
-  /** 该商品各 SKU 中的最低价，无任何定价时为 null */
+  /** Lowest price across the product's SKUs; null when nothing is priced */
   fromPriceMinor: number | null;
   /**
-   * fromPriceMinor 实际所属的币种。
-   * 请求币种缺少定价时会回落到基准币种，此处如实报告回落后的币种，
-   * 避免把美元金额挂上欧元符号展示。
+   * The currency fromPriceMinor is actually in.
+   * When the requested currency has no price we fall back to the base currency,
+   * and this reports the currency fallen back to, so a dollar amount is never
+   * displayed behind a euro sign.
    */
   priceCurrency: Currency | null;
 };
 
-/** 列出在售商品及其指定语言的名称与最低价 */
+/** List sellable products with their name in a given language and their lowest price */
 export async function listActiveProducts(
   db: Db,
   locale: Locale,
   currency: Currency = BASE_CURRENCY,
 ): Promise<ProductListItem[]> {
-  // 同时取请求币种与基准币种的价格行，回落逻辑在内存里判定，避免两次查库
+  // Fetch both the requested and the base currency in one go and resolve the
+  // fallback in memory, rather than querying twice
   const currencies =
     currency === BASE_CURRENCY ? [BASE_CURRENCY] : [currency, BASE_CURRENCY];
 
@@ -87,7 +90,8 @@ export async function listActiveProducts(
     baseMinor: number | null;
   };
 
-  // 一个商品有多个 SKU、多个币种，会产生多行，收敛为每商品一行
+  // A product has several SKUs in several currencies and so yields several rows;
+  // collapse them to one row per product
   const byProduct = new Map<string, Accumulator>();
 
   for (const row of rows) {
@@ -190,12 +194,12 @@ function parseJsonRecord(value: string | null): Record<string, string> | null {
       ? (parsed as Record<string, string>)
       : null;
   } catch {
-    // 脏数据不应让整个商品页 500，退化为不展示该字段
+    // Malformed data should not 500 the whole product page; drop the field instead
     return null;
   }
 }
 
-/** 取商品详情：翻译、特性、工况、SKU 与该币种价格 */
+/** Product detail: translations, features, use cases, SKUs and prices in one currency */
 export async function getProductDetail(
   db: Db,
   slug: string,
@@ -318,7 +322,7 @@ export async function getProductDetail(
   };
 }
 
-/** 在售商品的 slug，供 generateStaticParams 使用 */
+/** Slugs of sellable products, for generateStaticParams */
 export async function listProductSlugs(db: Db): Promise<string[]> {
   const rows = await db
     .select({ slug: schema.products.slug })
@@ -333,16 +337,17 @@ export type UseCasePageRef = {
   productSlug: string;
   locale: Locale;
   useCaseSlug: string;
-  /** 该语言下的工况标题，首页与导航列表要显示它 */
+  /** The use-case title in this language, shown in listings and navigation */
   useCaseTitle: string;
-  /** 跨语言标识，用于把同一工况的各语言版本关联起来做 hreflang */
+  /** Cross-language key linking every language version of one use case, for hreflang */
   groupKey: string;
 };
 
 /**
- * 需要生成独立落地页的工况。
- * 只取 has_own_page = 1 且 slug 非空的记录——内容不够厚的工况留在商品页内，
- * 强行成页会被判为 thin content，反而拖累整站质量评分。
+ * Use cases that get a landing page of their own.
+ * Only rows with has_own_page = 1 and a non-empty slug: a use case without
+ * enough substance stays inside the product page, because forcing one into a
+ * page produces thin content that drags the whole domain's quality down.
  */
 export async function listUseCasePages(db: Db): Promise<UseCasePageRef[]> {
   const rows = await db
@@ -382,13 +387,14 @@ export async function listUseCasePages(db: Db): Promise<UseCasePageRef[]> {
 }
 
 /**
- * 取某个工况在各语言下的落地页 slug。
+ * The landing-page slug of one use case in every language.
  *
- * hreflang 必须指向目标语言下真实存在的 slug——各语言的工况 slug 是本地化的
- * （offshore-seawater-lines / offshore-seewasserleitungen …），若让所有语言共用
- * 同一个 slug，hreflang 会指向 404，等于把爬虫引向死链。
+ * hreflang must point at a slug that genuinely exists in the target language.
+ * Use-case slugs are localised (offshore-seawater-lines /
+ * offshore-seewasserleitungen / ...), so sharing one slug across languages
+ * would make hreflang point at 404s — pointing crawlers straight at dead links.
  *
- * 返回 null 表示该 slug 在该语言下不存在独立落地页。
+ * null means that slug has no landing page in that language.
  */
 export async function getUseCaseAlternates(
   db: Db,
@@ -437,7 +443,8 @@ export async function getUseCaseAlternates(
 
   const alternates: Partial<Record<Locale, string>> = {};
   for (const row of rows) {
-    // 缺翻译的语言直接不出现在 hreflang 里，绝不用别的语言 slug 顶替
+    // A language missing its translation simply does not appear in hreflang;
+    // never substitute another language's slug
     if (row.scenarioSlug && isLocale(row.locale)) {
       alternates[row.locale] = row.scenarioSlug;
     }
@@ -446,7 +453,7 @@ export async function getUseCaseAlternates(
   return alternates;
 }
 
-/** slug → updated_at，供 sitemap 的 lastModified 使用 */
+/** slug to updated_at, for the sitemap's lastModified */
 export async function listProductUpdatedAt(
   db: Db,
 ): Promise<Record<string, number>> {

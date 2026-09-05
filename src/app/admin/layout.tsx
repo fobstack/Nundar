@@ -4,7 +4,8 @@ import { AdminLocalePicker } from "@/components/AdminLocalePicker";
 import { getAdminT } from "@/lib/admin/locale";
 
 export const metadata: Metadata = {
-  // 后台整体不进索引；robots.txt 也已 disallow /admin，双保险
+  // Nothing in the admin is indexed; robots.txt disallows /admin as well, and both
+  // belts are deliberate
   robots: { index: false, follow: false },
 };
 

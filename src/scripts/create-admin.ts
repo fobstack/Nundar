@@ -3,18 +3,19 @@ import { createInterface } from "node:readline";
 import { hashPassword } from "@/lib/auth/password";
 
 /**
- * 建后台账号。
+ * Create an admin account.
  *
- * 密码**只从标准输入读**，绝不接受命令行参数：命令行参数会出现在 `ps aux`
- * 的输出里（同机其他用户可见），并且会被写进 shell 历史文件。
+ * The password is read **from stdin only** and never from an argument: command
+ * line arguments show up in `ps aux`, visible to every other user on the
+ * machine, and get written into the shell history file.
  *
- * 用法：
- *   pnpm admin:create you@example.com            # 交互输入密码
- *   pnpm admin:create you@example.com --remote   # 写到线上 D1
- *   echo "$PASSWORD" | pnpm admin:create you@example.com   # CI 里从管道读
+ * Usage:
+ *   pnpm admin:create you@example.com            # prompts for the password
+ *   pnpm admin:create you@example.com --remote   # writes to the deployed D1
+ *   echo "$PASSWORD" | pnpm admin:create you@example.com   # piped, for CI
  */
 function readPassword(prompt: string): Promise<string> {
-  // 管道输入（CI 场景）：直接读一行，不打提示
+  // Piped input, as in CI: read one line without prompting
   if (!process.stdin.isTTY) {
     return new Promise((resolve) => {
       const rl = createInterface({ input: process.stdin });
@@ -32,7 +33,7 @@ function readPassword(prompt: string): Promise<string> {
       terminal: true,
     });
 
-    // 关闭回显，密码不出现在终端上
+    // Echo off, so the password never appears on the terminal
     const stdout = process.stdout as NodeJS.WriteStream & {
       moveCursor?: (dx: number, dy: number) => void;
     };
@@ -98,7 +99,7 @@ async function main(): Promise<void> {
   const id = crypto.randomUUID();
   const now = Math.floor(Date.now() / 1000);
 
-  // 单引号转义：邮箱与哈希都可能含特殊字符
+  // Escape single quotes: both the email and the hash may contain them
   const esc = (value: string) => value.replace(/'/g, "''");
 
   const sql = `INSERT INTO admin_users (id, email, password_hash, role, created_at) VALUES ('${esc(id)}', '${esc(email.trim().toLowerCase())}', '${esc(hash)}', '${role}', ${now}) ON CONFLICT(email) DO UPDATE SET password_hash = excluded.password_hash, role = excluded.role;`;

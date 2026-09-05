@@ -84,8 +84,8 @@ describe("validateImage", () => {
   it("rejects HTML disguised as an image, whatever it claims to be", () => {
     const html = new TextEncoder().encode("<html><script>alert(1)</script></html>");
 
-    // 客户端声明的 Content-Type 可任意伪造；一个被当图片存下、实际是 HTML
-    // 的文件在同源提供时就是 XSS 载体
+    // A client-declared Content-Type can say anything. A file stored as an image
+    // that is really HTML becomes an XSS vector once served from our own origin.
     const result = validateImage(html, "image/png");
     expect(result.ok).toBe(false);
     if (result.ok) return;

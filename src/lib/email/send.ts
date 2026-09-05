@@ -1,8 +1,8 @@
 import type { EmailContent } from "./templates";
 
 /**
- * Cloudflare Email Sending 的 Workers 绑定形态。
- * 用绑定而非 REST API：不需要在 Worker 里保管 API token。
+ * The Workers binding shape for Cloudflare Email Sending.
+ * A binding rather than the REST API, so the Worker holds no API token.
  */
 export type EmailBinding = {
   send(message: {
@@ -18,12 +18,14 @@ export type EmailBinding = {
 export type SendResult = { ok: true } | { ok: false; reason: string };
 
 /**
- * 发一封事务邮件。
+ * Send one transactional email.
  *
- * 失败不抛出：邮件发不出去不该让下单或发货流程回滚——货已经付了、订单已经改了，
- * 因为通知失败就整体失败对用户更糟。调用方按返回值记日志或告警即可。
+ * Never throws. A notification that cannot be delivered must not roll back
+ * placing or shipping an order — the money has moved and the order has changed,
+ * and failing the whole operation over a failed notice is worse for the buyer
+ * than the missing email. Callers log or alert on the returned result.
  *
- * 日志里不写收件地址，避免 PII 进日志。
+ * The recipient address stays out of the logs.
  */
 export async function sendTransactionalEmail(
   binding: EmailBinding | undefined,
@@ -46,7 +48,8 @@ export async function sendTransactionalEmail(
       to: input.to,
       from: { email: input.fromAddress, name: input.fromName },
       subject: input.content.subject,
-      // 两个版本都要有：只发 HTML 会在部分客户端显示空白，也会拉高垃圾邮件评分
+      // Both parts are required: HTML alone renders blank in some clients and
+      // pushes up the spam score
       html: input.content.html,
       text: input.content.text,
     });

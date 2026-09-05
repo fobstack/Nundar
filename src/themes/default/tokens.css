@@ -1,8 +1,9 @@
 /*
- * default 主题的设计 token。
+ * Design tokens for the default theme.
  *
- * 另一个主题只需重新定义同名变量，整站外观即改变——组件里不出现字面色值。
- * 取值来自设计稿的 token 画板。
+ * Another theme changes the entire site's appearance by redefining these same
+ * variables — no component contains a literal colour. The values come from the
+ * token artboard in the design files.
  */
 :root {
   /* Color */
@@ -80,7 +81,7 @@
   font-family: var(--font-mono);
 }
 
-/* 内容区：所有页面共用同一条水平节奏线 */
+/* Content area: every page shares one horizontal rhythm */
 .theme-root .shell {
   max-width: var(--shell-max);
   margin: 0 auto;
@@ -89,7 +90,7 @@
   width: 100%;
 }
 
-/* Markdown 正文：商品描述与工况正文共用 */
+/* Markdown body, shared by product descriptions and use-case copy */
 .theme-root .prose {
   font-size: var(--text-body);
   line-height: 1.75;

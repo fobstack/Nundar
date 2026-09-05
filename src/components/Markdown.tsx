@@ -1,10 +1,11 @@
 import { renderMarkdown } from "@/lib/markdown";
 
 /**
- * 渲染 Markdown 正文。
+ * Render Markdown body copy.
  *
- * 这里用 dangerouslySetInnerHTML 是安全的：renderMarkdown 先转义全部 HTML
- * 特殊字符再套语法，产出的标签集合完全由渲染器决定，不受输入控制。
+ * dangerouslySetInnerHTML is safe here: renderMarkdown escapes every HTML
+ * special character before applying any syntax, so the set of tags produced is
+ * decided entirely by the renderer and never by the input.
  */
 export function Markdown({
   source,

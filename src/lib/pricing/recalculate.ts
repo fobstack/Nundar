@@ -9,7 +9,7 @@ import type { Db } from "@/db/client";
 import * as schema from "@/db/schema";
 import { convertPrice, needsRecalculation } from "@/lib/pricing";
 
-/** 把一份汇率快照写进 exchange_rates，同一对币种只保留最新一行 */
+/** Write a rate snapshot into exchange_rates, keeping one current row per currency pair */
 export async function refreshExchangeRates(
   db: Db,
   rates: Record<string, number>,
@@ -42,22 +42,26 @@ export async function refreshExchangeRates(
 }
 
 export type RecalculationResult = {
-  /** 实际重算并落库的价格行数 */
+  /** Price rows actually recomputed and written */
   updated: number;
-  /** 因汇率偏离未超阈值而保持不变的行数 */
+  /** Rows left alone because the rate had not drifted past the threshold */
   skipped: number;
-  /** 因运营手动定价而跳过的行数 */
+  /** Rows skipped because they carry a manual price */
   manual: number;
 };
 
 /**
- * 按当前汇率重算各币种的自动价。
+ * Recompute automatic prices in every currency at the current rates.
  *
- * 三条不可动摇的规则：
- * 1. 基准币种价格是运营手填的事实来源，永不改写
- * 2. source = manual 的行永不改写——运营针对该市场的定价优先于汇率
- * 3. 汇率偏离未超阈值时不动价——否则静态页要每日全量再生成，且 JSON-LD 里的
- *    价格与结算价频繁漂移会触发 Google Merchant 警告
+ * Three rules that do not bend:
+ * 1. The base-currency price is entered by a human and is the source of truth.
+ *    It is never rewritten.
+ * 2. Rows with source = manual are never rewritten: a price chosen for a
+ *    specific market outranks whatever the exchange rate says.
+ * 3. Prices do not move until the rate has drifted past the threshold.
+ *    Otherwise every static page would regenerate daily, and the constant drift
+ *    between the price in the JSON-LD and the price at checkout triggers Google
+ *    Merchant warnings.
  */
 export async function recalculatePrices(db: Db): Promise<RecalculationResult> {
   const rateRows = await db

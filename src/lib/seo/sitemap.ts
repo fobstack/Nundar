@@ -17,10 +17,11 @@ function languagesFor(pathFor: (locale: Locale) => string) {
 }
 
 /**
- * 站点地图条目。
+ * Sitemap entries.
  *
- * 只收录 has_own_page = 1 的工况页——留在商品页内的工况没有独立 URL，
- * 收录它们等于往 sitemap 里塞 404。
+ * Only use cases with has_own_page = 1 are listed. One that stays inside the
+ * product page has no URL of its own, so listing it would put a 404 in the
+ * sitemap.
  */
 export async function buildSitemapEntries(db: Db): Promise<SitemapEntry[]> {
   const [slugs, useCasePages, updatedAtBySlug] = await Promise.all([
@@ -63,7 +64,8 @@ export async function buildSitemapEntries(db: Db): Promise<SitemapEntry[]> {
     }
   }
 
-  // 工况页的 slug 逐语言不同，alternates 需按 groupKey 汇总后逐语言取真实 slug
+  // Use-case slugs differ per language, so alternates are grouped by groupKey and
+  // resolved to each language's real slug
   const byGroup = new Map<string, Partial<Record<Locale, string>>>();
   for (const page of useCasePages) {
     const key = `${page.productSlug}::${page.groupKey}`;

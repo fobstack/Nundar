@@ -45,7 +45,7 @@ export default async function AdminProductPage({
         {product.slug} · {product.status}
       </p>
 
-      {/* ── 多语言内容与 SEO ─────────────────────────── */}
+      {/* ── Multilingual content and SEO ───────────────── */}
       <section className="mt-10">
         <h2 className="text-lg font-semibold">Content &amp; SEO</h2>
 
@@ -129,7 +129,7 @@ export default async function AdminProductPage({
         ))}
       </section>
 
-      {/* ── 图片 ─────────────────────────────────────── */}
+      {/* ── Images ─────────────────────────────────────── */}
       <section className="mt-12">
         <h2 className="text-lg font-semibold">Images</h2>
         <p className="mt-1 text-sm text-neutral-500">
@@ -164,7 +164,7 @@ export default async function AdminProductPage({
         </div>
       </section>
 
-      {/* ── SKU、库存、MOQ、交期与定价 ───────────────── */}
+      {/* ── SKUs: stock, MOQ, lead time and pricing ────── */}
       <section className="mt-12">
         <h2 className="text-lg font-semibold">SKUs, stock &amp; pricing</h2>
 
@@ -243,7 +243,8 @@ export default async function AdminProductPage({
                 </button>
               </form>
 
-              {/* 换算价一览：一眼看出哪个是自动算的、哪个是手动定的、汇率多旧 */}
+              {/* Converted prices at a glance: which are derived, which were set
+                  by hand, and how old the rate behind them is */}
               <table className="mt-4 w-full text-sm">
                 <thead>
                   <tr className="border-b border-neutral-200 text-left">
@@ -336,7 +337,7 @@ export default async function AdminProductPage({
         })}
       </section>
 
-      {/* ── 使用工况：控制哪些提升为独立落地页 ───────── */}
+      {/* ── Use cases: which get promoted to landing pages ─ */}
       <section className="mt-12">
         <h2 className="text-lg font-semibold">Applications</h2>
         <p className="mt-1 text-sm text-neutral-500">

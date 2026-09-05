@@ -33,7 +33,8 @@ export default async function AdminHome() {
         {t.overview.signedInAs} {session.userId} ({session.role})
       </p>
 
-      {/* 需要处理的事排在最前：运营打开后台是来干活的，不是来看数字的 */}
+      {/* What needs doing comes first: people open the admin to work, not to look
+          at numbers */}
       {stats.oversoldOrders > 0 ? (
         <p className="mt-6 rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           <Link href="/admin/orders?status=oversold" className="underline">
@@ -88,7 +89,7 @@ export default async function AdminHome() {
           <p className="mt-2 text-sm text-neutral-400">—</p>
         ) : (
           <div className="mt-2 flex flex-wrap gap-4">
-            {/* 按币种分别展示：不同币种相加得到的数字没有意义 */}
+            {/* Shown per currency: a sum across currencies means nothing */}
             {revenue.map(([currency, minor]) => (
               <div key={currency} className={card}>
                 <div className="text-xs uppercase tracking-wide text-neutral-500">

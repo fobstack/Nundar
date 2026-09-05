@@ -5,7 +5,8 @@ on:
     branches: [main]
   pull_request:
 
-# 只读权限：CI 不需要写仓库，最小权限能限制被攻破的 action 能造成的破坏
+# Read-only: CI never writes to the repository, and least privilege caps the
+# damage a compromised action could do
 permissions:
   contents: read
 
@@ -24,19 +25,22 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # 跑 README 里给新贡献者的那条命令：生成迁移、建表、灌种子数据。
-      # 用它而不是拆开的三条，是为了让 CI 顺带验证 `pnpm setup` 本身没坏——
-      # 新人照文档执行的第一条命令失灵，是最劝退的一种故障。
+      # Runs the exact command the README gives a new contributor: generate
+      # migrations, create the tables, load the seed data. Using it instead of
+      # the three underlying commands means CI also proves `pnpm setup` still
+      # works — the first command someone runs from the docs failing is the most
+      # discouraging kind of breakage.
       #
-      # 这一步是构建的前提：generateStaticParams 会读本地 D1 取商品与工况列表，
-      # 没有建表构建就会以 "no such table" 失败。
+      # The build depends on this: generateStaticParams reads the local D1 for
+      # the product and use-case lists, so without the tables it fails with
+      # "no such table".
       - run: pnpm setup
 
       - run: pnpm typecheck
 
       - run: pnpm lint
 
-      # 测试跑在真实 workerd 运行时里，不是 Node mock
+      # Tests run inside the real workerd runtime, not a Node mock
       - run: pnpm test
 
       - run: pnpm build

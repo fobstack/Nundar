@@ -59,7 +59,8 @@ export function HomeView({ locale, products, applications, urls }: HomeViewProps
 
   return (
     <>
-      {/* 第一屏不放 banner：B2B 买家要的是能立刻筛出候选，不是海报 */}
+      {/* No banner above the fold: a B2B buyer wants to narrow down candidates
+          immediately, not look at a poster */}
       <section style={{ background: "var(--surface)", borderBottom: "1px solid var(--line)" }}>
         <div
           className="shell"

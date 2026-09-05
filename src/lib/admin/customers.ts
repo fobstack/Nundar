@@ -7,15 +7,16 @@ export type CustomerSummary = {
   email: string;
   createdAt: number;
   orderCount: number;
-  /** 已付款订单的累计金额，按币种分组——不同币种不能相加 */
+  /** Total across paid orders, grouped by currency — amounts in different currencies do not add up */
   spentByCurrency: Record<string, number>;
 };
 
 /**
- * 客户列表。
+ * The customer list.
  *
- * 累计消费按币种分组返回而不是求一个总数：把 USD 和 EUR 金额相加得到的数字
- * 没有任何意义，展示出来只会误导运营做决策。
+ * Lifetime spend comes back grouped by currency rather than as one total.
+ * Adding a USD amount to a EUR amount produces a number that means nothing, and
+ * showing it would only mislead whoever is making decisions from it.
  */
 export async function listCustomers(db: Db): Promise<CustomerSummary[]> {
   const rows = await db
@@ -47,7 +48,7 @@ export async function listCustomers(db: Db): Promise<CustomerSummary[]> {
     const spentByCurrency: Record<string, number> = {};
 
     for (const order of own) {
-      // 只统计真正付过款的单，pending 与 cancelled 不算消费
+      // Count only orders that were actually paid; pending and cancelled are not spend
       if (order.status === "pending" || order.status === "cancelled") {
         continue;
       }
@@ -152,13 +153,14 @@ export type DashboardStats = {
   activeProducts: number;
   pendingOrders: number;
   oversoldOrders: number;
-  /** 已付款营收，按币种分组 */
+  /** Paid revenue, grouped by currency */
   revenueByCurrency: Record<string, number>;
   customerCount: number;
   lowStockVariants: { sku: string; stock: number; moq: number }[];
 };
 
-/** 概览页的统计。低库存判定用 MOQ 而非固定阈值——起订量 50 的 SKU 剩 40 就已经卖不了了。 */
+/** Dashboard statistics. Low stock is measured against MOQ rather than a fixed
+ * threshold: a SKU with a minimum order of 50 is already unsellable at 40. */
 export async function getDashboardStats(db: Db): Promise<DashboardStats> {
   const [products, orders, customerRows, variants] = await Promise.all([
     db
@@ -204,7 +206,7 @@ export async function getDashboardStats(db: Db): Promise<DashboardStats> {
     oversoldOrders,
     revenueByCurrency,
     customerCount: customerRows[0]?.count ?? 0,
-    // 库存低于起订量 = 这个 SKU 实际已经无法下单
+    // Stock below the minimum order quantity means this SKU cannot be ordered at all
     lowStockVariants: variants.filter((v) => v.stock < v.moq),
   };
 }

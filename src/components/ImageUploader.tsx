@@ -5,10 +5,11 @@ import { useState } from "react";
 import { ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES } from "@/lib/media/images";
 
 /**
- * 商品图上传。
+ * Product image upload.
  *
- * alt 文本设为必填而非选填：它既是无障碍要求，也是图片排名信号。
- * 做成选填，实际结果就是永远没人填。
+ * Alt text is required rather than optional: it is both an accessibility
+ * requirement and an image ranking signal. Made optional, the real-world
+ * outcome is that nobody ever fills it in.
  */
 export function ImageUploader({
   productId,

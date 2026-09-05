@@ -4,20 +4,21 @@ import { redirect } from "next/navigation";
 import { readSession, SESSION_COOKIE, type AdminSession } from "./session";
 
 /**
- * 后台页面守卫。
+ * Route guards for admin pages.
  *
- * 与 admin.ts 分开的原因：这里依赖 next/headers 与 next/navigation，
- * 而那些模块在纯 Workers 测试运行时里加载不了；把纯逻辑留在 admin.ts 才能测。
+ * Kept separate from admin.ts because this file depends on next/headers and
+ * next/navigation, which cannot be loaded inside the bare Workers test runtime.
+ * Keeping the pure logic in admin.ts is what makes it testable.
  */
 
-/** 读取当前登录态；未登录返回 null */
+/** Read the current session; null when not signed in */
 export async function currentAdmin(): Promise<AdminSession | null> {
   const token = (await cookies()).get(SESSION_COOKIE)?.value ?? "";
   const { env } = getCloudflareContext();
   return readSession(env.SESSIONS, token);
 }
 
-/** 后台页面守卫：未登录一律跳登录页 */
+/** Page guard: anyone not signed in goes to the login page */
 export async function requireAdmin(): Promise<AdminSession> {
   const session = await currentAdmin();
   if (!session) {
@@ -26,7 +27,7 @@ export async function requireAdmin(): Promise<AdminSession> {
   return session;
 }
 
-/** owner 专属功能守卫 */
+/** Guard for owner-only functionality */
 export async function requireOwner(): Promise<AdminSession> {
   const session = await requireAdmin();
   if (session.role !== "owner") {

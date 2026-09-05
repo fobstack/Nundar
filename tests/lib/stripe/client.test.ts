@@ -189,7 +189,8 @@ describe("createCheckoutSession", () => {
     );
 
     const body = bodyOf(calls[0]);
-    // webhook 收到的是 payment_intent.succeeded，只有这里带上 order_id 才找得到订单
+    // The webhook receives payment_intent.succeeded, and order_id being here is the
+    // only way it can find the order
     expect(body.get("payment_intent_data[metadata][order_id]")).toBe("order-99");
     expect(body.get("metadata[order_id]")).toBe("order-99");
   });

@@ -11,7 +11,7 @@ function db() {
 const now = () => Math.floor(Date.now() / 1000);
 
 beforeEach(async () => {
-  // 清表顺序遵循外键依赖，先子后父
+  // Truncation order follows the foreign keys: children before parents
   await env.DB.exec("DELETE FROM variant_prices");
   await env.DB.exec("DELETE FROM product_variants");
   await env.DB.exec("DELETE FROM product_use_cases");

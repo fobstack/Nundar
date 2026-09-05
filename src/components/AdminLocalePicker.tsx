@@ -13,10 +13,11 @@ const LABEL: Record<AdminLocale, string> = {
 };
 
 /**
- * 后台界面语言切换。
+ * Admin interface language switcher.
  *
- * 写 cookie 后整页重载：后台全是动态渲染，服务端重新读 cookie 即可拿到新语言，
- * 不需要像前台那样处理静态页。
+ * Writes the cookie and reloads the page. The admin is rendered dynamically
+ * throughout, so the server simply re-reads the cookie — none of the static
+ * page handling the storefront needs applies here.
  */
 export function AdminLocalePicker({ locale }: { locale: AdminLocale }) {
   function choose(next: AdminLocale) {

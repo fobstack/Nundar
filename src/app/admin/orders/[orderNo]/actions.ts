@@ -40,7 +40,8 @@ export async function shipOrderAction(formData: FormData) {
   const db = getDb();
   await shipOrder(db, input.orderId, input.trackingNo);
 
-  // 发货通知发不出去不该让发货本身失败——货已经寄了
+  // A shipping notice that cannot be sent must not fail the shipment itself —
+  // the goods have already gone out
   const order = await getOrder(db, input.orderNo);
   const email = order?.shippingAddress.email;
 
@@ -105,7 +106,8 @@ export async function refundOrderAction(formData: FormData) {
   const db = getDb();
   const order = await getOrder(db, input.orderNo);
 
-  // 先向 Stripe 退款；退款失败就不改本地状态，避免账实不符
+  // Refund at Stripe first. If that fails the local state is left alone, so the
+  // books never disagree with reality
   if (order?.stripePaymentIntentId) {
     const { env } = getCloudflareContext();
     const secretKey = (env as unknown as { STRIPE_SECRET_KEY?: string })

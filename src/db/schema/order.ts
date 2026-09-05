@@ -22,7 +22,7 @@ export const orders = sqliteTable(
     totalMinor: integer("total_minor").notNull(),
     stripePaymentIntentId: text("stripe_payment_intent_id"),
     shippingAddressJson: text("shipping_address_json").notNull(),
-    /** 下单时语言，用于发对应语言的通知邮件 */
+    /** The language the order was placed in, so notifications go out in it */
     locale: text("locale").notNull(),
     trackingNo: text("tracking_no"),
     createdAt: integer("created_at").notNull(),
@@ -35,7 +35,8 @@ export const orders = sqliteTable(
   ],
 );
 
-/** 订单行存快照：商品改名改价下架都不影响历史订单 */
+/** Order lines are snapshots: renaming, repricing or delisting a product leaves
+ * historical orders untouched. */
 export const orderItems = sqliteTable(
   "order_items",
   {
@@ -52,7 +53,8 @@ export const orderItems = sqliteTable(
   (table) => [index("order_items_order_idx").on(table.orderId)],
 );
 
-/** Webhook 幂等表：Stripe 会重投同一事件，重复处理会导致库存重复扣减 */
+/** Webhook idempotency. Stripe redelivers events, and processing one twice would
+ * decrement stock twice. */
 export const stripeEvents = sqliteTable("stripe_events", {
   eventId: text("event_id").primaryKey(),
   type: text("type").notNull(),

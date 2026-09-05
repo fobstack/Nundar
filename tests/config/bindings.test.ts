@@ -1,7 +1,8 @@
 import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 
-// 绑定名写错到部署时才发现的成本很高，这里在测试运行时里提前拦住
+// A mistyped binding name discovered at deploy time is expensive; this catches it
+// in the test runtime instead
 describe("cloudflare bindings", () => {
   it("exposes the D1 database as DB", () => {
     expect(env.DB).toBeDefined();
@@ -9,8 +10,8 @@ describe("cloudflare bindings", () => {
   });
 
   it("exposes the R2 bucket for product media as MEDIA", () => {
-    // 刻意不叫 IMAGES：那是 Cloudflare Images 产品的保留绑定名，
-    // 用它会让生成的类型变成 ImagesBinding 而不是 R2Bucket
+    // Deliberately not called IMAGES: that name is reserved by Cloudflare Images,
+    // and using it makes the generated type ImagesBinding rather than R2Bucket
     expect(env.MEDIA).toBeDefined();
     expect(typeof env.MEDIA.put).toBe("function");
   });

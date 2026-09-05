@@ -15,7 +15,7 @@ describe("toMinor", () => {
   });
 
   it("rounds rather than truncates float artefacts", () => {
-    // 1.005 在 IEEE754 下实为 1.00499999...，截断会得到 100
+    // Under IEEE 754, 1.005 is really 1.00499999..., and truncating gives 100
     expect(toMinor(1.005, "USD")).toBe(101);
   });
 
@@ -56,7 +56,8 @@ describe("sumMinor", () => {
 
 describe("formatMoney", () => {
   it("formats per locale and currency", () => {
-    // 只断言关键片段，避免绑定各 ICU 版本的空格与符号位置差异
+    // Assert on the essential fragments only, so the test does not pin down where
+    // a given ICU version puts spaces and symbols
     const usd = formatMoney(9900, "USD", "en");
     expect(usd).toContain("99");
     expect(usd).toContain("$");

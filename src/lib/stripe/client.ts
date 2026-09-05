@@ -1,11 +1,12 @@
 import type { Currency } from "@/config/currency";
 
 /**
- * Stripe REST 客户端（fetch 直连，不引入 SDK）。
+ * A Stripe REST client built on fetch, with no SDK.
  *
- * 不用官方 Node SDK 的原因：在 Workers 上需要额外适配，而本项目只用到
- * 创建 PaymentIntent 与退款两个接口，直接调 REST 更少依赖也更可控——
- * 这对要开源的模板尤其重要。
+ * The official Node SDK needs adapting to run on Workers, and this project uses
+ * exactly two endpoints — create a PaymentIntent, and refund one. Calling REST
+ * directly costs fewer dependencies and gives more control, which matters
+ * doubly for a template other people will fork.
  */
 const API_BASE = "https://api.stripe.com/v1";
 
@@ -27,7 +28,7 @@ async function stripeRequest<T>(
     "Content-Type": "application/x-www-form-urlencoded",
   };
 
-  // 幂等键让重试不会重复扣款
+  // The idempotency key is what stops a retry from charging twice
   if (idempotencyKey) {
     headers["Idempotency-Key"] = idempotencyKey;
   }
@@ -46,7 +47,7 @@ async function stripeRequest<T>(
     const message =
       (payload as { error?: { message?: string } }).error?.message ??
       `Stripe request failed with status ${response.status}`;
-    // 不把密钥或完整响应写进错误信息，避免泄漏进日志
+    // Never put the key or the full response in the error, or it lands in the logs
     throw new Error(`Stripe: ${message}`);
   }
 
@@ -60,9 +61,11 @@ export type PaymentIntent = {
 };
 
 /**
- * 创建 PaymentIntent。
+ * Create a PaymentIntent.
  *
- * 金额一律取后端算好的值，绝不接受前端传入——否则用户可以用 1 分钱买走商品。
+ * The amount always comes from the server-side calculation and never from the
+ * client. Accepting a client-supplied amount would let anyone buy anything for
+ * a penny.
  */
 export async function createPaymentIntent(
   secretKey: string,
@@ -84,7 +87,7 @@ export async function createPaymentIntent(
       "metadata[order_id]": input.orderId,
       "metadata[order_no]": input.orderNo,
     },
-    // 同一订单重复提交只会得到同一个 PaymentIntent
+    // Resubmitting the same order yields the same PaymentIntent
     `order:${input.orderId}`,
     fetchImpl,
   );
@@ -119,13 +122,14 @@ export type CheckoutSession = {
 };
 
 /**
- * 创建 Stripe 托管结账会话。
+ * Open a Stripe hosted Checkout session.
  *
- * 相比 Elements 嵌入式支付，托管页零客户端依赖、卡号同样不经过本站服务器。
- * 代价是用户会跳到 stripe.com 完成支付，品牌一致性略差。
+ * Compared with embedded Elements, the hosted page needs no client-side
+ * dependency, and card numbers stay off our servers either way. The cost is
+ * that the buyer leaves for stripe.com to pay, which weakens brand continuity.
  *
- * 关键点：order_id 必须写进 payment_intent_data.metadata，
- * 否则 webhook 收到 payment_intent.succeeded 时找不到对应订单。
+ * The critical detail: order_id must go into payment_intent_data.metadata.
+ * Without it, a payment_intent.succeeded webhook cannot be matched to an order.
  */
 export async function createCheckoutSession(
   secretKey: string,

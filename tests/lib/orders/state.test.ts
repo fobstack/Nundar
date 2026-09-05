@@ -26,7 +26,8 @@ describe("canTransition", () => {
 
   it("routes an oversold order out of pending", () => {
     expect(canTransition("pending", "oversold")).toBe(true);
-    // 超卖单只能退款或人工取消，不能假装已付款继续发货
+    // An oversold order can only be refunded or cancelled by hand; it must never
+    // pretend to be paid and ship
     expect(canTransition("oversold", "refunded")).toBe(true);
     expect(canTransition("oversold", "cancelled")).toBe(true);
     expect(canTransition("oversold", "shipped")).toBe(false);

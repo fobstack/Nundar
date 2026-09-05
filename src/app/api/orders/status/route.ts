@@ -10,15 +10,18 @@ import {
 } from "@/lib/security/rate-limit";
 
 /**
- * 查订单状态，供支付成功页轮询。
+ * Order status, polled by the payment success page.
  *
- * 订单状态以 webhook 为准，而 webhook 与用户跳回成功页是并发的——
- * 用户很可能先到页面、webhook 后到，所以成功页要显示"处理中"并轮询。
+ * The webhook is what decides an order's status, and it races the buyer's
+ * return to the success page. The buyer usually arrives first, which is why the
+ * page shows "processing" and polls.
  *
- * 只返回单号与状态，不返回金额、地址等信息：单号可能被猜到或分享。
+ * Returns the order number and status only — never amounts or addresses, since
+ * an order number can be guessed or shared.
  */
 export async function GET(request: Request) {
-  // 单号是可枚举的（日期 + 6 位十六进制），限流把批量探测的成本抬起来
+  // Order numbers are enumerable (a date plus six hex digits), and the rate limit
+  // is what makes probing them expensive
   const { env } = getCloudflareContext();
   const limit = await checkRateLimit(
     env.SESSIONS,

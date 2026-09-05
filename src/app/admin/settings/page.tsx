@@ -16,7 +16,7 @@ const readOnly =
   "mt-1 w-full rounded border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-600";
 
 export default async function AdminSettingsPage() {
-  // 整页 owner 专属，不只是其中的账号管理
+  // The whole page is owner-only, not merely the account management on it
   const session = await requireOwner();
   const { locale, t } = await getAdminT();
   const admins = await listAdmins(getDb());
@@ -112,7 +112,8 @@ export default async function AdminSettingsPage() {
                     {formatAdminDate(admin.createdAt, locale)}
                   </td>
                   <td className="px-3 py-2 text-right">
-                    {/* 删自己的按钮直接不给：服务端也会拒，但不该让人点了才知道 */}
+                    {/* No delete button for yourself: the server refuses it too, but
+                        nobody should have to click to find that out */}
                     {isSelf ? (
                       <span className="text-xs text-neutral-400">
                         {t.settings.cannotRemoveSelf}

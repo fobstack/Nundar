@@ -59,9 +59,9 @@ describe("runExchangeRateCron", () => {
     const eur = prices.find((p) => p.currency === "EUR");
     const gbp = prices.find((p) => p.currency === "GBP");
 
-    // 9900 * 0.860437 * 1.03 = 8774.5 → 8775 → .99 取整 → 8799
+    // 9900 * 0.860437 * 1.03 = 8774.5 -> 8775 -> rounded to .99 -> 8799
     expect(eur?.amountMinor).toBe(8799);
-    // 9900 * 0.739098 * 1.03 = 7536.5 → 7537 → .99 取整 → 7599
+    // 9900 * 0.739098 * 1.03 = 7536.5 -> 7537 -> rounded to .99 -> 7599
     expect(gbp?.amountMinor).toBe(7599);
     expect(eur?.source).toBe("auto");
   });

@@ -15,8 +15,8 @@ type OfferVariant = {
 };
 
 /**
- * schema.org 的 price 要求主单位十进制字符串（"99.00"），
- * 直接塞最小单位整数会被 Google 读成 9900 元。
+ * schema.org expects price as a decimal string in major units ("99.00").
+ * Passing the minor-unit integer straight through makes Google read 9900.
  */
 function priceString(minor: number, currency: Currency): string {
   return fromMinor(minor, currency).toFixed(CURRENCY_MINOR_UNITS[currency]);
@@ -24,7 +24,7 @@ function priceString(minor: number, currency: Currency): string {
 
 function offerFor(variant: OfferVariant, productUrl: string): JsonLd | null {
   if (variant.priceMinor === null || variant.priceCurrency === null) {
-    // 无定价的 SKU 不输出 offer——写 0 价会触发 Google Merchant 的价格错误
+    // An unpriced SKU emits no offer: a price of 0 raises a Google Merchant error
     return null;
   }
 
@@ -44,7 +44,7 @@ function offerFor(variant: OfferVariant, productUrl: string): JsonLd | null {
     offer.eligibleQuantity = {
       "@type": "QuantitativeValue",
       minValue: variant.moq,
-      unitCode: "C62", // UN/CEFACT 的“件”
+      unitCode: "C62", // UN/CEFACT code for "piece"
     };
   }
 
@@ -113,9 +113,10 @@ export function breadcrumbJsonLd(
 }
 
 /**
- * 工况落地页的结构化数据。
- * mainEntityOfPage 指向落地页自身而非商品页——指向商品页等于告诉 Google
- * 这一页只是商品页的附庸，会丧失该长尾词的独立排名机会。
+ * Structured data for a use-case landing page.
+ * mainEntityOfPage points at the landing page itself, not at the product page.
+ * Pointing at the product page tells Google this page is an appendage of it,
+ * forfeiting the independent ranking the long-tail term is there to win.
  */
 export function buildUseCaseJsonLd(input: {
   headline: string;

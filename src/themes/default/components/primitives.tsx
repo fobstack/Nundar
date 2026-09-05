@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 
-/** 章节标题 + 右侧说明，多个页面共用同一条节奏 */
+/** A section heading with a note on the right; several pages share this rhythm */
 export function SectionHead({
   title,
   aside,
@@ -84,7 +84,8 @@ export function Panel({
   );
 }
 
-/** 主按钮的链接形态；表单里的提交按钮各自实现，样式共享此处的取值 */
+/** The link form of the primary button. Form submit buttons are their own
+ * elements but share these values. */
 export function ButtonLink({
   href,
   children,
@@ -118,7 +119,8 @@ export function ButtonLink({
   );
 }
 
-/** 库存状态点。有货、少量、缺货三档用颜色区分，文字仍然独立说明。 */
+/** The stock indicator dot. In stock, low and out are distinguished by colour,
+ * with the text still saying so on its own. */
 export function StockDot({ stock }: { stock: number }) {
   const color =
     stock <= 0 ? "var(--ink-3)" : stock < 20 ? "#b8860b" : "var(--ok)";
@@ -139,10 +141,11 @@ export function StockDot({ stock }: { stock: number }) {
 }
 
 /**
- * 商品图占位。
+ * Product image placeholder.
  *
- * 尚无真实图片时画蓝图风格的线稿，而不是灰色方块——工业品目录里，
- * 一个有结构的占位比空白更能说明"这里将来是产品图"。
+ * Draws a blueprint-style outline rather than a grey rectangle when no real
+ * image exists yet. In an industrial catalogue a placeholder with structure
+ * says "a product photo belongs here" far better than a blank box does.
  */
 export function ProductPlaceholder({ size = 200 }: { size?: number }) {
   return (

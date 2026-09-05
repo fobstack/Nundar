@@ -1,16 +1,19 @@
 /**
- * 商品图存储（R2）。
+ * Product image storage, on R2.
  *
- * 只用 R2、不接 Cloudflare Images：R2 有免费额度且出口流量免费，而 Images 是
- * 独立付费产品。代价是变体（缩略图等）要自己处理——当前策略是原图直传、
- * 展示端按需裁切，图片量或流量增长后再评估是否升级。
+ * R2 only, deliberately not Cloudflare Images: R2 has a free tier and charges
+ * nothing for egress, while Images is a separate paid product. The cost of that
+ * choice is handling variants ourselves — the current approach uploads the
+ * original and crops at display time, which is worth revisiting once image
+ * volume or traffic grows.
  *
- * object key 用商品 slug 而非随机哈希：文件名是图片 SEO 的排名信号之一，
- * `stainless-ball-valve-dn50-01.jpg` 比 `a3f9c2.jpg` 有意义得多。
+ * Object keys are built from the product slug rather than a random hash,
+ * because the filename is one of the ranking signals for image search.
+ * `stainless-ball-valve-dn50-01.jpg` says considerably more than `a3f9c2.jpg`.
  */
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
-/** 只接受浏览器广泛支持、且能被安全地当作图片渲染的格式 */
+/** Only formats browsers support widely and can render safely as images */
 export const ALLOWED_IMAGE_TYPES = [
   "image/jpeg",
   "image/png",
@@ -36,10 +39,12 @@ export type ImageValidation =
   | { ok: false; reason: string };
 
 /**
- * 校验上传的文件。
+ * Validate an uploaded file.
  *
- * 只信 magic bytes，不信客户端声明的 Content-Type 和扩展名——两者都可任意伪造，
- * 而一个被当作图片存下、实际是 HTML 的文件，在同源提供时就是 XSS 载体。
+ * Trusts the magic bytes and nothing else — not the client's Content-Type, not
+ * the extension, since both can be set to anything. A file stored as an image
+ * that is really HTML becomes an XSS vector the moment it is served from our
+ * own origin.
  */
 export function validateImage(
   bytes: Uint8Array,
@@ -60,7 +65,8 @@ export function validateImage(
     return { ok: false, reason: "File is not a supported image" };
   }
 
-  // 声明与实际不符时以实际为准，但要拒绝——这通常意味着有人在试探
+  // When the declaration disagrees with the bytes, believe the bytes and refuse
+  // anyway: the mismatch usually means someone is probing
   if (isAllowedImageType(declaredType) && declaredType !== sniffed) {
     return {
       ok: false,
@@ -71,7 +77,7 @@ export function validateImage(
   return { ok: true, contentType: sniffed };
 }
 
-/** 按文件头字节判断真实格式 */
+/** Determine the real format from the leading bytes */
 export function sniffImageType(bytes: Uint8Array): AllowedImageType | null {
   const at = (index: number) => bytes[index];
 
@@ -111,10 +117,12 @@ export function sniffImageType(bytes: Uint8Array): AllowedImageType | null {
 }
 
 /**
- * 生成 object key。
+ * Build an object key.
  *
- * 用商品 slug + 序号，不用随机哈希——文件名参与图片 SEO。
- * slug 已经是 URL 安全的（后台校验过），这里再兜一层防止路径穿越。
+ * Product slug plus an index rather than a random hash, because the filename
+ * counts towards image SEO. The slug is already URL-safe (the admin validates
+ * it); this strips separators again as a second line of defence against path
+ * traversal.
  */
 export function buildImageKey(
   productSlug: string,
@@ -131,7 +139,7 @@ export function buildImageKey(
   return `products/${safeSlug}/${safeSlug}-${sequence}.${EXTENSION[contentType]}`;
 }
 
-/** 从 object key 反推公开访问路径 */
+/** Map an object key back to its public path */
 export function imageUrl(objectKey: string): string {
   return `/api/images/${objectKey}`;
 }

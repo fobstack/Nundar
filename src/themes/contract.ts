@@ -8,22 +8,25 @@ import type {
 } from "@/lib/queries/products";
 
 /**
- * 主题契约。
+ * The theme contract.
  *
- * 路由层负责取数据、生成 SEO 元信息（hreflang / canonical / JSON-LD）与计算路径；
- * 主题只负责呈现。这样换主题永远不会动到 SEO 逻辑——那是整套长尾词策略的命脉，
- * 让主题作者有机会写坏它是不可接受的。
+ * The route layer fetches data, produces the SEO metadata (hreflang, canonical,
+ * JSON-LD) and computes paths. A theme decides only how things look. That way
+ * swapping themes can never touch the SEO logic, which is the whole long-tail
+ * strategy — giving theme authors the opportunity to break it is not an
+ * acceptable trade.
  *
- * 这些类型一旦发布就是公开接口：改动会同时波及所有主题，等同于破坏性变更。
+ * Once published, these types are a public interface: changing one affects
+ * every theme at once and is a breaking change.
  */
 
-/** 站点级路径。由路由层算好传入，主题不拼 URL。 */
+/** Site-level paths, computed by the route layer. A theme never assembles a URL. */
 export type SiteUrls = {
   home: string;
   products: string;
   cart: string;
   checkout: string;
-  /** 切到其他语言时当前页面的对应地址，缺失的语言不出现在表里 */
+  /** Where this page lives in each other language; a missing language is simply absent */
   localeSwitch: Partial<Record<Locale, string>>;
 };
 
@@ -38,7 +41,7 @@ export type HomeViewProps = {
   locale: Locale;
   currency: Currency;
   products: ProductListItem[];
-  /** 已提升为独立落地页的工况，用于首页导流 */
+  /** Use cases promoted to landing pages, for linking from the home page */
   applications: {
     title: string;
     productName: string;
@@ -72,7 +75,7 @@ export type UseCaseViewProps = {
   currency: Currency;
   product: ProductDetail;
   useCase: ProductUseCase;
-  /** 同商品下其他已成页的工况，用于站内互链 */
+  /** The product's other landing-page use cases, for internal linking */
   siblings: { title: string; href: string }[];
   urls: SiteUrls & {
     product: string;
@@ -99,7 +102,7 @@ export type OrderViewProps = {
 };
 
 export type ThemeMeta = {
-  /** 目录名，也是 THEME 环境变量的取值 */
+  /** The directory name, which is also the value of the THEME variable */
   name: string;
   description: string;
 };

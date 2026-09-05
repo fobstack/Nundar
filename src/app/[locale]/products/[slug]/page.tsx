@@ -12,7 +12,8 @@ import { getTheme } from "@/themes/registry";
 
 type PageParams = { locale: string; slug: string };
 
-// 四语言 × 全部在售商品，构建期全部静态生成，爬虫拿到完整内容
+// Four languages times every sellable product, all generated at build time, so a
+// crawler receives complete content
 export async function generateStaticParams() {
   const db = await getDbAsync();
   const slugs = await listProductSlugs(db);
@@ -75,7 +76,7 @@ export default async function ProductPage({
   const productUrl = absoluteUrl(localePath(locale, "products", slug));
   const theme = getTheme();
 
-  // slug 与语言无关，切换语言时停留在同一个商品上
+  // The slug is language-independent, so switching language stays on this product
   const urls = {
     ...buildSiteUrls(locale, (target) => localePath(target, "products", slug)),
     useCase: (scenarioSlug: string) =>
@@ -84,7 +85,8 @@ export default async function ProductPage({
 
   return (
     <theme.Shell locale={locale} currency={currency} urls={urls}>
-      {/* 结构化数据留在路由层：换主题绝不该影响 SEO */}
+      {/* Structured data stays in the route layer: swapping themes must never
+          affect SEO */}
       <JsonLd
         data={productJsonLd({
           name: product.name,

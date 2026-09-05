@@ -9,10 +9,11 @@ const LOCALE_LABEL: Record<Locale, string> = {
 };
 
 /**
- * 语言切换。
+ * Language switcher.
  *
- * 纯链接，不是 JS 跳转：每个语言版本都有自己的 URL，爬虫能顺着链接抓到全部版本。
- * 用 <details> 做无 JS 下拉，禁用脚本时依然可用。
+ * Plain links rather than a scripted redirect: every language version has its
+ * own URL, and a crawler can follow the links to reach all of them. The dropdown
+ * is a <details> element, so it still works with scripting disabled.
  */
 export function LocalePicker({
   locale,

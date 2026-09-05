@@ -62,7 +62,7 @@ function isLocaleValue(value: string): value is Locale {
   return (LOCALES as readonly string[]).includes(value);
 }
 
-/** 后台编辑页用的全量数据：所有语言、所有 SKU、所有币种价格 */
+/** Everything the edit page needs: every language, every SKU, every currency's price */
 export async function getAdminProduct(
   db: Db,
   slug: string,
@@ -114,7 +114,8 @@ export async function getAdminProduct(
         )
     : [];
 
-  // 缺翻译的语言也要出现在编辑页里，否则运营根本看不到该补哪一门
+  // Languages missing a translation still appear on the edit page; otherwise there
+  // is no way to see which one needs filling in
   const translations: AdminTranslation[] = LOCALES.map((locale) => {
     const row = translationRows.find((t) => t.locale === locale);
     return {

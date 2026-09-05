@@ -1,8 +1,9 @@
 /**
- * 主题名解析。
+ * Theme name resolution.
  *
- * 与注册表分开：注册表要 import 主题的 React 组件，而这段逻辑是纯的，
- * 单独放才能在不加载整棵组件树的情况下测。
+ * Kept out of the registry, which has to import each theme's React components.
+ * This logic is pure, and separating it is what makes it testable without
+ * loading the entire component tree.
  */
 export function resolveThemeName(
   requested: string | undefined,
@@ -17,6 +18,7 @@ export function resolveThemeName(
     return { name: requested, fellBack: false };
   }
 
-  // 上线时因为主题名拼错而整站白屏，比用默认主题渲染糟糕得多
+  // A whole site blank in production because a theme name was misspelled is far
+  // worse than the same site rendered with the default theme
   return { name: fallback, fellBack: true };
 }

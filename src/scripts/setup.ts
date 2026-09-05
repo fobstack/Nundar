@@ -2,9 +2,11 @@ import { execFileSync } from "node:child_process";
 import { existsSync, copyFileSync } from "node:fs";
 
 /**
- * 一键把本地开发环境准备好：生成迁移、建表、灌示例数据。
+ * Prepare a local development environment in one command: generate the
+ * migrations, create the tables, load the sample data.
  *
- * 全程不需要 Cloudflare 账号——D1 / R2 / KV 都由 miniflare 在本地模拟。
+ * No Cloudflare account is needed at any point — D1, R2 and KV are all
+ * simulated locally by miniflare.
  */
 function run(command: string, args: string[]): void {
   console.log(`\n▸ ${command} ${args.join(" ")}`);

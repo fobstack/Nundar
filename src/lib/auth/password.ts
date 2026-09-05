@@ -1,12 +1,15 @@
 /**
- * 密码哈希：WebCrypto 的 PBKDF2-SHA256。
+ * Password hashing with WebCrypto's PBKDF2-SHA256.
  *
- * 选它而非 Argon2id 的原因是零依赖——Argon2 在 Workers 上需要引入 WASM 库，
- * 而本项目要作为开源模板发布，依赖越少越好。PBKDF2 配合足够的迭代次数与
- * 登录限流，对后台账号这一低频、少量账户的场景是够用的。
+ * Chosen over Argon2id for one reason: no dependency. Argon2 on Workers means
+ * pulling in a WASM library, and this project ships as an open-source template
+ * where every dependency is one more thing an adopter has to trust. PBKDF2 with
+ * a high enough iteration count, combined with login rate limiting, is adequate
+ * for a handful of admin accounts logging in occasionally.
  *
- * 迭代次数取 210k（OWASP 对 PBKDF2-HMAC-SHA256 的推荐量级之一）。再高会显著
- * 增加单次登录的 CPU 时间，在 Workers 的 CPU 限额下得不偿失。
+ * 210k iterations follows OWASP's guidance for PBKDF2-HMAC-SHA256. Going higher
+ * adds real CPU time to every login, which is a poor trade against the Workers
+ * CPU limit.
  */
 const SCHEME = "pbkdf2-sha256";
 const ITERATIONS = 210_000;
@@ -43,7 +46,7 @@ async function derive(
   return new Uint8Array(bits);
 }
 
-/** 比较两个等长字节串，耗时与内容无关，避免计时侧信道 */
+/** Compare two equal-length byte strings in time independent of their contents */
 function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
   if (a.length !== b.length) {
     return false;
@@ -55,7 +58,7 @@ function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
   return diff === 0;
 }
 
-/** 返回自描述的哈希串：scheme$iterations$salt$digest */
+/** Produce a self-describing hash string: scheme$iterations$salt$digest */
 export async function hashPassword(password: string): Promise<string> {
   if (!password) {
     throw new Error("Password must not be empty");
@@ -73,7 +76,8 @@ export async function verifyPassword(
 ): Promise<boolean> {
   const parts = stored.split("$");
   if (parts.length !== 4 || parts[0] !== SCHEME) {
-    // 存储格式不认识就是验证失败，不抛异常——避免把存储细节暴露成 500
+    // An unrecognised stored format is a failed verification, not an exception:
+    // throwing would turn a storage detail into a 500 that leaks it
     return false;
   }
 
@@ -92,7 +96,7 @@ export async function verifyPassword(
   }
 }
 
-/** 存量哈希是否该在下次成功登录时按当前参数重算 */
+/** Whether an existing hash should be recomputed with current parameters on next login */
 export function needsRehash(stored: string): boolean {
   const parts = stored.split("$");
   if (parts.length !== 4 || parts[0] !== SCHEME) {

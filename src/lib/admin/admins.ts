@@ -22,7 +22,7 @@ export async function listAdmins(db: Db): Promise<AdminUserRow[]> {
     .from(schema.adminUsers)
     .orderBy(desc(schema.adminUsers.createdAt));
 
-  // 未知角色一律降级为 staff，绝不因为数据脏就放行 owner 权限
+  // An unrecognised role degrades to staff. Bad data must never grant owner rights.
   return rows.map((row) => ({
     ...row,
     role: row.role === "owner" ? "owner" : "staff",
@@ -38,7 +38,7 @@ export async function createAdmin(
   if (!email.includes("@")) {
     throw new Error("A valid email address is required");
   }
-  // 后台账号掌握整个店铺，密码强度不能由用户随意决定
+  // An admin account holds the whole shop, so password strength is not left to preference
   if (input.password.length < 12) {
     throw new Error("Password must be at least 12 characters");
   }
@@ -63,10 +63,11 @@ export async function createAdmin(
 }
 
 /**
- * 删除管理员。
+ * Delete an administrator.
  *
- * 两条不可绕过的限制：不能删自己（会把自己锁在门外），
- * 不能删掉最后一个 owner（店铺将永远无法再修改设置和管理账号）。
+ * Two limits with no way around them: you cannot delete yourself, which would
+ * lock you out; and you cannot delete the last owner, which would leave the
+ * shop permanently unable to change its settings or manage accounts.
  */
 export async function deleteAdmin(
   db: Db,
@@ -98,7 +99,8 @@ export async function changeAdminRole(
   input: { targetId: string; role: AdminRole; actingUserId: string },
 ): Promise<void> {
   if (input.targetId === input.actingUserId && input.role !== "owner") {
-    // 自我降级会让最后一个 owner 消失，且本人立刻失去恢复权限的能力
+    // Self-demotion removes the last owner and simultaneously removes the
+    // ability to undo it
     throw new Error("You cannot demote your own account");
   }
 
