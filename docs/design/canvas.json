@@ -1,0 +1,27 @@
+{
+  "artboards": [
+    { "file": "Home.dc.html", "x": 0, "y": 0, "w": 1440, "h": 2340, "title": "1 · Home" },
+    { "file": "ProductList.dc.html", "x": 1560, "y": 0, "w": 1440, "h": 1320, "title": "2 · Category / list" },
+    { "file": "Main.dc.html", "x": 3120, "y": 0, "w": 1440, "h": 2680, "title": "3 · Product detail" },
+    { "file": "UseCase.dc.html", "x": 1560, "y": 1560, "w": 1440, "h": 1560, "title": "4 · Application landing page" },
+    { "file": "Checkout.dc.html", "x": 4680, "y": 0, "w": 1440, "h": 1320, "title": "5 · Checkout" },
+    { "file": "Tokens.dc.html", "x": 4680, "y": 1560, "w": 1000, "h": 1720, "title": "Design tokens" }
+  ],
+  "annotations": [
+    {
+      "id": "brief",
+      "x": 0,
+      "y": -240,
+      "w": 560,
+      "text": "shopcf storefront — technical clean direction\n\nArtboards run left to right in the order a buyer walks the site: home → category → product → application note → checkout.\n\nIBM Plex Sans + Plex Mono; mono is reserved for part numbers, specs and quantities — the values a buyer compares character by character. Borders instead of shadows, 2px radii, one petrol accent.\n\nEverything here becomes src/themes/default/."
+    },
+    {
+      "id": "longtail",
+      "x": 1560,
+      "y": 1340,
+      "w": 460,
+      "text": "The application landing page is the long-tail engine. Narrow measure so it is actually readable, plus a sticky product rail so it converts instead of only informing."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}

@@ -1,0 +1,118 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #FBFBFC;
+      color: #16181C;
+      font-family: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: #0E5A6E; text-decoration: none; }
+    a:hover { color: #0A4351; text-decoration: underline; text-underline-offset: 3px; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; background: #FBFBFC;">
+
+  <div style="background: #FFFFFF; border-bottom: 1px solid #E3E5E8;">
+    <div style="max-width: 1240px; margin: 0 auto; padding: 20px 32px; display: flex; align-items: center; gap: 40px;">
+      <span style="font-size: 20px; font-weight: 700; letter-spacing: -0.02em;">shopcf</span>
+      <div style="flex-grow: 1;"></div>
+      <div style="display: flex; gap: 28px; align-items: center; font-size: 14px; font-weight: 500;">
+        <span>Products</span><span>Applications</span><span>Capabilities</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16181C" stroke-width="1.6"><path d="M3 4h2l2.2 10.4a2 2 0 0 0 2 1.6h7.5a2 2 0 0 0 2-1.55L20.5 8H6"/><circle cx="10" cy="20" r="1.2"/><circle cx="18" cy="20" r="1.2"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <div style="max-width: 1240px; margin: 0 auto; padding: 20px 32px 0; font-size: 13px; color: #787F88; display: flex; gap: 8px;">
+    <a href="#">Products</a><span>/</span>
+    <a href="#">Stainless Steel Ball Valve DN50</a><span>/</span>
+    <span style="color: #4E545C;">Offshore platform seawater lines</span>
+  </div>
+
+  <!-- Article head. Narrow measure — this page exists to be read. -->
+  <div style="max-width: 1240px; margin: 0 auto; padding: 32px 32px 0; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 48px;">
+
+    <div style="grid-column: span 8;">
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #0E5A6E;">Application note · Offshore &amp; marine</span>
+      <h1 style="margin: 14px 0 0; font-size: 40px; line-height: 1.15; letter-spacing: -0.025em; font-weight: 600; text-wrap: pretty; max-width: 20ch;">Ball valves for offshore platform seawater lines</h1>
+
+      <div style="margin-top: 20px; display: flex; gap: 20px; font-size: 13px; color: #787F88; align-items: center;">
+        <span>Written by our valve engineering team</span>
+        <span>·</span>
+        <span>Updated March 2026</span>
+        <span>·</span>
+        <span>6 min read</span>
+      </div>
+
+      <p style="margin: 32px 0 0; font-size: 19px; line-height: 1.6; color: #2B2F36; max-width: 60ch; text-wrap: pretty;">Offshore seawater service combines chloride attack with constant vibration — the two failure modes that kill a valve fastest, and the two that datasheets rarely address together.</p>
+
+      <div style="margin-top: 32px; font-size: 17px; line-height: 1.75; color: #2B2F36; max-width: 68ch;">
+        <p style="margin: 0;">The 316L body resists pitting that would perforate a 304 valve within a season. Molybdenum content is what makes the difference: at 2–3%, it stabilises the passive layer against chloride ingress in a way 304 simply cannot. On a platform where a leaking valve means a shutdown, that margin is the whole argument.</p>
+
+        <h2 style="margin: 40px 0 0; font-size: 24px; font-weight: 600; letter-spacing: -0.015em;">Why two-piece construction matters here</h2>
+        <p style="margin: 16px 0 0;">The two-piece bolted construction allows seat replacement in place rather than cutting the valve out of the line. Offshore, where hot work permits are slow and welding is restricted, being able to service a valve without a permit is worth more than the unit price difference.</p>
+
+        <blockquote style="margin: 32px 0 0; padding: 20px 24px; border-left: 3px solid #0E5A6E; background: #FFFFFF; font-size: 16px; line-height: 1.65; color: #2B2F36;">
+          Specify the ISO 5211 pad option if the line will later be actuated for remote shutdown. Retrofitting a mounting pad offshore is not practical.
+        </blockquote>
+
+        <h2 style="margin: 40px 0 0; font-size: 24px; font-weight: 600; letter-spacing: -0.015em;">Specification checklist</h2>
+        <ul style="margin: 16px 0 0; padding-left: 22px;">
+          <li style="margin-bottom: 10px;">316L body and ball, not 304 — confirm with a 3.1 material certificate</li>
+          <li style="margin-bottom: 10px;">PTFE or RPTFE seat rated for the line's maximum temperature</li>
+          <li style="margin-bottom: 10px;">ISO 5211 pad sized for the actuator you may fit later</li>
+          <li style="margin-bottom: 10px;">Anti-static device between ball, stem and body</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Sticky product rail: the page must convert, not just inform -->
+    <div style="grid-column: span 4;">
+      <div style="border: 1px solid #E3E5E8; background: #FFFFFF;">
+        <div style="padding: 16px 20px; border-bottom: 1px solid #EDEFF2; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4E545C;">The part discussed here</div>
+        <div style="padding: 20px;">
+          <div style="height: 120px; border: 1px solid #E3E5E8; background: #FBFBFC; display: flex; align-items: center; justify-content: center;">
+            <svg width="90" height="66" viewBox="0 0 80 60" fill="none"><path d="M12 30h56M22 18h36v24H22z" stroke="#CDD1D6" stroke-width="2"/><circle cx="40" cy="30" r="11" stroke="#0E5A6E" stroke-width="2"/></svg>
+          </div>
+          <h3 style="margin: 16px 0 0; font-size: 17px; font-weight: 600; line-height: 1.35;"><a href="#">Stainless Steel Ball Valve DN50</a></h3>
+          <div style="margin-top: 14px; display: flex; align-items: baseline; gap: 8px;">
+            <span style="font-size: 24px; font-weight: 600; letter-spacing: -0.01em;">$99.00</span>
+            <span style="font-size: 13px; color: #787F88;">per unit</span>
+          </div>
+          <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: #4E545C;">
+            <div style="display: flex; justify-content: space-between;"><span style="color: #787F88;">Minimum order</span><span style="font-family: 'IBM Plex Mono', ui-monospace, monospace;">10 units</span></div>
+            <div style="display: flex; justify-content: space-between;"><span style="color: #787F88;">Lead time</span><span style="font-family: 'IBM Plex Mono', ui-monospace, monospace;">15–20 days</span></div>
+            <div style="display: flex; justify-content: space-between;"><span style="color: #787F88;">Stock</span><span style="color: #146C43;">120 available</span></div>
+          </div>
+          <div style="margin-top: 18px; background: #0E5A6E; color: #FFFFFF; padding: 12px; text-align: center; font-size: 15px; font-weight: 600;">View product</div>
+        </div>
+      </div>
+
+      <div style="margin-top: 24px; border: 1px solid #E3E5E8; background: #FFFFFF; padding: 20px;">
+        <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4E545C;">Other applications</div>
+        <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 12px; font-size: 15px; line-height: 1.45;">
+          <a href="#">Valve selection for chemical dosing skids</a>
+          <a href="#">Full-bore valves in CIP circuits</a>
+          <a href="#">Cryogenic service below −50 °C</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="height: 72px;"></div>
+</div>
+</x-dc>
+</body>
+</html>

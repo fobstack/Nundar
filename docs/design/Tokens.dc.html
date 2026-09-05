@@ -1,0 +1,170 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #FBFBFC;
+      color: #16181C;
+      font-family: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: #0E5A6E; text-decoration: none; }
+    a:hover { color: #0A4351; }
+  </style>
+</helmet>
+
+<div style="width: 1000px; background: #FBFBFC; padding: 48px;">
+
+  <h1 style="margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -0.02em;">Design tokens</h1>
+  <p style="margin: 10px 0 0; font-size: 15px; line-height: 1.6; color: #4E545C; max-width: 62ch;">These become CSS custom properties in <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 14px;">src/themes/default/tokens.css</span>. A second theme redefines the same names and the whole storefront changes.</p>
+
+  <!-- Color -->
+  <h2 style="margin: 40px 0 0; font-size: 18px; font-weight: 600;">Color</h2>
+  <div style="margin-top: 16px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px;">
+    <div>
+      <div style="height: 64px; background: #FBFBFC; border: 1px solid #E3E5E8;"></div>
+      <div style="margin-top: 8px; font-size: 13px; font-weight: 600;">--bg</div>
+      <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #787F88;">#FBFBFC</div>
+    </div>
+    <div>
+      <div style="height: 64px; background: #FFFFFF; border: 1px solid #E3E5E8;"></div>
+      <div style="margin-top: 8px; font-size: 13px; font-weight: 600;">--surface</div>
+      <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #787F88;">#FFFFFF</div>
+    </div>
+    <div>
+      <div style="height: 64px; background: #E3E5E8;"></div>
+      <div style="margin-top: 8px; font-size: 13px; font-weight: 600;">--line</div>
+      <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #787F88;">#E3E5E8</div>
+    </div>
+    <div>
+      <div style="height: 64px; background: #CDD1D6;"></div>
+      <div style="margin-top: 8px; font-size: 13px; font-weight: 600;">--line-strong</div>
+      <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #787F88;">#CDD1D6</div>
+    </div>
+
+    <div>
+      <div style="height: 64px; background: #16181C;"></div>
+      <div style="margin-top: 8px; font-size: 13px; font-weight: 600;">--ink</div>
+      <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #787F88;">#16181C</div>
+    </div>
+    <div>
+      <div style="height: 64px; background: #4E545C;"></div>
+      <div style="margin-top: 8px; font-size: 13px; font-weight: 600;">--ink-2</div>
+      <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #787F88;">#4E545C</div>
+    </div>
+    <div>
+      <div style="height: 64px; background: #787F88;"></div>
+      <div style="margin-top: 8px; font-size: 13px; font-weight: 600;">--ink-3</div>
+      <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #787F88;">#787F88</div>
+    </div>
+    <div>
+      <div style="height: 64px; background: #0E5A6E;"></div>
+      <div style="margin-top: 8px; font-size: 13px; font-weight: 600;">--accent</div>
+      <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #787F88;">#0E5A6E</div>
+    </div>
+
+    <div>
+      <div style="height: 64px; background: #0A4351;"></div>
+      <div style="margin-top: 8px; font-size: 13px; font-weight: 600;">--accent-ink</div>
+      <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #787F88;">#0A4351</div>
+    </div>
+    <div>
+      <div style="height: 64px; background: #EAF3F6; border: 1px solid #E3E5E8;"></div>
+      <div style="margin-top: 8px; font-size: 13px; font-weight: 600;">--accent-soft</div>
+      <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #787F88;">#EAF3F6</div>
+    </div>
+    <div>
+      <div style="height: 64px; background: #146C43;"></div>
+      <div style="margin-top: 8px; font-size: 13px; font-weight: 600;">--ok</div>
+      <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #787F88;">#146C43 · in stock</div>
+    </div>
+    <div>
+      <div style="height: 64px; background: #8A5A00;"></div>
+      <div style="margin-top: 8px; font-size: 13px; font-weight: 600;">--warn</div>
+      <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #787F88;">#8A5A00 · made to order</div>
+    </div>
+  </div>
+
+  <!-- Type -->
+  <h2 style="margin: 44px 0 0; font-size: 18px; font-weight: 600;">Typography</h2>
+  <p style="margin: 8px 0 0; font-size: 14px; color: #4E545C;">IBM Plex Sans for everything readable; IBM Plex Mono for part numbers, specifications and quantities — anything the buyer will compare character by character.</p>
+
+  <div style="margin-top: 20px; border: 1px solid #E3E5E8; background: #FFFFFF;">
+    <div style="padding: 18px 22px; border-bottom: 1px solid #F2F3F5; display: flex; align-items: baseline; gap: 24px;">
+      <span style="width: 130px; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #787F88; flex-shrink: 0;">display / 52·600</span>
+      <span style="font-size: 40px; font-weight: 600; letter-spacing: -0.03em;">Spec it once</span>
+    </div>
+    <div style="padding: 18px 22px; border-bottom: 1px solid #F2F3F5; display: flex; align-items: baseline; gap: 24px;">
+      <span style="width: 130px; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #787F88; flex-shrink: 0;">h1 / 30·600</span>
+      <span style="font-size: 30px; font-weight: 600; letter-spacing: -0.02em;">Stainless Steel Ball Valve DN50</span>
+    </div>
+    <div style="padding: 18px 22px; border-bottom: 1px solid #F2F3F5; display: flex; align-items: baseline; gap: 24px;">
+      <span style="width: 130px; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #787F88; flex-shrink: 0;">h2 / 24·600</span>
+      <span style="font-size: 24px; font-weight: 600; letter-spacing: -0.015em;">Applications</span>
+    </div>
+    <div style="padding: 18px 22px; border-bottom: 1px solid #F2F3F5; display: flex; align-items: baseline; gap: 24px;">
+      <span style="width: 130px; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #787F88; flex-shrink: 0;">body / 16·400</span>
+      <span style="font-size: 16px; line-height: 1.7;">Resists chloride pitting in seawater and chemical service where 304 fails.</span>
+    </div>
+    <div style="padding: 18px 22px; border-bottom: 1px solid #F2F3F5; display: flex; align-items: baseline; gap: 24px;">
+      <span style="width: 130px; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #787F88; flex-shrink: 0;">small / 13·400</span>
+      <span style="font-size: 13px; color: #4E545C;">per unit · excl. VAT and freight</span>
+    </div>
+    <div style="padding: 18px 22px; border-bottom: 1px solid #F2F3F5; display: flex; align-items: baseline; gap: 24px;">
+      <span style="width: 130px; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #787F88; flex-shrink: 0;">mono / 14·400</span>
+      <span style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 14px;">BV-316L-DN50-NPT · 1000 PSI · 1.35 kg</span>
+    </div>
+    <div style="padding: 18px 22px; display: flex; align-items: baseline; gap: 24px;">
+      <span style="width: 130px; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; color: #787F88; flex-shrink: 0;">eyebrow / 12·600</span>
+      <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #0E5A6E;">Offshore &amp; marine</span>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <h2 style="margin: 44px 0 0; font-size: 18px; font-weight: 600;">Controls</h2>
+  <div style="margin-top: 16px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap;">
+    <div style="background: #0E5A6E; color: #FFFFFF; padding: 13px 26px; font-size: 15px; font-weight: 600;">Primary</div>
+    <div style="border: 1px solid #CDD1D6; background: #FFFFFF; padding: 13px 26px; font-size: 15px; font-weight: 500;">Secondary</div>
+    <div style="border: 1px solid #0E5A6E; color: #0E5A6E; padding: 13px 26px; font-size: 15px; font-weight: 600;">Outline</div>
+    <div style="background: #E9EAEC; color: #A8AEB6; padding: 13px 26px; font-size: 15px; font-weight: 600;">Disabled</div>
+    <div style="display: flex; align-items: center; border: 1px solid #CDD1D6; background: #FBFBFC;">
+      <span style="width: 42px; height: 46px; display: flex; align-items: center; justify-content: center; color: #4E545C;">−</span>
+      <span style="width: 54px; text-align: center; font-weight: 600; font-family: 'IBM Plex Mono', ui-monospace, monospace;">10</span>
+      <span style="width: 42px; height: 46px; display: flex; align-items: center; justify-content: center; color: #4E545C;">+</span>
+    </div>
+  </div>
+
+  <!-- Geometry -->
+  <h2 style="margin: 44px 0 0; font-size: 18px; font-weight: 600;">Geometry</h2>
+  <div style="margin-top: 16px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; font-size: 14px; line-height: 1.7; color: #4E545C;">
+    <div>
+      <div style="font-weight: 600; color: #16181C; margin-bottom: 6px;">Radius</div>
+      2px on inputs and buttons, 0 on panels. Sharp corners read as precision; rounded ones read as consumer software.
+    </div>
+    <div>
+      <div style="font-weight: 600; color: #16181C; margin-bottom: 6px;">Spacing</div>
+      4px base. Steps 4 · 8 · 12 · 16 · 24 · 32 · 48 · 64 · 96. Section gaps use 64 and above.
+    </div>
+    <div>
+      <div style="font-weight: 600; color: #16181C; margin-bottom: 6px;">Measure</div>
+      Body copy capped at 68ch, lead paragraphs at 60ch. Long specification pages stay readable.
+    </div>
+    <div>
+      <div style="font-weight: 600; color: #16181C; margin-bottom: 6px;">Elevation</div>
+      Borders, not shadows. A 1px line separates; a shadow implies a floating layer that a catalogue does not have.
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

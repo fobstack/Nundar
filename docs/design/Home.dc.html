@@ -1,0 +1,204 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #FBFBFC;
+      color: #16181C;
+      font-family: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: #0E5A6E; text-decoration: none; }
+    a:hover { color: #0A4351; text-decoration: underline; text-underline-offset: 3px; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; background: #FBFBFC;">
+
+  <div style="background: #16181C; color: #A8AEB6; font-size: 13px;">
+    <div style="max-width: 1240px; margin: 0 auto; padding: 8px 32px; display: flex; justify-content: space-between; align-items: center;">
+      <span>Manufacturer direct · Ships worldwide from stock</span>
+      <div style="display: flex; gap: 20px; align-items: center;">
+        <span>English</span><span style="color: #4E545C;">|</span><span>USD $</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="background: #FFFFFF; border-bottom: 1px solid #E3E5E8;">
+    <div style="max-width: 1240px; margin: 0 auto; padding: 20px 32px; display: flex; align-items: center; gap: 40px;">
+      <span style="font-size: 20px; font-weight: 700; letter-spacing: -0.02em;">shopcf</span>
+      <div style="flex-grow: 1; display: flex; align-items: center; gap: 8px; border: 1px solid #CDD1D6; background: #FBFBFC; padding: 9px 12px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#787F88" stroke-width="1.75"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <span style="color: #787F88; font-size: 14px;">Search by part number, size or material</span>
+      </div>
+      <div style="display: flex; gap: 28px; align-items: center; font-size: 14px; font-weight: 500;">
+        <span>Products</span><span>Applications</span><span>Capabilities</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16181C" stroke-width="1.6"><path d="M3 4h2l2.2 10.4a2 2 0 0 0 2 1.6h7.5a2 2 0 0 0 2-1.55L20.5 8H6"/><circle cx="10" cy="20" r="1.2"/><circle cx="18" cy="20" r="1.2"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hero: one sentence, one action. No stock-photo banner. -->
+  <div style="background: #FFFFFF; border-bottom: 1px solid #E3E5E8;">
+    <div style="max-width: 1240px; margin: 0 auto; padding: 72px 32px; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 40px; align-items: center;">
+      <div style="grid-column: span 7;">
+        <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #0E5A6E;">Stainless valves &amp; fittings</span>
+        <h1 style="margin: 16px 0 0; font-size: 52px; line-height: 1.08; letter-spacing: -0.03em; font-weight: 600; text-wrap: pretty;">Spec it once.<br>Order it direct.</h1>
+        <p style="margin: 20px 0 0; font-size: 18px; line-height: 1.6; color: #4E545C; max-width: 48ch;">Every part lists its material grade, pressure rating, minimum order and real lead time before you add it to the cart — so procurement never has to email for a quote first.</p>
+        <div style="margin-top: 32px; display: flex; gap: 12px;">
+          <div style="background: #0E5A6E; color: #FFFFFF; padding: 14px 28px; font-size: 15px; font-weight: 600;">Browse the catalogue</div>
+          <div style="border: 1px solid #CDD1D6; background: #FFFFFF; padding: 14px 28px; font-size: 15px; font-weight: 500;">Request a sample</div>
+        </div>
+      </div>
+
+      <!-- Spec-lookup panel: the B2B entry point, not a carousel -->
+      <div style="grid-column: span 5; border: 1px solid #E3E5E8; background: #FBFBFC; padding: 28px;">
+        <div style="font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4E545C;">Find by specification</div>
+        <div style="margin-top: 18px; display: flex; flex-direction: column; gap: 14px;">
+          <div>
+            <div style="font-size: 13px; color: #787F88; margin-bottom: 6px;">Nominal size</div>
+            <div style="border: 1px solid #CDD1D6; background: #FFFFFF; padding: 11px 12px; font-size: 14px; display: flex; justify-content: space-between; align-items: center;">
+              <span>DN50 / 2"</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#787F88" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+            </div>
+          </div>
+          <div>
+            <div style="font-size: 13px; color: #787F88; margin-bottom: 6px;">Body material</div>
+            <div style="border: 1px solid #CDD1D6; background: #FFFFFF; padding: 11px 12px; font-size: 14px; display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: #787F88;">Any</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#787F88" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+            </div>
+          </div>
+          <div>
+            <div style="font-size: 13px; color: #787F88; margin-bottom: 6px;">Connection</div>
+            <div style="border: 1px solid #CDD1D6; background: #FFFFFF; padding: 11px 12px; font-size: 14px; display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: #787F88;">Any</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#787F88" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+            </div>
+          </div>
+          <div style="background: #16181C; color: #FFFFFF; padding: 13px; text-align: center; font-size: 15px; font-weight: 600; margin-top: 4px;">Show 24 matches</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Categories -->
+  <div style="max-width: 1240px; margin: 0 auto; padding: 64px 32px 0;">
+    <div style="display: flex; align-items: baseline; justify-content: space-between;">
+      <h2 style="margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.015em;">Catalogue</h2>
+      <a href="#" style="font-size: 14px; font-weight: 500;">All products →</a>
+    </div>
+    <div style="margin-top: 24px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px;">
+      <div style="border: 1px solid #E3E5E8; background: #FFFFFF; padding: 24px;">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="#0E5A6E" stroke-width="1.6"><circle cx="16" cy="16" r="7"/><path d="M2 16h7M23 16h7M16 9V2"/></svg>
+        <div style="margin-top: 16px; font-size: 16px; font-weight: 600;">Ball valves</div>
+        <div style="margin-top: 4px; font-size: 13px; color: #787F88;">DN15 – DN200 · 48 parts</div>
+      </div>
+      <div style="border: 1px solid #E3E5E8; background: #FFFFFF; padding: 24px;">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="#0E5A6E" stroke-width="1.6"><path d="M6 12h20v8H6zM10 12V8h12v4"/></svg>
+        <div style="margin-top: 16px; font-size: 16px; font-weight: 600;">Gate valves</div>
+        <div style="margin-top: 4px; font-size: 13px; color: #787F88;">DN25 – DN300 · 31 parts</div>
+      </div>
+      <div style="border: 1px solid #E3E5E8; background: #FFFFFF; padding: 24px;">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="#0E5A6E" stroke-width="1.6"><circle cx="16" cy="16" r="10"/><path d="M16 6v20"/></svg>
+        <div style="margin-top: 16px; font-size: 16px; font-weight: 600;">Butterfly valves</div>
+        <div style="margin-top: 4px; font-size: 13px; color: #787F88;">DN50 – DN400 · 27 parts</div>
+      </div>
+      <div style="border: 1px solid #E3E5E8; background: #FFFFFF; padding: 24px;">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="#0E5A6E" stroke-width="1.6"><path d="M16 4v10M16 18v10M6 16h20"/><circle cx="16" cy="16" r="2.5"/></svg>
+        <div style="margin-top: 16px; font-size: 16px; font-weight: 600;">Fittings</div>
+        <div style="margin-top: 4px; font-size: 13px; color: #787F88;">Threaded &amp; welded · 96 parts</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Applications: SEO surface promoted onto the home page -->
+  <div style="max-width: 1240px; margin: 64px auto 0; padding: 0 32px;">
+    <div style="border-top: 1px solid #E3E5E8; padding-top: 32px; display: flex; align-items: baseline; justify-content: space-between;">
+      <h2 style="margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.015em;">Application notes</h2>
+      <span style="font-size: 13px; color: #787F88;">Written by the engineers who build the parts</span>
+    </div>
+    <div style="margin-top: 24px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px;">
+      <div style="border: 1px solid #E3E5E8; background: #FFFFFF; padding: 26px;">
+        <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #0E5A6E;">Offshore &amp; marine</span>
+        <h3 style="margin: 10px 0 0; font-size: 17px; font-weight: 600; line-height: 1.4; text-wrap: pretty;"><a href="#">Ball valves for offshore platform seawater lines</a></h3>
+        <p style="margin: 10px 0 0; font-size: 14px; line-height: 1.6; color: #4E545C;">Why 304 perforates within a season and what to specify instead.</p>
+      </div>
+      <div style="border: 1px solid #E3E5E8; background: #FFFFFF; padding: 26px;">
+        <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #0E5A6E;">Chemical</span>
+        <h3 style="margin: 10px 0 0; font-size: 17px; font-weight: 600; line-height: 1.4; text-wrap: pretty;"><a href="#">Valve selection for chemical dosing skids</a></h3>
+        <p style="margin: 10px 0 0; font-size: 14px; line-height: 1.6; color: #4E545C;">Seat material, dead volume and the cost of getting either wrong.</p>
+      </div>
+      <div style="border: 1px solid #E3E5E8; background: #FFFFFF; padding: 26px;">
+        <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #0E5A6E;">Food &amp; beverage</span>
+        <h3 style="margin: 10px 0 0; font-size: 17px; font-weight: 600; line-height: 1.4; text-wrap: pretty;"><a href="#">Full-bore valves in CIP circuits</a></h3>
+        <p style="margin: 10px 0 0; font-size: 14px; line-height: 1.6; color: #4E545C;">Eliminating the dead volume that survives a clean-in-place cycle.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trust strip -->
+  <div style="max-width: 1240px; margin: 64px auto 0; padding: 0 32px;">
+    <div style="border: 1px solid #E3E5E8; background: #FFFFFF; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));">
+      <div style="padding: 28px; border-right: 1px solid #EDEFF2;">
+        <div style="font-size: 28px; font-weight: 600; letter-spacing: -0.02em;">[12] yrs</div>
+        <div style="margin-top: 6px; font-size: 14px; color: #4E545C;">Manufacturing the parts we sell</div>
+      </div>
+      <div style="padding: 28px; border-right: 1px solid #EDEFF2;">
+        <div style="font-size: 28px; font-weight: 600; letter-spacing: -0.02em;">ISO 9001</div>
+        <div style="margin-top: 6px; font-size: 14px; color: #4E545C;">Certificate no. [YOUR CERT NO.]</div>
+      </div>
+      <div style="padding: 28px; border-right: 1px solid #EDEFF2;">
+        <div style="font-size: 28px; font-weight: 600; letter-spacing: -0.02em;">15–20 d</div>
+        <div style="margin-top: 6px; font-size: 14px; color: #4E545C;">Typical lead time on stock items</div>
+      </div>
+      <div style="padding: 28px;">
+        <div style="font-size: 28px; font-weight: 600; letter-spacing: -0.02em;">3.1 certs</div>
+        <div style="margin-top: 6px; font-size: 14px; color: #4E545C;">Material traceability on request</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top: 80px; background: #16181C; color: #A8AEB6;">
+    <div style="max-width: 1240px; margin: 0 auto; padding: 48px 32px; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 32px;">
+      <div style="grid-column: span 4;">
+        <div style="font-size: 18px; font-weight: 700; color: #FFFFFF; letter-spacing: -0.02em;">shopcf</div>
+        <p style="margin: 12px 0 0; font-size: 14px; line-height: 1.7; max-width: 34ch;">Manufacturer-direct industrial components, shipped from stock to Europe and North America.</p>
+      </div>
+      <div style="grid-column: span 2; display: flex; flex-direction: column; gap: 10px; font-size: 14px;">
+        <span style="color: #FFFFFF; font-weight: 600; font-size: 13px;">Catalogue</span>
+        <span>All products</span><span>Applications</span><span>New arrivals</span>
+      </div>
+      <div style="grid-column: span 2; display: flex; flex-direction: column; gap: 10px; font-size: 14px;">
+        <span style="color: #FFFFFF; font-weight: 600; font-size: 13px;">Ordering</span>
+        <span>Minimum quantities</span><span>Lead times</span><span>Shipping &amp; duties</span>
+      </div>
+      <div style="grid-column: span 2; display: flex; flex-direction: column; gap: 10px; font-size: 14px;">
+        <span style="color: #FFFFFF; font-weight: 600; font-size: 13px;">Company</span>
+        <span>About</span><span>Quality &amp; certificates</span><span>Contact</span>
+      </div>
+      <div style="grid-column: span 2; display: flex; flex-direction: column; gap: 10px; font-size: 14px;">
+        <span style="color: #FFFFFF; font-weight: 600; font-size: 13px;">Language</span>
+        <span>English</span><span>Deutsch</span><span>Français</span><span>Español</span>
+      </div>
+    </div>
+    <div style="border-top: 1px solid #2B2F36;">
+      <div style="max-width: 1240px; margin: 0 auto; padding: 18px 32px; font-size: 13px; display: flex; justify-content: space-between;">
+        <span>© 2026 shopcf</span><span>Terms · Privacy</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

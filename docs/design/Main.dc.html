@@ -1,0 +1,310 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #FBFBFC;
+      color: #16181C;
+      font-family: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: #0E5A6E; text-decoration: none; }
+    a:hover { color: #0A4351; text-decoration: underline; text-underline-offset: 3px; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; background: #FBFBFC;">
+
+  <!-- Utility bar -->
+  <div style="background: #16181C; color: #A8AEB6; font-size: 13px;">
+    <div style="max-width: 1240px; margin: 0 auto; padding: 8px 32px; display: flex; justify-content: space-between; align-items: center;">
+      <span>Manufacturer direct · Ships worldwide from stock</span>
+      <div style="display: flex; gap: 20px; align-items: center;">
+        <span style="display: flex; align-items: center; gap: 6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A8AEB6" stroke-width="1.75"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"/></svg>
+          English
+        </span>
+        <span style="color: #4E545C;">|</span>
+        <span>USD $</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <div style="background: #FFFFFF; border-bottom: 1px solid #E3E5E8;">
+    <div style="max-width: 1240px; margin: 0 auto; padding: 20px 32px; display: flex; align-items: center; gap: 40px;">
+      <span style="font-size: 20px; font-weight: 700; letter-spacing: -0.02em;">shopcf</span>
+
+      <div style="flex-grow: 1; display: flex; align-items: center; gap: 8px; border: 1px solid #CDD1D6; background: #FBFBFC; padding: 9px 12px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#787F88" stroke-width="1.75"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <span style="color: #787F88; font-size: 14px;">Search by part number, size or material</span>
+      </div>
+
+      <div style="display: flex; gap: 28px; align-items: center; font-size: 14px; font-weight: 500;">
+        <span>Products</span>
+        <span>Applications</span>
+        <span>Capabilities</span>
+        <span style="display: flex; align-items: center; gap: 7px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16181C" stroke-width="1.6"><path d="M3 4h2l2.2 10.4a2 2 0 0 0 2 1.6h7.5a2 2 0 0 0 2-1.55L20.5 8H6"/><circle cx="10" cy="20" r="1.2"/><circle cx="18" cy="20" r="1.2"/></svg>
+          <span style="background: #0E5A6E; color: #fff; font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 999px;">2</span>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Breadcrumb -->
+  <div style="max-width: 1240px; margin: 0 auto; padding: 20px 32px 0; font-size: 13px; color: #787F88; display: flex; gap: 8px; align-items: center;">
+    <a href="#">Products</a>
+    <span>/</span>
+    <a href="#">Ball valves</a>
+    <span>/</span>
+    <span style="color: #4E545C;">Stainless Steel Ball Valve DN50</span>
+  </div>
+
+  <!-- Product head -->
+  <div style="max-width: 1240px; margin: 0 auto; padding: 24px 32px 0; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 40px;">
+
+    <!-- Gallery -->
+    <div style="grid-column: span 6; display: flex; flex-direction: column; gap: 12px;">
+      <div style="aspect-ratio: 4 / 3; background: #FFFFFF; border: 1px solid #E3E5E8; display: flex; align-items: center; justify-content: center; position: relative;">
+        <svg width="260" height="200" viewBox="0 0 260 200" fill="none">
+          <defs>
+            <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+              <path d="M20 0H0v20" stroke="#EDEFF2" stroke-width="1"/>
+            </pattern>
+          </defs>
+          <rect width="260" height="200" fill="url(#grid)"/>
+          <path d="M60 100h140M78 78h104v44H78z" stroke="#CDD1D6" stroke-width="2"/>
+          <circle cx="130" cy="100" r="24" stroke="#0E5A6E" stroke-width="2" fill="none"/>
+          <path d="M130 62v-18h-14l14-14 14 14h-14" stroke="#0E5A6E" stroke-width="2" fill="none"/>
+        </svg>
+        <span style="position: absolute; bottom: 12px; left: 12px; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: #A8AEB6;">[ product photo ]</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;">
+        <div style="aspect-ratio: 1; border: 2px solid #0E5A6E; background: #FFFFFF;"></div>
+        <div style="aspect-ratio: 1; border: 1px solid #E3E5E8; background: #FFFFFF;"></div>
+        <div style="aspect-ratio: 1; border: 1px solid #E3E5E8; background: #FFFFFF;"></div>
+        <div style="aspect-ratio: 1; border: 1px solid #E3E5E8; background: #FFFFFF;"></div>
+      </div>
+    </div>
+
+    <!-- Buy panel -->
+    <div style="grid-column: span 6; display: flex; flex-direction: column;">
+      <h1 style="margin: 0; font-size: 30px; line-height: 1.2; letter-spacing: -0.02em; font-weight: 600; text-wrap: pretty;">Stainless Steel Ball Valve DN50</h1>
+      <p style="margin: 12px 0 0; font-size: 16px; line-height: 1.6; color: #4E545C; max-width: 52ch;">Full-bore 316L ball valve rated to 1000&nbsp;PSI for corrosive and food-grade media.</p>
+
+      <!-- Variant selector -->
+      <div style="margin-top: 28px;">
+        <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #787F88;">Connection</span>
+        <div style="margin-top: 10px; display: flex; gap: 10px;">
+          <div style="flex-grow: 1; border: 2px solid #0E5A6E; background: #FFFFFF; padding: 12px 14px;">
+            <div style="font-size: 14px; font-weight: 600;">NPT threaded</div>
+            <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #787F88; margin-top: 3px;">BV-316L-DN50-NPT</div>
+          </div>
+          <div style="flex-grow: 1; border: 1px solid #CDD1D6; background: #FFFFFF; padding: 12px 14px;">
+            <div style="font-size: 14px; font-weight: 600; color: #4E545C;">ANSI 150 flanged</div>
+            <div style="font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; color: #787F88; margin-top: 3px;">BV-316L-DN50-FLG</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Commercial terms -->
+      <div style="margin-top: 24px; border: 1px solid #E3E5E8; background: #FFFFFF;">
+        <div style="padding: 20px; display: flex; align-items: flex-end; justify-content: space-between; border-bottom: 1px solid #EDEFF2;">
+          <div>
+            <div style="font-size: 34px; font-weight: 600; letter-spacing: -0.02em; line-height: 1;">$99.00</div>
+            <div style="font-size: 13px; color: #787F88; margin-top: 6px;">per unit · excl. VAT and freight</div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 7px; color: #146C43; font-size: 13px; font-weight: 500;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#146C43" stroke-width="2.2"><path d="m4 12.5 5.2 5.2L20 7"/></svg>
+            120 in stock
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));">
+          <div style="padding: 14px 20px; border-right: 1px solid #EDEFF2;">
+            <div style="font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: #787F88;">Minimum order</div>
+            <div style="font-size: 16px; font-weight: 600; margin-top: 4px;">10 units</div>
+          </div>
+          <div style="padding: 14px 20px;">
+            <div style="font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: #787F88;">Lead time</div>
+            <div style="font-size: 16px; font-weight: 600; margin-top: 4px;">15–20 business days</div>
+          </div>
+        </div>
+
+        <div style="padding: 20px; border-top: 1px solid #EDEFF2; display: flex; gap: 12px; align-items: stretch;">
+          <div style="display: flex; align-items: center; border: 1px solid #CDD1D6; background: #FBFBFC;">
+            <span style="width: 44px; height: 48px; display: flex; align-items: center; justify-content: center; color: #4E545C; font-size: 18px;">−</span>
+            <span style="width: 56px; text-align: center; font-size: 16px; font-weight: 600; font-family: 'IBM Plex Mono', ui-monospace, monospace;">10</span>
+            <span style="width: 44px; height: 48px; display: flex; align-items: center; justify-content: center; color: #4E545C; font-size: 18px;">+</span>
+          </div>
+          <div style="flex-grow: 1; background: #0E5A6E; color: #FFFFFF; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600;">Add to cart</div>
+          <div style="width: 140px; border: 1px solid #CDD1D6; background: #FFFFFF; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 500;">Request quote</div>
+        </div>
+      </div>
+
+      <!-- Assurance row -->
+      <div style="margin-top: 16px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; font-size: 13px; color: #4E545C;">
+        <div style="display: flex; gap: 8px; align-items: flex-start;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0E5A6E" stroke-width="1.7" style="flex-shrink: 0; margin-top: 1px;"><path d="M12 3 4 6.5v5.2c0 4.7 3.3 8.4 8 9.3 4.7-.9 8-4.6 8-9.3V6.5L12 3Z"/></svg>
+          Material certificate 3.1 on request
+        </div>
+        <div style="display: flex; gap: 8px; align-items: flex-start;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0E5A6E" stroke-width="1.7" style="flex-shrink: 0; margin-top: 1px;"><rect x="2" y="7" width="13" height="10"/><path d="M15 10h4l3 3v4h-7"/><circle cx="7" cy="18" r="1.6"/><circle cx="18" cy="18" r="1.6"/></svg>
+          DDP shipping to EU and US
+        </div>
+        <div style="display: flex; gap: 8px; align-items: flex-start;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0E5A6E" stroke-width="1.7" style="flex-shrink: 0; margin-top: 1px;"><path d="M12 3v18M5 8l7-5 7 5M5 8v8l7 5 7-5V8"/></svg>
+          Samples available before bulk
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section nav -->
+  <div style="max-width: 1240px; margin: 56px auto 0; padding: 0 32px;">
+    <div style="border-bottom: 1px solid #E3E5E8; display: flex; gap: 32px; font-size: 14px; font-weight: 500;">
+      <span style="padding-bottom: 12px; border-bottom: 2px solid #0E5A6E;">Overview</span>
+      <span style="padding-bottom: 12px; color: #4E545C;">Specifications</span>
+      <span style="padding-bottom: 12px; color: #4E545C;">Applications</span>
+      <span style="padding-bottom: 12px; color: #4E545C;">Downloads</span>
+    </div>
+  </div>
+
+  <!-- Body: description + specs -->
+  <div style="max-width: 1240px; margin: 0 auto; padding: 40px 32px 0; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 40px;">
+    <div style="grid-column: span 7;">
+      <p style="margin: 0; font-size: 16px; line-height: 1.75; color: #2B2F36; max-width: 68ch; text-wrap: pretty;">A full-bore two-piece ball valve machined from 316L stainless steel. Rated to 1000&nbsp;PSI at ambient temperature with a PTFE seat, it handles corrosive and food-grade media without contamination. Supplied with ISO&nbsp;5211 mounting for direct actuator fitting.</p>
+
+      <h2 style="margin: 40px 0 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em;">Why this valve</h2>
+      <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 22px;">
+        <div style="display: flex; gap: 16px;">
+          <div style="width: 3px; background: #0E5A6E; flex-shrink: 0;"></div>
+          <div>
+            <h3 style="margin: 0; font-size: 16px; font-weight: 600;">316L stainless body</h3>
+            <p style="margin: 6px 0 0; font-size: 15px; line-height: 1.65; color: #4E545C; max-width: 62ch;">Resists chloride pitting in seawater and chemical service where 304 fails.</p>
+          </div>
+        </div>
+        <div style="display: flex; gap: 16px;">
+          <div style="width: 3px; background: #0E5A6E; flex-shrink: 0;"></div>
+          <div>
+            <h3 style="margin: 0; font-size: 16px; font-weight: 600;">Full bore, zero flow restriction</h3>
+            <p style="margin: 6px 0 0; font-size: 15px; line-height: 1.65; color: #4E545C; max-width: 62ch;">The bore matches the pipe ID, so pressure drop across the valve is negligible.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Spec table -->
+    <div style="grid-column: span 5;">
+      <div style="border: 1px solid #E3E5E8; background: #FFFFFF;">
+        <div style="padding: 14px 18px; border-bottom: 1px solid #E3E5E8; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #4E545C;">Specifications</div>
+        <div style="display: flex; flex-direction: column;">
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 11px 18px; border-bottom: 1px solid #F2F3F5; font-size: 14px;">
+            <span style="color: #787F88;">Nominal size</span><span style="font-family: 'IBM Plex Mono', ui-monospace, monospace;">DN50 / 2"</span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 11px 18px; border-bottom: 1px solid #F2F3F5; font-size: 14px;">
+            <span style="color: #787F88;">Body material</span><span style="font-family: 'IBM Plex Mono', ui-monospace, monospace;">316L stainless</span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 11px 18px; border-bottom: 1px solid #F2F3F5; font-size: 14px;">
+            <span style="color: #787F88;">Seat</span><span style="font-family: 'IBM Plex Mono', ui-monospace, monospace;">PTFE</span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 11px 18px; border-bottom: 1px solid #F2F3F5; font-size: 14px;">
+            <span style="color: #787F88;">Pressure rating</span><span style="font-family: 'IBM Plex Mono', ui-monospace, monospace;">1000 PSI / 69 bar</span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 11px 18px; border-bottom: 1px solid #F2F3F5; font-size: 14px;">
+            <span style="color: #787F88;">Actuator pad</span><span style="font-family: 'IBM Plex Mono', ui-monospace, monospace;">ISO 5211 F05</span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 11px 18px; font-size: 14px;">
+            <span style="color: #787F88;">Net weight</span><span style="font-family: 'IBM Plex Mono', ui-monospace, monospace;">1.35 kg</span>
+          </div>
+        </div>
+      </div>
+      <p style="margin: 12px 0 0; font-size: 13px; color: #787F88; line-height: 1.6;">Specifications come from the product description, so every category can carry the fields that matter to it.</p>
+    </div>
+  </div>
+
+  <!-- Applications: the long-tail engine -->
+  <div style="max-width: 1240px; margin: 64px auto 0; padding: 0 32px;">
+    <div style="display: flex; align-items: baseline; justify-content: space-between; border-top: 1px solid #E3E5E8; padding-top: 32px;">
+      <h2 style="margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.015em;">Applications</h2>
+      <span style="font-size: 13px; color: #787F88;">Where this valve is specified, and why</span>
+    </div>
+
+    <div style="margin-top: 24px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px;">
+      <!-- Promoted: has its own landing page -->
+      <div style="border: 1px solid #E3E5E8; background: #FFFFFF; padding: 28px; display: flex; flex-direction: column;">
+        <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #0E5A6E;">Offshore &amp; marine</span>
+        <h3 style="margin: 10px 0 0; font-size: 19px; font-weight: 600; line-height: 1.35; text-wrap: pretty;">
+          <a href="#">Ball valves for offshore platform seawater lines</a>
+        </h3>
+        <p style="margin: 12px 0 0; font-size: 15px; line-height: 1.65; color: #4E545C;">Offshore seawater service combines chloride attack with constant vibration. The 316L body resists pitting that would perforate a 304 valve within a season, while the two-piece bolted construction allows seat replacement in place.</p>
+        <div style="margin-top: 18px; display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; color: #0E5A6E;">
+          Read the full application note
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0E5A6E" stroke-width="2"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+        </div>
+      </div>
+
+      <!-- Inline only -->
+      <div style="border: 1px solid #E3E5E8; background: #FFFFFF; padding: 28px; display: flex; flex-direction: column;">
+        <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #787F88;">Food &amp; beverage</span>
+        <h3 style="margin: 10px 0 0; font-size: 19px; font-weight: 600; line-height: 1.35; text-wrap: pretty;">Food-grade dosing and CIP circuits</h3>
+        <p style="margin: 12px 0 0; font-size: 15px; line-height: 1.65; color: #4E545C;">The PTFE seat carries no plasticiser migration risk, and the full bore leaves no dead volume where product can stagnate between CIP cycles.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div style="margin-top: 80px; background: #16181C; color: #A8AEB6;">
+    <div style="max-width: 1240px; margin: 0 auto; padding: 48px 32px; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 32px;">
+      <div style="grid-column: span 4;">
+        <div style="font-size: 18px; font-weight: 700; color: #FFFFFF; letter-spacing: -0.02em;">shopcf</div>
+        <p style="margin: 12px 0 0; font-size: 14px; line-height: 1.7; max-width: 34ch;">Manufacturer-direct industrial components, shipped from stock to Europe and North America.</p>
+      </div>
+      <div style="grid-column: span 2; display: flex; flex-direction: column; gap: 10px; font-size: 14px;">
+        <span style="color: #FFFFFF; font-weight: 600; font-size: 13px;">Catalogue</span>
+        <span>All products</span>
+        <span>Applications</span>
+        <span>New arrivals</span>
+      </div>
+      <div style="grid-column: span 2; display: flex; flex-direction: column; gap: 10px; font-size: 14px;">
+        <span style="color: #FFFFFF; font-weight: 600; font-size: 13px;">Ordering</span>
+        <span>Minimum quantities</span>
+        <span>Lead times</span>
+        <span>Shipping &amp; duties</span>
+      </div>
+      <div style="grid-column: span 2; display: flex; flex-direction: column; gap: 10px; font-size: 14px;">
+        <span style="color: #FFFFFF; font-weight: 600; font-size: 13px;">Company</span>
+        <span>About</span>
+        <span>Quality &amp; certificates</span>
+        <span>Contact</span>
+      </div>
+      <div style="grid-column: span 2; display: flex; flex-direction: column; gap: 10px; font-size: 14px;">
+        <span style="color: #FFFFFF; font-weight: 600; font-size: 13px;">Language</span>
+        <span>English</span>
+        <span>Deutsch</span>
+        <span>Français</span>
+        <span>Español</span>
+      </div>
+    </div>
+    <div style="border-top: 1px solid #2B2F36;">
+      <div style="max-width: 1240px; margin: 0 auto; padding: 18px 32px; font-size: 13px; display: flex; justify-content: space-between;">
+        <span>© 2026 shopcf</span>
+        <span>Terms · Privacy</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>
