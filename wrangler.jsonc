@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "kontor",
+  "name": "nundar",
   // 自定义入口：复用 OpenNext 的 fetch handler，另加 Cron 的 scheduled handler
   "main": "src/worker.ts",
   // 不要超过本地 workerd 二进制支持的最新日期，否则 vitest-pool-workers 起不来
@@ -27,7 +27,7 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "kontor",
+      "database_name": "nundar",
       "database_id": "local-placeholder-replace-before-deploy",
       "migrations_dir": "drizzle/migrations"
     }
@@ -39,12 +39,12 @@
       // 不能叫 IMAGES：那是 Cloudflare Images 产品的保留绑定名，
       // 用它会让 wrangler types 生成 ImagesBinding 而非 R2Bucket
       "binding": "MEDIA",
-      "bucket_name": "kontor-media"
+      "bucket_name": "nundar-media"
     },
     // OpenNext 的 ISR 增量缓存
     {
       "binding": "NEXT_INC_CACHE_R2_BUCKET",
-      "bucket_name": "kontor-inc-cache"
+      "bucket_name": "nundar-inc-cache"
     }
   ],
 
@@ -64,7 +64,7 @@
   "services": [
     {
       "binding": "WORKER_SELF_REFERENCE",
-      "service": "kontor"
+      "service": "nundar"
     }
   ],
 

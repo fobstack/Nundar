@@ -53,7 +53,7 @@ export async function shipOrderAction(formData: FormData) {
         fromAddress:
           (env as unknown as { MAIL_FROM_ADDRESS?: string })
             .MAIL_FROM_ADDRESS ?? "",
-        fromName: "Kontor",
+        fromName: "Nundar",
         content: shippingNotificationEmail({
           orderNo: input.orderNo,
           locale: isLocale(order.locale) ? order.locale : DEFAULT_LOCALE,

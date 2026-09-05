@@ -25,7 +25,7 @@ async function makeOrder(
 ) {
   const customer = customerId ? `'${customerId}'` : "NULL";
   await env.DB.exec(
-    `INSERT INTO orders (id, order_no, customer_id, status, currency, subtotal_minor, shipping_minor, tax_minor, total_minor, shipping_address_json, locale, created_at) VALUES ('${id}', 'KT-${id}', ${customer}, '${status}', '${currency}', ${totalMinor}, 0, 0, ${totalMinor}, '{}', 'en', ${NOW})`,
+    `INSERT INTO orders (id, order_no, customer_id, status, currency, subtotal_minor, shipping_minor, tax_minor, total_minor, shipping_address_json, locale, created_at) VALUES ('${id}', 'ND-${id}', ${customer}, '${status}', '${currency}', ${totalMinor}, 0, 0, ${totalMinor}, '{}', 'en', ${NOW})`,
   );
 }
 
@@ -114,7 +114,7 @@ describe("getCustomer", () => {
     expect(customer!.addresses).toHaveLength(1);
     expect(customer!.addresses[0].isDefault).toBe(true);
     expect(customer!.orders).toHaveLength(1);
-    expect(customer!.orders[0].orderNo).toBe("KT-o1");
+    expect(customer!.orders[0].orderNo).toBe("ND-o1");
   });
 });
 

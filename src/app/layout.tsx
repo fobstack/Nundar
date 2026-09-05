@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "kontor",
-  description: "Cloudflare-native storefront for cross-border trade",
+  title: "Nundar",
+  description: "Open-source commerce engine for Cloudflare",
 };
 
 // 显式声明 props，而非依赖 Next 构建期生成的全局 LayoutProps，

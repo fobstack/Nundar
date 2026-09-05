@@ -8,7 +8,7 @@
 
 **Tech Stack:** 承阶段 1，无新增依赖。
 
-**Spec:** `docs/superpowers/specs/2026-09-03-kontor-design.md`（第 5 节）
+**Spec:** `docs/superpowers/specs/2026-09-03-nundar-design.md`（第 5 节）
 
 ## Global Constraints
 

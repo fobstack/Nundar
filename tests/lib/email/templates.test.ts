@@ -5,7 +5,7 @@ import {
 } from "@/lib/email/templates";
 
 const ORDER = {
-  orderNo: "KT-260904-AB12CD",
+  orderNo: "ND-260904-AB12CD",
   currency: "USD" as const,
   totalMinor: 99_000,
   locale: "en" as const,
@@ -24,7 +24,7 @@ describe("orderConfirmationEmail", () => {
   const mail = orderConfirmationEmail(ORDER);
 
   it("puts the order number in the subject so replies are traceable", () => {
-    expect(mail.subject).toContain("KT-260904-AB12CD");
+    expect(mail.subject).toContain("ND-260904-AB12CD");
   });
 
   it("always ships a plain-text part alongside the HTML", () => {
@@ -86,7 +86,7 @@ describe("orderConfirmationEmail", () => {
 
 describe("shippingNotificationEmail", () => {
   const mail = shippingNotificationEmail({
-    orderNo: "KT-260904-AB12CD",
+    orderNo: "ND-260904-AB12CD",
     locale: "en",
     trackingNo: "TRACK123456",
   });
@@ -97,12 +97,12 @@ describe("shippingNotificationEmail", () => {
   });
 
   it("names the order in the subject", () => {
-    expect(mail.subject).toContain("KT-260904-AB12CD");
+    expect(mail.subject).toContain("ND-260904-AB12CD");
   });
 
   it("omits the tracking section when there is no tracking number", () => {
     const without = shippingNotificationEmail({
-      orderNo: "KT-1",
+      orderNo: "ND-1",
       locale: "en",
       trackingNo: null,
     });
@@ -113,7 +113,7 @@ describe("shippingNotificationEmail", () => {
 
   it("localises the subject", () => {
     const german = shippingNotificationEmail({
-      orderNo: "KT-1",
+      orderNo: "ND-1",
       locale: "de",
       trackingNo: "T1",
     });

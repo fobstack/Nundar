@@ -20,7 +20,7 @@ export default async function AdminLayout({
       <header className="border-b border-neutral-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-4">
           <Link href="/admin" className="font-semibold">
-            Kontor
+            Nundar
           </Link>
 
           <nav className="flex flex-1 items-center gap-5 text-sm">

@@ -15,7 +15,7 @@ export type AdminLocale = (typeof ADMIN_LOCALES)[number];
 
 export const DEFAULT_ADMIN_LOCALE: AdminLocale = "zh";
 
-export const ADMIN_LOCALE_COOKIE = "kontor_admin_lang";
+export const ADMIN_LOCALE_COOKIE = "nundar_admin_lang";
 
 export const ADMIN_LOCALE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
@@ -64,7 +64,7 @@ const MESSAGES = {
       optional: "选填",
     },
     login: {
-      title: "Kontor 后台",
+      title: "Nundar 后台",
       email: "邮箱",
       password: "密码",
       submit: "登录",
@@ -200,7 +200,7 @@ const MESSAGES = {
       optional: "Optional",
     },
     login: {
-      title: "Kontor admin",
+      title: "Nundar admin",
       email: "Email",
       password: "Password",
       submit: "Sign in",

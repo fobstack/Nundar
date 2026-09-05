@@ -1,4 +1,6 @@
-# Kontor
+# Nundar
+
+**Open-source commerce engine for Cloudflare.**
 
 一套跑在 Cloudflare 上的外贸独立站商城系统。以 SEO 长尾词获客为第一性目标：每个商品是内容完整的静态页面，携带多语言 SEO 字段、产品特性与使用工况内容块；内容够厚的工况可一键提升为独立落地页，自动进 sitemap 并生成逐语言本地化的 URL。
 
@@ -6,7 +8,7 @@
 
 ## 一键部署
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/FobStack/kontor)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/FobStack/nundar)
 
 点击后 Cloudflare 会把仓库复制到你的 GitHub 账号，**自动创建所需的 D1 数据库、两个 R2 桶和 KV 命名空间并把 id 写回配置**，跑一遍迁移后完成首次部署。你只需要在设置页填几个值（每一项都有说明）。
 
@@ -20,7 +22,7 @@
 
 ## 为什么不是又一个开源商城
 
-| | 通用开源商城 | Kontor |
+| | 通用开源商城 | Nundar |
 |---|---|---|
 | 首要目标 | 交易功能完备度 | **SEO 长尾词获客** |
 | 商品页 | 一个商品一个页面 | 商品页 + N 个工况落地页，逐语言本地化 slug |
@@ -99,9 +101,9 @@ npx wrangler login
 创建云端资源，把各命令输出的 id 填入 `wrangler.jsonc`（替换其中的 `local-placeholder-replace-before-deploy`）：
 
 ```bash
-npx wrangler d1 create kontor
-npx wrangler r2 bucket create kontor-media
-npx wrangler r2 bucket create kontor-inc-cache
+npx wrangler d1 create Nundar
+npx wrangler r2 bucket create nundar-media
+npx wrangler r2 bucket create nundar-inc-cache
 npx wrangler kv namespace create SESSIONS
 ```
 
@@ -201,7 +203,7 @@ tests/               与 src 同构的测试
 
 架构、数据模型与各项取舍的**理由**见：
 
-- `docs/superpowers/specs/2026-09-03-kontor-design.md` — 完整设计规格
+- `docs/superpowers/specs/2026-09-03-nundar-design.md` — 完整设计规格
 - `docs/superpowers/plans/` — 分阶段实施计划与执行记录（含实现中发现的缺陷与修复）
 
 改动结构性设计前请先读 spec；与其中记录的决定冲突时，在同一个 PR 里更新 spec 并说明新的理由。

@@ -38,7 +38,7 @@ describe("createPaymentIntent", () => {
         amountMinor: 99_000,
         currency: "EUR",
         orderId: "order-1",
-        orderNo: "KT-260904-ABC123",
+        orderNo: "ND-260904-ABC123",
       },
       impl,
     );
@@ -62,14 +62,14 @@ describe("createPaymentIntent", () => {
         amountMinor: 100,
         currency: "USD",
         orderId: "order-42",
-        orderNo: "KT-260904-XYZ789",
+        orderNo: "ND-260904-XYZ789",
       },
       impl,
     );
 
     const body = bodyOf(calls[0]);
     expect(body.get("metadata[order_id]")).toBe("order-42");
-    expect(body.get("metadata[order_no]")).toBe("KT-260904-XYZ789");
+    expect(body.get("metadata[order_no]")).toBe("ND-260904-XYZ789");
   });
 
   it("sends an idempotency key keyed on the order, so retries do not double-charge", async () => {
@@ -85,7 +85,7 @@ describe("createPaymentIntent", () => {
         amountMinor: 100,
         currency: "USD",
         orderId: "order-7",
-        orderNo: "KT-1",
+        orderNo: "ND-1",
       },
       impl,
     );
@@ -156,9 +156,9 @@ describe("createCheckoutSession", () => {
         amountMinor: 99_000,
         currency: "USD",
         orderId: "order-1",
-        orderNo: "KT-1",
-        productName: "Order KT-1",
-        successUrl: "https://shop.example/en/orders/KT-1",
+        orderNo: "ND-1",
+        productName: "Order ND-1",
+        successUrl: "https://shop.example/en/orders/ND-1",
         cancelUrl: "https://shop.example/en/cart",
       },
       impl,
@@ -180,8 +180,8 @@ describe("createCheckoutSession", () => {
         amountMinor: 100,
         currency: "USD",
         orderId: "order-99",
-        orderNo: "KT-9",
-        productName: "Order KT-9",
+        orderNo: "ND-9",
+        productName: "Order ND-9",
         successUrl: "https://shop.example/ok",
         cancelUrl: "https://shop.example/cart",
       },
@@ -203,8 +203,8 @@ describe("createCheckoutSession", () => {
         amountMinor: 100,
         currency: "USD",
         orderId: "order-3",
-        orderNo: "KT-3",
-        productName: "Order KT-3",
+        orderNo: "ND-3",
+        productName: "Order ND-3",
         successUrl: "https://shop.example/ok",
         cancelUrl: "https://shop.example/cart",
       },

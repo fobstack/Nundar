@@ -67,7 +67,7 @@ export default async function AdminLoginPage({
 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Kontor admin</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">Nundar admin</h1>
 
       {message ? (
         <p

@@ -67,7 +67,7 @@ export function Header({
               color: "var(--ink)",
             }}
           >
-            kontor
+            Nundar
           </Link>
 
           <nav

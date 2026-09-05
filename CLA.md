@@ -1,10 +1,10 @@
-# Kontor Individual Contributor License Agreement
+# Nundar Individual Contributor License Agreement
 
 **This is not legal advice.** This document is adapted from the Apache Software
 Foundation's Individual CLA v2.2, which is the most widely reviewed template in
 open source. Have a lawyer review it before you rely on it commercially.
 
-By submitting a contribution to Kontor, You accept and agree to the following
+By submitting a contribution to Nundar, You accept and agree to the following
 terms for Your present and future Contributions. Except for the license granted
 here, You reserve all right, title and interest in and to Your Contributions.
 
@@ -15,7 +15,7 @@ copyright owner that is entering into this Agreement.
 
 **"Contribution"** means any original work of authorship, including any
 modifications or additions to an existing work, that is intentionally submitted
-by You for inclusion in Kontor. "Submitted" means any form of electronic,
+by You for inclusion in Nundar. "Submitted" means any form of electronic,
 verbal, or written communication sent to the project — including but not limited
 to pull requests, issues, and discussion — excluding communication conspicuously
 marked "Not a Contribution".
@@ -78,7 +78,7 @@ Add a line to `CONTRIBUTORS.md` in the same pull request as your first
 contribution:
 
 ```
-Full Name <email@example.com> — signed Kontor ICLA, YYYY-MM-DD
+Full Name <email@example.com> — signed Nundar ICLA, YYYY-MM-DD
 ```
 
 Opening a pull request that adds this line is your electronic signature.

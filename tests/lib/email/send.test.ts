@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { sendTransactionalEmail, type EmailBinding } from "@/lib/email/send";
 
 const CONTENT = {
-  subject: "Order KT-1 confirmed",
+  subject: "Order ND-1 confirmed",
   text: "plain",
   html: "<p>html</p>",
 };
@@ -28,14 +28,14 @@ describe("sendTransactionalEmail", () => {
     const result = await sendTransactionalEmail(binding, {
       to: "buyer@example.com",
       fromAddress: "orders@shop.example",
-      fromName: "Kontor",
+      fromName: "Nundar",
       content: CONTENT,
     });
 
     expect(result.ok).toBe(true);
     expect(sent[0]).toMatchObject({
       to: "buyer@example.com",
-      from: { email: "orders@shop.example", name: "Kontor" },
+      from: { email: "orders@shop.example", name: "Nundar" },
       subject: CONTENT.subject,
       html: CONTENT.html,
       text: CONTENT.text,

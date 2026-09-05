@@ -8,7 +8,7 @@
 
 **Tech Stack:** Next.js (App Router) · TypeScript · Tailwind CSS · `@opennextjs/cloudflare` · Cloudflare D1 / R2 / KV / Cron · Drizzle ORM + drizzle-kit · Zod · Vitest + `@cloudflare/vitest-pool-workers`
 
-**Spec:** `docs/superpowers/specs/2026-09-03-kontor-design.md`
+**Spec:** `docs/superpowers/specs/2026-09-03-nundar-design.md`
 
 ## Global Constraints
 
@@ -29,7 +29,7 @@
 以下步骤需要 Cloudflare 账号凭据，执行到 Task 5 与 Task 9 前必须由项目所有者完成：
 
 1. `wrangler login` 完成账号授权
-2. Task 5 中的 `wrangler d1 create kontor` 会输出 `database_id`，需填入 `wrangler.jsonc`
+2. Task 5 中的 `wrangler d1 create nundar` 会输出 `database_id`，需填入 `wrangler.jsonc`
 3. Task 9 部署需要账号具备 Workers 与 R2 权限
 
 执行者遇到这些步骤时应停下来告知所有者，不要尝试绕过。
@@ -91,11 +91,11 @@ drizzle.config.ts           drizzle-kit 配置
 
 - [ ] **Step 1: 生成项目骨架**
 
-在 `/Users/jasonyu/workspace/company/kontor` 目录下执行。注意当前目录已有 `docs/` 与 `.git/`，脚手架需生成到临时目录再合并，避免覆盖已有文件。
+在 `/Users/jasonyu/workspace/company/nundar` 目录下执行。注意当前目录已有 `docs/` 与 `.git/`，脚手架需生成到临时目录再合并，避免覆盖已有文件。
 
 ```bash
-cd /Users/jasonyu/workspace/company/kontor
-npm create cloudflare@latest -- .kontor-scaffold --framework=next --platform=workers
+cd /Users/jasonyu/workspace/company/nundar
+npm create cloudflare@latest -- .nundar-scaffold --framework=next --platform=workers
 ```
 
 交互选项按此选择：TypeScript、ESLint、Tailwind CSS、App Router、`src/` 目录、import alias `@/*`。
@@ -103,9 +103,9 @@ npm create cloudflare@latest -- .kontor-scaffold --framework=next --platform=wor
 - [ ] **Step 2: 合并脚手架产物到仓库根目录**
 
 ```bash
-cd /Users/jasonyu/workspace/company/kontor
-rsync -a --exclude='.git' .kontor-scaffold/ ./
-rm -rf .kontor-scaffold
+cd /Users/jasonyu/workspace/company/nundar
+rsync -a --exclude='.git' .nundar-scaffold/ ./
+rm -rf .nundar-scaffold
 git status --short
 ```
 
@@ -185,8 +185,8 @@ describe("test harness", () => {
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:migrate:local": "wrangler d1 migrations apply kontor --local",
-    "db:migrate:remote": "wrangler d1 migrations apply kontor --remote",
+    "db:migrate:local": "wrangler d1 migrations apply nundar --local",
+    "db:migrate:remote": "wrangler d1 migrations apply nundar --remote",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
   }
@@ -1201,7 +1201,7 @@ export * from "./customer";
 需要已完成 `wrangler login`。
 
 ```bash
-npx wrangler d1 create kontor
+npx wrangler d1 create nundar
 ```
 
 把输出的 `database_id` 填入 `wrangler.jsonc`。`wrangler.jsonc` 中新增/确认以下配置（保留脚手架已有字段）：
@@ -1211,7 +1211,7 @@ npx wrangler d1 create kontor
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "kontor",
+      "database_name": "nundar",
       "database_id": "<把 wrangler d1 create 输出的 id 填这里>",
       "migrations_dir": "drizzle/migrations"
     }
@@ -1979,8 +1979,8 @@ pnpm vitest run tests/scripts/build-seed-sql.test.ts
 ```json
 {
   "db:seed:build": "tsx src/scripts/build-seed-sql.ts",
-  "db:seed:local": "pnpm db:seed:build && wrangler d1 execute kontor --local --file=./drizzle/seed.sql",
-  "db:seed:remote": "pnpm db:seed:build && wrangler d1 execute kontor --remote --file=./drizzle/seed.sql"
+  "db:seed:local": "pnpm db:seed:build && wrangler d1 execute nundar --local --file=./drizzle/seed.sql",
+  "db:seed:remote": "pnpm db:seed:build && wrangler d1 execute nundar --remote --file=./drizzle/seed.sql"
 }
 ```
 
@@ -1994,13 +1994,13 @@ echo "drizzle/seed.sql" >> .gitignore
 
 ```bash
 pnpm db:seed:local
-npx wrangler d1 execute kontor --local --command "SELECT slug FROM products"
+npx wrangler d1 execute nundar --local --command "SELECT slug FROM products"
 ```
 
 预期输出含 `stainless-ball-valve-dn50`。再跑一次 `pnpm db:seed:local`，商品数不应增加（幂等验证）：
 
 ```bash
-npx wrangler d1 execute kontor --local --command "SELECT COUNT(*) AS n FROM products"
+npx wrangler d1 execute nundar --local --command "SELECT COUNT(*) AS n FROM products"
 ```
 
 预期 `n` 为 1。
@@ -2056,8 +2056,8 @@ describe("cloudflare bindings", () => {
 - [ ] **Step 2: 创建 R2 bucket 与 KV namespace**
 
 ```bash
-npx wrangler r2 bucket create kontor-images
-npx wrangler r2 bucket create kontor-inc-cache
+npx wrangler r2 bucket create nundar-images
+npx wrangler r2 bucket create nundar-inc-cache
 npx wrangler kv namespace create SESSIONS
 ```
 
@@ -2074,11 +2074,11 @@ npx wrangler kv namespace create SESSIONS
   "r2_buckets": [
     {
       "binding": "IMAGES",
-      "bucket_name": "kontor-images"
+      "bucket_name": "nundar-images"
     },
     {
       "binding": "NEXT_INC_CACHE_R2_BUCKET",
-      "bucket_name": "kontor-inc-cache"
+      "bucket_name": "nundar-inc-cache"
     }
   ],
 
@@ -2092,7 +2092,7 @@ npx wrangler kv namespace create SESSIONS
   "services": [
     {
       "binding": "WORKER_SELF_REFERENCE",
-      "service": "kontor"
+      "service": "nundar"
     }
   ],
 
@@ -2348,7 +2348,7 @@ export default async function HomePage({
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-16">
-      <h1 className="text-3xl font-semibold tracking-tight">Kontor</h1>
+      <h1 className="text-3xl font-semibold tracking-tight">Nundar</h1>
       <ul className="mt-10 space-y-6">
         {products.map((product) => (
           <li key={product.id} className="border-b border-neutral-200 pb-6">
@@ -2389,7 +2389,7 @@ pnpm dev
 ```bash
 pnpm exec opennextjs-cloudflare build
 pnpm exec opennextjs-cloudflare deploy
-npx wrangler d1 migrations apply kontor --remote
+npx wrangler d1 migrations apply nundar --remote
 ```
 
 部署完成后访问输出的 `*.workers.dev` 地址加语言前缀（如 `/en`），确认页面可访问。远端库尚无数据时列表为空属正常。
@@ -2401,7 +2401,7 @@ npx wrangler d1 migrations apply kontor --remote
 创建 `README.md`：
 
 ````markdown
-# Kontor
+# Nundar
 
 一套跑在 Cloudflare 上的外贸独立站商城系统。以 SEO 长尾词获客为第一性目标：每个商品是内容完整的静态页面，携带多语言 SEO 字段、产品特性与使用工况内容块。
 
@@ -2416,7 +2416,7 @@ Next.js (App Router) · TypeScript · Tailwind CSS · `@opennextjs/cloudflare` �
 前置：Node.js 20+、pnpm、一个 Cloudflare 账号。
 
 ```bash
-git clone <your-fork-url> && cd kontor
+git clone <your-fork-url> && cd nundar
 pnpm install
 npx wrangler login
 ```
@@ -2424,9 +2424,9 @@ npx wrangler login
 创建云端资源，把各命令输出的 id 填入 `wrangler.jsonc`：
 
 ```bash
-npx wrangler d1 create kontor
-npx wrangler r2 bucket create kontor-images
-npx wrangler r2 bucket create kontor-inc-cache
+npx wrangler d1 create nundar
+npx wrangler r2 bucket create nundar-images
+npx wrangler r2 bucket create nundar-inc-cache
 npx wrangler kv namespace create SESSIONS
 ```
 
