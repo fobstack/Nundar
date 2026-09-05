@@ -72,7 +72,7 @@ describe("createPendingOrder", () => {
 
     const row = await orderById(order.id);
     expect(row.status).toBe("pending");
-    expect(row.orderNo).toMatch(/^SC-/);
+    expect(row.orderNo).toMatch(/^KT-/);
     expect(row.totalMinor).toBe(99_000);
     expect(row.currency).toBe("USD");
   });

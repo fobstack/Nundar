@@ -67,7 +67,7 @@ export function Header({
               color: "var(--ink)",
             }}
           >
-            shopcf
+            kontor
           </Link>
 
           <nav

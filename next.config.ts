@@ -55,7 +55,19 @@ const CSP = [
   "object-src 'none'",
 ].join("; ");
 
+/**
+ * 改这个文件时注意：`experimental` 与 `headers()` 都是必需的，不要因为只关心
+ * 其中一半就整体重写——曾经加安全响应头时覆盖掉 experimental，导致构建期
+ * D1 并发崩溃回归。
+ */
 const nextConfig: NextConfig = {
+  experimental: {
+    // 构建期 generateStaticParams 要读本地 D1；多个构建 worker 并发连同一个
+    // miniflare SQLite 会触发 D1 internal error，故限制为单 worker 串行构建
+    cpus: 1,
+    workerThreads: false,
+  },
+
   async headers() {
     return [
       {

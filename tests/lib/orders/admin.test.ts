@@ -100,7 +100,7 @@ describe("getOrder", () => {
   });
 
   it("returns null for an unknown order number", async () => {
-    expect(await getOrder(createDb(env.DB), "SC-NOPE")).toBeNull();
+    expect(await getOrder(createDb(env.DB), "KT-NOPE")).toBeNull();
   });
 
   it("survives a corrupt stored address", async () => {

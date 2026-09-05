@@ -16,7 +16,7 @@ export default function AdminLayout({
       <header className="border-b border-neutral-200 bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <Link href="/admin" className="font-semibold">
-            shopcf admin
+            Kontor admin
           </Link>
           <nav className="flex items-center gap-4 text-sm">
             <Link href="/admin/products" className="hover:underline">

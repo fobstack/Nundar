@@ -17,17 +17,17 @@ publishing.
 
 ## Supported versions
 
-shopcf is a self-deployed template rather than a hosted service: you run your own
+Kontor is a self-deployed template rather than a hosted service: you run your own
 fork. Security fixes land on `main`. There are no backported release branches —
 rebase your fork onto `main` to pick up fixes.
 
-## What shopcf handles, and what it deliberately does not
+## What Kontor handles, and what it deliberately does not
 
 Knowing where the trust boundaries are is the point of this section.
 
 | Data | Where it lives | Notes |
 |---|---|---|
-| Card numbers, CVV | **Never touches shopcf** | Payment happens on Stripe's hosted checkout. The server never sees card data, so it is out of scope for PCI DSS SAQ-A purposes. |
+| Card numbers, CVV | **Never touches kontor** | Payment happens on Stripe's hosted checkout. The server never sees card data, so it is out of scope for PCI DSS SAQ-A purposes. |
 | Admin passwords | D1, PBKDF2-SHA256 (210k iterations), per-user random salt | Never logged, never returned by an API. |
 | Admin sessions | KV, opaque 256-bit random token | The cookie carries only the token; role and identity live server-side so they cannot be forged client-side. |
 | Customer addresses, emails | D1, and a snapshot on the order | Excluded from all logs. |

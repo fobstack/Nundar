@@ -8,7 +8,7 @@
  */
 const testWorker = {
   async fetch(): Promise<Response> {
-    return new Response("shopcf test worker", { status: 200 });
+    return new Response("kontor test worker", { status: 200 });
   },
 };
 

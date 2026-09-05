@@ -78,7 +78,7 @@ describe("destroySession", () => {
 
 describe("session cookie policy", () => {
   it("uses a name that does not leak its purpose to scanners", () => {
-    expect(SESSION_COOKIE).toBe("shopcf_admin");
+    expect(SESSION_COOKIE).toBe("kontor_admin");
   });
 
   it("expires within a working day rather than lingering for weeks", () => {

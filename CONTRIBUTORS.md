@@ -1,12 +1,12 @@
 # Contributors
 
-Everyone listed here has signed the [shopcf ICLA](CLA.md). Adding your line in
+Everyone listed here has signed the [Kontor ICLA](CLA.md). Adding your line in
 the same pull request as your first contribution is your electronic signature.
 
 Format:
 
 ```
-Full Name <email@example.com> — signed shopcf ICLA, YYYY-MM-DD
+Full Name <email@example.com> — signed Kontor ICLA, YYYY-MM-DD
 ```
 
 ## Signed

@@ -13,7 +13,7 @@
       "x": 0,
       "y": -240,
       "w": 560,
-      "text": "shopcf storefront — technical clean direction\n\nArtboards run left to right in the order a buyer walks the site: home → category → product → application note → checkout.\n\nIBM Plex Sans + Plex Mono; mono is reserved for part numbers, specs and quantities — the values a buyer compares character by character. Borders instead of shadows, 2px radii, one petrol accent.\n\nEverything here becomes src/themes/default/."
+      "text": "kontor storefront — technical clean direction\n\nArtboards run left to right in the order a buyer walks the site: home → category → product → application note → checkout.\n\nIBM Plex Sans + Plex Mono; mono is reserved for part numbers, specs and quantities — the values a buyer compares character by character. Borders instead of shadows, 2px radii, one petrol accent.\n\nEverything here becomes src/themes/default/."
     },
     {
       "id": "longtail",

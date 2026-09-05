@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "shopcf",
+  title: "kontor",
   description: "Cloudflare-native storefront for cross-border trade",
 };
 

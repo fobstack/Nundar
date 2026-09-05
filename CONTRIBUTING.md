@@ -1,4 +1,4 @@
-# Contributing to shopcf
+# Contributing to Kontor
 
 Thanks for taking the time to contribute.
 
@@ -26,7 +26,7 @@ All three must pass. New logic needs matching tests.
 ## Design decisions live in `docs/`
 
 Before changing anything structural, read
-`docs/superpowers/specs/2026-09-03-shopcf-design.md`. It records not just what
+`docs/superpowers/specs/2026-09-03-kontor-design.md`. It records not just what
 the system does but **why** — the reasoning behind decisions like storing money
 as integer minor units, decrementing stock only after payment, and never
 redirecting by IP.
@@ -51,7 +51,7 @@ same pull request and explain the new reasoning.
 
 ## Contributor licensing — read this before your first PR
 
-shopcf is dual-licensed `MIT OR Apache-2.0`, and contributions require a signed
+Kontor is dual-licensed `MIT OR Apache-2.0`, and contributions require a signed
 [ICLA](CLA.md).
 
 **Why a CLA rather than just a DCO.** A DCO certifies you had the right to
@@ -68,7 +68,7 @@ is a deliberate trade.
 add yourself to `CONTRIBUTORS.md`:
 
 ```
-Full Name <email@example.com> — signed shopcf ICLA, YYYY-MM-DD
+Full Name <email@example.com> — signed Kontor ICLA, YYYY-MM-DD
 ```
 
 Contributing on behalf of an employer? Your employer needs a Corporate CLA

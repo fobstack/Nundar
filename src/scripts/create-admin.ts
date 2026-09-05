@@ -109,7 +109,7 @@ async function main(): Promise<void> {
       "wrangler",
       "d1",
       "execute",
-      "shopcf",
+      "kontor",
       remote ? "--remote" : "--local",
       "--command",
       sql,

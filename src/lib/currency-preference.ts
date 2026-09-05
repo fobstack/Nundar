@@ -6,7 +6,7 @@ import { BASE_CURRENCY, isCurrency, type Currency } from "@/config/currency";
  * 语言由 URL 前缀唯一决定，币种则与语言解耦——同一门语言的买家可能要看不同币种。
  * 绝不依据 IP 自动切换：爬虫多从美国 IP 抓取，自动改写会让其他版本无法被正确索引。
  */
-export const CURRENCY_COOKIE = "shopcf_currency";
+export const CURRENCY_COOKIE = "kontor_currency";
 
 export const CURRENCY_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 

@@ -1,12 +1,12 @@
 {
-  "name": "shopcf",
+  "name": "kontor",
   "version": "0.1.0",
   "description": "SEO-first, Cloudflare-native storefront for cross-border trade. Single-tenant, self-deployed.",
   "license": "MIT OR Apache-2.0",
   "private": true,
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/[YOUR-ORG]/shopcf.git"
+    "url": "git+https://github.com/[YOUR-ORG]/kontor.git"
   },
   "scripts": {
     "dev": "next dev",
@@ -18,11 +18,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
-    "db:migrate:local": "wrangler d1 migrations apply shopcf --local",
-    "db:migrate:remote": "wrangler d1 migrations apply shopcf --remote",
+    "db:migrate:local": "wrangler d1 migrations apply kontor --local",
+    "db:migrate:remote": "wrangler d1 migrations apply kontor --remote",
     "db:seed:build": "tsx src/scripts/write-seed-sql.ts",
-    "db:seed:local": "pnpm db:seed:build && wrangler d1 execute shopcf --local --file=./drizzle/seed.sql",
-    "db:seed:remote": "pnpm db:seed:build && wrangler d1 execute shopcf --remote --file=./drizzle/seed.sql",
+    "db:seed:local": "pnpm db:seed:build && wrangler d1 execute kontor --local --file=./drizzle/seed.sql",
+    "db:seed:remote": "pnpm db:seed:build && wrangler d1 execute kontor --remote --file=./drizzle/seed.sql",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",

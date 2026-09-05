@@ -130,7 +130,7 @@ async function sendOrderConfirmation(orderId: string): Promise<void> {
       fromAddress:
         (env as unknown as { MAIL_FROM_ADDRESS?: string }).MAIL_FROM_ADDRESS ??
         "",
-      fromName: "shopcf",
+      fromName: "Kontor",
       content: orderConfirmationEmail({
         orderNo: detail.orderNo,
         currency: detail.currency as Currency,

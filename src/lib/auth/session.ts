@@ -6,7 +6,7 @@ export type AdminSession = {
 };
 
 /** cookie 名不暴露技术栈与用途 */
-export const SESSION_COOKIE = "shopcf_admin";
+export const SESSION_COOKIE = "kontor_admin";
 
 /** 会话有效期一个工作日；后台是高权限入口，不做长期免登录 */
 export const SESSION_TTL_SECONDS = 60 * 60 * 8;

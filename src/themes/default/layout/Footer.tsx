@@ -71,7 +71,7 @@ export function Footer({ locale, urls }: { locale: Locale; urls: SiteUrls }) {
       >
         <div style={{ gridColumn: "span 4" }}>
           <div style={{ fontSize: 18, fontWeight: 700, color: "var(--ink-inverse)", letterSpacing: "-0.02em" }}>
-            shopcf
+            kontor
           </div>
           <p style={{ margin: "var(--space-3) 0 0", fontSize: "var(--text-sm)", lineHeight: 1.7, maxWidth: "34ch" }}>
             {copy.blurb}
@@ -116,7 +116,7 @@ export function Footer({ locale, urls }: { locale: Locale; urls: SiteUrls }) {
             justifyContent: "space-between",
           }}
         >
-          <span>© {new Date().getFullYear()} shopcf</span>
+          <span>© {new Date().getFullYear()} kontor</span>
         </div>
       </div>
     </footer>

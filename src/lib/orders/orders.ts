@@ -22,7 +22,7 @@ type SuccessfulCart = Extract<PricedCart, { ok: true }>;
 function newOrderNo(): string {
   const date = new Date().toISOString().slice(2, 10).replace(/-/g, "");
   const suffix = crypto.randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase();
-  return `SC-${date}-${suffix}`;
+  return `KT-${date}-${suffix}`;
 }
 
 function nowSeconds(): number {
