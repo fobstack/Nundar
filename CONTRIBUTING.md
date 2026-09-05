@@ -46,6 +46,39 @@ same pull request and explain the new reasoning.
 | Stock | Decremented after payment is confirmed, never at add-to-cart or order creation. |
 | Webhooks | Must be idempotent. Stripe redelivers. |
 | Secrets | Never in the repo. Use `wrangler secret` or `.dev.vars`. |
+| Prices | Never accepted from the client. Recomputed server-side at checkout, always. |
+| Dependencies | Ask whether the platform already provides it. Every dependency is inherited attack surface. |
+
+## Contributor licensing — read this before your first PR
+
+shopcf is dual-licensed `MIT OR Apache-2.0`, and contributions require a signed
+[ICLA](CLA.md).
+
+**Why a CLA rather than just a DCO.** A DCO certifies you had the right to
+submit your code, but you keep the copyright. That means the project cannot be
+relicensed, combined into a larger work, or transferred without contacting every
+past contributor individually — which is effectively impossible once a project
+has more than a handful. The CLA grants a sublicensable license so those options
+stay open.
+
+We are being upfront that this is a real cost: CLAs deter some contributors. It
+is a deliberate trade.
+
+**Signing takes one line.** In the same pull request as your first contribution,
+add yourself to `CONTRIBUTORS.md`:
+
+```
+Full Name <email@example.com> — signed shopcf ICLA, YYYY-MM-DD
+```
+
+Contributing on behalf of an employer? Your employer needs a Corporate CLA
+first — open an issue titled "CCLA request".
+
+## Security
+
+Never open a public issue for a security problem. See [SECURITY.md](SECURITY.md)
+for private reporting, the trust boundaries, and the design decisions that are
+security controls rather than style choices.
 
 ## Commit messages
 

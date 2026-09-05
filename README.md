@@ -191,4 +191,16 @@ tests/               与 src 同构的测试
 
 ## 协议
 
-MIT
+双协议：**`MIT OR Apache-2.0`**，使用者任选其一。
+
+这与 Cloudflare 自家工具链一致（wrangler 是 `MIT OR Apache-2.0`，workerd 是
+Apache-2.0）。之所以不只用 MIT：MIT 对专利只字未提，而 Apache-2.0 第 3 条有
+明确的专利授权与专利反制条款，对商业使用者和下游集成方更安全。
+
+贡献需签署 [ICLA](CLA.md)，一行字即可——理由见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
+## 安全
+
+漏洞请勿公开提 issue，见 [SECURITY.md](SECURITY.md)。其中列出了完整的信任边界
+（卡号永不经过本系统、密码与会话如何存放、哪些数据绝不进日志），以及哪些设计
+决定其实是安全控制而非风格选择。

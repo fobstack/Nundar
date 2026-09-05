@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# 只读权限：CI 不需要写仓库，最小权限能限制被攻破的 action 能造成的破坏
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # 迁移必须先生成：测试库的表结构直接来自迁移文件，
+      # 这样 schema 漂移会在 CI 里暴露，而不是等到部署
+      - run: pnpm db:generate
+
+      - run: pnpm typecheck
+
+      - run: pnpm lint
+
+      # 测试跑在真实 workerd 运行时里，不是 Node mock
+      - run: pnpm test
+
+      - run: pnpm build

@@ -1,7 +1,13 @@
 {
   "name": "shopcf",
   "version": "0.1.0",
+  "description": "SEO-first, Cloudflare-native storefront for cross-border trade. Single-tenant, self-deployed.",
+  "license": "MIT OR Apache-2.0",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/[YOUR-ORG]/shopcf.git"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
