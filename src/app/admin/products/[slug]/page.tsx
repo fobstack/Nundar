@@ -4,6 +4,9 @@ import { BASE_CURRENCY, CURRENCIES } from "@/config/currency";
 import { getDb } from "@/db/client";
 import { requireAdmin } from "@/lib/auth/guard";
 import { getAdminProduct } from "@/lib/admin/queries";
+import { ImageUploader } from "@/components/ImageUploader";
+import { imageUrl } from "@/lib/media/images";
+import { DEFAULT_LOCALE } from "@/config/locales";
 import { fromMinor } from "@/lib/money";
 import {
   priceOverrideAction,
@@ -124,6 +127,41 @@ export default async function AdminProductPage({
             </button>
           </form>
         ))}
+      </section>
+
+      {/* ── 图片 ─────────────────────────────────────── */}
+      <section className="mt-12">
+        <h2 className="text-lg font-semibold">Images</h2>
+        <p className="mt-1 text-sm text-neutral-500">
+          The first upload becomes the primary image. File names are derived from
+          the product slug because they are an image-SEO signal.
+        </p>
+
+        {product.images.length > 0 ? (
+          <div className="mt-4 grid grid-cols-4 gap-4">
+            {product.images.map((image) => (
+              <figure key={image.id} className="rounded border border-neutral-200 bg-white p-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={imageUrl(image.objectKey)}
+                  alt={image.altText}
+                  className="aspect-square w-full object-contain"
+                />
+                <figcaption className="mt-2 truncate text-xs text-neutral-500" title={image.altText}>
+                  {image.altText}
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        ) : null}
+
+        <div className="mt-4 rounded border border-neutral-200 bg-white p-4">
+          <ImageUploader
+            productId={product.id}
+            productSlug={product.slug}
+            altLocale={DEFAULT_LOCALE}
+          />
+        </div>
       </section>
 
       {/* ── SKU、库存、MOQ、交期与定价 ───────────────── */}

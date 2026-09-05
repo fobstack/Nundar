@@ -5,6 +5,8 @@ import { createDb } from "@/db/client";
 import * as schema from "@/db/schema";
 import {
   clearManualPrice,
+  createProduct,
+  setProductStatus,
   saveProductTranslation,
   setManualPrice,
   updateBasePrice,
@@ -280,5 +282,114 @@ describe("updateUseCasePage", () => {
       .where(eq(schema.productUseCases.id, promoted));
 
     expect(row.hasOwnPage).toBe(0);
+  });
+});
+
+describe("createProduct", () => {
+  it("creates a draft with one SKU and a base price", async () => {
+    const created = await createProduct(createDb(env.DB), {
+      slug: "gate-valve-dn80",
+      name: "Gate Valve DN80",
+      locale: "en",
+      sku: "GV-316L-DN80",
+      basePriceMinor: 24_900,
+      stock: 30,
+      moq: 5,
+    });
+
+    const [product] = await createDb(env.DB)
+      .select()
+      .from(schema.products)
+      .where(eq(schema.products.id, created.id));
+
+    // 新商品先落草稿：没有图、没有其他语言内容就上架，等于让爬虫抓到残缺页
+    expect(product.status).toBe("draft");
+    expect(product.slug).toBe("gate-valve-dn80");
+  });
+
+  it("rejects a slug that is not URL-safe, since it goes straight into the URL", async () => {
+    await expect(
+      createProduct(createDb(env.DB), {
+        slug: "Gate Valve DN80!",
+        name: "x",
+        locale: "en",
+        sku: "S",
+        basePriceMinor: 100,
+        stock: 1,
+        moq: 1,
+      }),
+    ).rejects.toThrow(/slug/i);
+  });
+
+  it("refuses a duplicate slug rather than creating a second page on the same URL", async () => {
+    await expect(
+      createProduct(createDb(env.DB), {
+        slug: "stainless-ball-valve-dn50",
+        name: "Clash",
+        locale: "en",
+        sku: "NEW-SKU",
+        basePriceMinor: 100,
+        stock: 1,
+        moq: 1,
+      }),
+    ).rejects.toThrow(/already exists/);
+  });
+
+  it("rejects an MOQ below 1 and negative stock", async () => {
+    const base = {
+      slug: "a-valve",
+      name: "x",
+      locale: "en" as const,
+      sku: "S1",
+      basePriceMinor: 100,
+      stock: 1,
+      moq: 1,
+    };
+
+    await expect(
+      createProduct(createDb(env.DB), { ...base, moq: 0 }),
+    ).rejects.toThrow(/moq/i);
+    await expect(
+      createProduct(createDb(env.DB), { ...base, slug: "b-valve", stock: -1 }),
+    ).rejects.toThrow(/stock/i);
+  });
+});
+
+describe("setProductStatus", () => {
+  it("publishes a product that has a default-language name", async () => {
+    await setProductStatus(createDb(env.DB), PRODUCT_ID, "archived");
+    await setProductStatus(createDb(env.DB), PRODUCT_ID, "active");
+
+    const [product] = await createDb(env.DB)
+      .select()
+      .from(schema.products)
+      .where(eq(schema.products.id, PRODUCT_ID));
+
+    expect(product.status).toBe("active");
+  });
+
+  it("refuses to publish without an English name, which would ship a titleless page", async () => {
+    const created = await createProduct(createDb(env.DB), {
+      slug: "nameless-valve",
+      name: "Temp",
+      locale: "de",
+      sku: "TMP-1",
+      basePriceMinor: 100,
+      stock: 1,
+      moq: 1,
+    });
+    await env.DB.exec(
+      `DELETE FROM product_translations WHERE product_id = '${created.id}'`,
+    );
+
+    await expect(
+      setProductStatus(createDb(env.DB), created.id, "active"),
+    ).rejects.toThrow(/product name/i);
+  });
+
+  it("allows archiving regardless of translation state", async () => {
+    await expect(
+      setProductStatus(createDb(env.DB), PRODUCT_ID, "archived"),
+    ).resolves.toBeUndefined();
   });
 });

@@ -59,12 +59,17 @@ pnpm admin:create you@example.com 'your-password'
 - 购物车、结账、订单状态查询
 
 **后台**
-- 商品与多语言内容编辑，SEO 字段带长度提示
+- 中英双语界面（与前台的买家语言分开；漏翻在编译期报错）
+- 商品创建（默认落草稿）与多语言内容编辑，SEO 字段带长度提示
+- 商品图上传到 R2，按文件头校验真实格式、alt 文本强制必填
 - 定价：基准价 + 自动换算 + 单币种手动覆盖，显示所用汇率与新鲜度
 - MOQ 与交货周期
 - 工况成页开关
 - 订单管理：发货、送达、退款、取消，按状态机决定可用操作
 - 翻译工作台：各语言完整度与逐条缺失清单
+- 客户管理：列表、地址本、订单历史（消费额按币种分列，不合并）
+- 销售看板：营收按币种、待处理订单、库存低于起订量的 SKU
+- 管理员账号管理与设置（owner 专属，含防自锁规则）
 
 **自动化**
 - 每日 Cron 拉取 ECB 汇率，偏离超阈值才重算价格
@@ -81,7 +86,7 @@ npx wrangler login
 
 ```bash
 npx wrangler d1 create kontor
-npx wrangler r2 bucket create kontor-images
+npx wrangler r2 bucket create kontor-media
 npx wrangler r2 bucket create kontor-inc-cache
 npx wrangler kv namespace create SESSIONS
 ```

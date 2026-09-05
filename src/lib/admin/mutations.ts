@@ -1,6 +1,6 @@
 import { and, eq, ne } from "drizzle-orm";
 import { BASE_CURRENCY, type Currency } from "@/config/currency";
-import type { Locale } from "@/config/locales";
+import { DEFAULT_LOCALE, type Locale } from "@/config/locales";
 import type { Db } from "@/db/client";
 import * as schema from "@/db/schema";
 
@@ -16,6 +16,129 @@ async function touchProduct(db: Db, productId: string): Promise<void> {
   await db
     .update(schema.products)
     .set({ updatedAt: nowSeconds() })
+    .where(eq(schema.products.id, productId));
+}
+
+/**
+ * 创建商品。
+ *
+ * 只要求最小可用集合：slug + 默认语言的名称 + 一个 SKU。其余内容（其他语言、
+ * 特性、工况、图片、多币种价格）在编辑页逐步补齐——建商品时就要求填全，
+ * 会让运营在录入阶段就卡住。
+ */
+export async function createProduct(
+  db: Db,
+  input: {
+    slug: string;
+    name: string;
+    locale: Locale;
+    sku: string;
+    basePriceMinor: number;
+    stock: number;
+    moq: number;
+  },
+): Promise<{ id: string; slug: string }> {
+  const slug = input.slug.trim().toLowerCase();
+
+  if (!SLUG_PATTERN.test(slug)) {
+    throw new Error(
+      "Slug must be lowercase letters, digits and hyphens (used directly in the URL)",
+    );
+  }
+  if (!input.name.trim()) {
+    throw new Error("Product name must not be empty");
+  }
+  if (!input.sku.trim()) {
+    throw new Error("SKU must not be empty");
+  }
+  if (!Number.isInteger(input.basePriceMinor) || input.basePriceMinor < 0) {
+    throw new Error("Price must be a non-negative integer in minor units");
+  }
+  if (!Number.isInteger(input.moq) || input.moq < 1) {
+    throw new Error("MOQ must be at least 1");
+  }
+  if (!Number.isInteger(input.stock) || input.stock < 0) {
+    throw new Error("Stock must be a non-negative integer");
+  }
+
+  const [existing] = await db
+    .select({ id: schema.products.id })
+    .from(schema.products)
+    .where(eq(schema.products.slug, slug))
+    .limit(1);
+
+  if (existing) {
+    throw new Error(`A product with the slug "${slug}" already exists`);
+  }
+
+  const productId = crypto.randomUUID();
+  const variantId = crypto.randomUUID();
+  const now = nowSeconds();
+
+  await db.insert(schema.products).values({
+    id: productId,
+    slug,
+    // 新商品先落草稿：还没有图、没有其他语言内容就直接上架，
+    // 等于让爬虫先抓到一个残缺页面
+    status: "draft",
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  await db.insert(schema.productTranslations).values({
+    productId,
+    locale: input.locale,
+    name: input.name.trim(),
+  });
+
+  await db.insert(schema.productVariants).values({
+    id: variantId,
+    productId,
+    sku: input.sku.trim(),
+    stock: input.stock,
+    optionValues: "{}",
+    moq: input.moq,
+  });
+
+  await db.insert(schema.variantPrices).values({
+    variantId,
+    currency: BASE_CURRENCY,
+    amountMinor: input.basePriceMinor,
+    source: "base",
+    updatedAt: now,
+  });
+
+  return { id: productId, slug };
+}
+
+/** 上下架。草稿转在售前要求至少有默认语言的名称，避免出现无标题页面。 */
+export async function setProductStatus(
+  db: Db,
+  productId: string,
+  status: "draft" | "active" | "archived",
+): Promise<void> {
+  if (status === "active") {
+    const [translation] = await db
+      .select({ name: schema.productTranslations.name })
+      .from(schema.productTranslations)
+      .where(
+        and(
+          eq(schema.productTranslations.productId, productId),
+          eq(schema.productTranslations.locale, DEFAULT_LOCALE),
+        ),
+      )
+      .limit(1);
+
+    if (!translation?.name?.trim()) {
+      throw new Error(
+        `Cannot publish without a ${DEFAULT_LOCALE.toUpperCase()} product name`,
+      );
+    }
+  }
+
+  await db
+    .update(schema.products)
+    .set({ status, updatedAt: nowSeconds() })
     .where(eq(schema.products.id, productId));
 }
 

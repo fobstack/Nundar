@@ -8,9 +8,11 @@ describe("cloudflare bindings", () => {
     expect(typeof env.DB.prepare).toBe("function");
   });
 
-  it("exposes the R2 bucket for product images as IMAGES", () => {
-    expect(env.IMAGES).toBeDefined();
-    expect(typeof env.IMAGES.put).toBe("function");
+  it("exposes the R2 bucket for product media as MEDIA", () => {
+    // 刻意不叫 IMAGES：那是 Cloudflare Images 产品的保留绑定名，
+    // 用它会让生成的类型变成 ImagesBinding 而不是 R2Bucket
+    expect(env.MEDIA).toBeDefined();
+    expect(typeof env.MEDIA.put).toBe("function");
   });
 
   it("exposes the KV namespace for sessions and carts as SESSIONS", () => {

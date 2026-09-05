@@ -36,7 +36,15 @@ export default async function AdminProductsPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
-      <h1 className="text-2xl font-semibold tracking-tight">Products</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold tracking-tight">Products</h1>
+        <Link
+          href="/admin/products/new"
+          className="rounded bg-neutral-900 px-4 py-2 text-sm font-medium text-white"
+        >
+          New product
+        </Link>
+      </div>
 
       <table className="mt-8 w-full border-collapse bg-white text-sm">
         <thead>

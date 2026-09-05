@@ -40,10 +40,19 @@ export type AdminVariant = {
   prices: AdminVariantPrice[];
 };
 
+export type AdminImage = {
+  id: string;
+  objectKey: string;
+  altLocale: string;
+  altText: string;
+  sortOrder: number;
+};
+
 export type AdminProduct = {
   id: string;
   slug: string;
   status: string;
+  images: AdminImage[];
   translations: AdminTranslation[];
   useCases: AdminUseCase[];
   variants: AdminVariant[];
@@ -68,7 +77,7 @@ export async function getAdminProduct(
     return null;
   }
 
-  const [translationRows, useCaseRows, variantRows] = await Promise.all([
+  const [translationRows, useCaseRows, variantRows, imageRows] = await Promise.all([
     db
       .select()
       .from(schema.productTranslations)
@@ -86,6 +95,11 @@ export async function getAdminProduct(
       .from(schema.productVariants)
       .where(eq(schema.productVariants.productId, product.id))
       .orderBy(asc(schema.productVariants.sku)),
+    db
+      .select()
+      .from(schema.productImages)
+      .where(eq(schema.productImages.productId, product.id))
+      .orderBy(asc(schema.productImages.sortOrder)),
   ]);
 
   const priceRows = variantRows.length
@@ -117,6 +131,7 @@ export async function getAdminProduct(
     id: product.id,
     slug: product.slug,
     status: product.status,
+    images: imageRows,
     translations,
     useCases: useCaseRows.flatMap((row) =>
       isLocaleValue(row.locale)
