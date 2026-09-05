@@ -22,6 +22,12 @@ export default function AdminLayout({
             <Link href="/admin/products" className="hover:underline">
               Products
             </Link>
+            <Link href="/admin/orders" className="hover:underline">
+              Orders
+            </Link>
+            <Link href="/admin/translations" className="hover:underline">
+              Translations
+            </Link>
             <form action="/admin/logout" method="post">
               <button type="submit" className="hover:underline">
                 Sign out
