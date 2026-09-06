@@ -34,7 +34,13 @@ describe("authenticateAdmin", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.session).toEqual({ userId: "admin-1", role: "owner" });
+    // The session carries the email so the admin can name who is signed in.
+    // Without it the overview greeted people with their own row id.
+    expect(result.session).toEqual({
+      userId: "admin-1",
+      email: EMAIL,
+      role: "owner",
+    });
   });
 
   it("is case-insensitive about the email but not the password", async () => {

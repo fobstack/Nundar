@@ -1,7 +1,19 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { AdminLocalePicker } from "@/components/AdminLocalePicker";
-import { getAdminT } from "@/lib/admin/locale";
+import { Public_Sans } from "next/font/google";
+import "./admin.css";
+
+/**
+ * Public Sans, the face of the US design system, built for dense
+ * administrative interfaces and carrying real tabular figures — which this
+ * admin needs, because prices and stock are read down a column rather than one
+ * at a time. The storefront uses IBM Plex; the two surfaces should not be
+ * mistaken for each other.
+ */
+const publicSans = Public_Sans({
+  variable: "--font-public-sans",
+  subsets: ["latin"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   // Nothing in the admin is indexed; robots.txt disallows /admin as well, and both
@@ -9,53 +21,12 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const { locale, t } = await getAdminT();
-
-  return (
-    <div className="min-h-screen bg-neutral-50">
-      <header className="border-b border-neutral-200 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-4">
-          <Link href="/admin" className="font-semibold">
-            Nundar
-          </Link>
-
-          <nav className="flex flex-1 items-center gap-5 text-sm">
-            <Link href="/admin" className="hover:underline">
-              {t.nav.overview}
-            </Link>
-            <Link href="/admin/products" className="hover:underline">
-              {t.nav.products}
-            </Link>
-            <Link href="/admin/orders" className="hover:underline">
-              {t.nav.orders}
-            </Link>
-            <Link href="/admin/customers" className="hover:underline">
-              {t.nav.customers}
-            </Link>
-            <Link href="/admin/translations" className="hover:underline">
-              {t.nav.translations}
-            </Link>
-            <Link href="/admin/settings" className="hover:underline">
-              {t.nav.settings}
-            </Link>
-          </nav>
-
-          <div className="flex items-center gap-4 text-sm">
-            <AdminLocalePicker locale={locale} />
-            <form action="/admin/logout" method="post">
-              <button type="submit" className="hover:underline">
-                {t.nav.signOut}
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
-      {children}
-    </div>
-  );
+/**
+ * The frame every admin page shares: tokens, typeface, and staying out of the
+ * index. The navigation rail is not here — signing in and first-run setup have
+ * no shop to navigate yet, and showing them a rail full of links they cannot
+ * follow was a real defect in the previous layout.
+ */
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  return <div className={`admin-root ${publicSans.variable}`}>{children}</div>;
 }

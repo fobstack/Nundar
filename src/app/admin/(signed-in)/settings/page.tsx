@@ -25,17 +25,17 @@ export default async function AdminSettingsPage() {
   const settings = await getSettings(getDb());
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-10">
-      <h1 className="text-2xl font-semibold tracking-tight">{t.settings.title}</h1>
+    <>
+      <h1 style={{ fontSize: "var(--a-text-2xl)", fontWeight: 650, letterSpacing: "-0.02em", margin: 0 }}>{t.settings.title}</h1>
 
       <section className="mt-8">
-        <h2 className="text-lg font-semibold">{t.settings.site}</h2>
+        <h2 className="admin-section-title">{t.settings.site}</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <label className="text-sm">
+          <label className="admin-label">
             {t.settings.siteName}
             <div className={readOnly}>{SITE.name}</div>
           </label>
-          <label className="text-sm">
+          <label className="admin-label">
             {t.settings.siteUrl}
             <div className={readOnly}>{SITE.url}</div>
           </label>
@@ -48,7 +48,7 @@ export default async function AdminSettingsPage() {
       </section>
 
       <section className="mt-10">
-        <h2 className="text-lg font-semibold">{t.settings.security}</h2>
+        <h2 className="admin-section-title">{t.settings.security}</h2>
         <SecurityContactForm
           initialValue={settings.securityContactEmail}
           labels={{
@@ -63,19 +63,19 @@ export default async function AdminSettingsPage() {
       </section>
 
       <section className="mt-10">
-        <h2 className="text-lg font-semibold">{t.settings.pricing}</h2>
+        <h2 className="admin-section-title">{t.settings.pricing}</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
-          <label className="text-sm">
+          <label className="admin-label">
             {t.settings.bufferRate}
             <div className={readOnly}>{(PRICING.bufferRate * 100).toFixed(1)}%</div>
           </label>
-          <label className="text-sm">
+          <label className="admin-label">
             {t.settings.recalcThreshold}
             <div className={readOnly}>
               {(PRICING.recalcThreshold * 100).toFixed(1)}%
             </div>
           </label>
-          <label className="text-sm">
+          <label className="admin-label">
             {t.settings.rounding}
             <div className={readOnly}>{PRICING.roundingStrategy}</div>
           </label>
@@ -87,15 +87,15 @@ export default async function AdminSettingsPage() {
       </section>
 
       <section className="mt-10">
-        <h2 className="text-lg font-semibold">{t.settings.admins}</h2>
+        <h2 className="admin-section-title">{t.settings.admins}</h2>
 
-        <table className="mt-4 w-full border-collapse bg-white text-sm">
+        <table className="admin-table">
           <thead>
-            <tr className="border-b border-neutral-200 text-left">
-              <th className="px-3 py-2">{t.customers.email}</th>
-              <th className="px-3 py-2">{t.settings.role}</th>
-              <th className="px-3 py-2">{t.customers.joined}</th>
-              <th className="px-3 py-2" />
+            <tr >
+              <th>{t.customers.email}</th>
+              <th>{t.settings.role}</th>
+              <th>{t.customers.joined}</th>
+              <th />
             </tr>
           </thead>
           <tbody>
@@ -103,14 +103,14 @@ export default async function AdminSettingsPage() {
               const isSelf = admin.id === session.userId;
 
               return (
-                <tr key={admin.id} className="border-b border-neutral-100">
-                  <td className="px-3 py-2">
+                <tr key={admin.id} >
+                  <td>
                     {admin.email}
                     {isSelf ? (
                       <span className="ml-2 text-xs text-neutral-400">(you)</span>
                     ) : null}
                   </td>
-                  <td className="px-3 py-2">
+                  <td>
                     <form action={changeRoleAction} className="flex items-center gap-2">
                       <input type="hidden" name="targetId" value={admin.id} />
                       <select
@@ -126,10 +126,10 @@ export default async function AdminSettingsPage() {
                       </button>
                     </form>
                   </td>
-                  <td className="px-3 py-2 text-xs text-neutral-500">
+                  <td>
                     {formatAdminDate(admin.createdAt, locale)}
                   </td>
-                  <td className="px-3 py-2 text-right">
+                  <td>
                     {/* No delete button for yourself: the server refuses it too, but
                         nobody should have to click to find that out */}
                     {isSelf ? (
@@ -153,15 +153,15 @@ export default async function AdminSettingsPage() {
 
         <form
           action={createAdminAction}
-          className="mt-6 rounded border border-neutral-200 bg-white p-4"
+          className="admin-card admin-card-pad" style={{ marginTop: "var(--a-6)" }}
         >
           <h3 className="font-medium">{t.settings.addAdmin}</h3>
           <div className="mt-3 grid gap-3 sm:grid-cols-3">
-            <label className="text-sm">
+            <label className="admin-label">
               {t.customers.email}
               <input name="email" type="email" required className={field} />
             </label>
-            <label className="text-sm">
+            <label className="admin-label">
               {t.login.password}
               <input
                 name="password"
@@ -171,7 +171,7 @@ export default async function AdminSettingsPage() {
                 className={field}
               />
             </label>
-            <label className="text-sm">
+            <label className="admin-label">
               {t.settings.role}
               <select name="role" defaultValue="staff" className={field}>
                 <option value="staff">{t.settings.staff}</option>
@@ -181,12 +181,12 @@ export default async function AdminSettingsPage() {
           </div>
           <button
             type="submit"
-            className="mt-4 rounded bg-neutral-900 px-4 py-2 text-sm text-white"
+            className="admin-btn admin-btn-primary" style={{ marginTop: "var(--a-4)" }}
           >
             {t.common.create}
           </button>
         </form>
       </section>
-    </main>
+    </>
   );
 }

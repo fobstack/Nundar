@@ -17,7 +17,7 @@ import {
 
 const field =
   "mt-1 w-full rounded border border-neutral-300 px-3 py-2 text-sm";
-const button = "rounded bg-neutral-900 px-3 py-2 text-sm text-white";
+const button = "admin-btn admin-btn-primary";
 
 export default async function AdminProductPage({
   params,
@@ -33,7 +33,7 @@ export default async function AdminProductPage({
   }
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-10">
+    <>
       <Link href="/admin/products" className="text-sm underline underline-offset-4">
         ← All products
       </Link>
@@ -47,13 +47,13 @@ export default async function AdminProductPage({
 
       {/* ── Multilingual content and SEO ───────────────── */}
       <section className="mt-10">
-        <h2 className="text-lg font-semibold">Content &amp; SEO</h2>
+        <h2 className="admin-section-title">Content &amp; SEO</h2>
 
         {product.translations.map((translation) => (
           <form
             key={translation.locale}
             action={saveTranslationAction}
-            className="mt-6 rounded border border-neutral-200 bg-white p-4"
+            className="admin-card admin-card-pad" style={{ marginTop: "var(--a-6)" }}
           >
             <input type="hidden" name="productId" value={product.id} />
             <input type="hidden" name="slug" value={product.slug} />
@@ -131,7 +131,7 @@ export default async function AdminProductPage({
 
       {/* ── Images ─────────────────────────────────────── */}
       <section className="mt-12">
-        <h2 className="text-lg font-semibold">Images</h2>
+        <h2 className="admin-section-title">Images</h2>
         <p className="mt-1 text-sm text-neutral-500">
           The first upload becomes the primary image. File names are derived from
           the product slug because they are an image-SEO signal.
@@ -140,7 +140,7 @@ export default async function AdminProductPage({
         {product.images.length > 0 ? (
           <div className="mt-4 grid grid-cols-4 gap-4">
             {product.images.map((image) => (
-              <figure key={image.id} className="rounded border border-neutral-200 bg-white p-2">
+              <figure key={image.id} className="admin-card" style={{ padding: "var(--a-2)" }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={imageUrl(image.objectKey)}
@@ -166,7 +166,7 @@ export default async function AdminProductPage({
 
       {/* ── SKUs: stock, MOQ, lead time and pricing ────── */}
       <section className="mt-12">
-        <h2 className="text-lg font-semibold">SKUs, stock &amp; pricing</h2>
+        <h2 className="admin-section-title">SKUs, stock &amp; pricing</h2>
 
         {product.variants.map((variant) => {
           const base = variant.prices.find((p) => p.currency === BASE_CURRENCY);
@@ -174,7 +174,7 @@ export default async function AdminProductPage({
           return (
             <div
               key={variant.id}
-              className="mt-6 rounded border border-neutral-200 bg-white p-4"
+              className="admin-card admin-card-pad" style={{ marginTop: "var(--a-6)" }}
             >
               <h3 className="font-mono text-sm font-medium">{variant.sku}</h3>
 
@@ -183,7 +183,7 @@ export default async function AdminProductPage({
                 <input type="hidden" name="variantId" value={variant.id} />
 
                 <div className="grid gap-3 sm:grid-cols-5">
-                  <label className="text-sm">
+                  <label className="admin-label">
                     Base price ({BASE_CURRENCY})
                     <input
                       name="basePrice"
@@ -196,7 +196,7 @@ export default async function AdminProductPage({
                       className={field}
                     />
                   </label>
-                  <label className="text-sm">
+                  <label className="admin-label">
                     Stock
                     <input
                       name="stock"
@@ -206,7 +206,7 @@ export default async function AdminProductPage({
                       className={field}
                     />
                   </label>
-                  <label className="text-sm">
+                  <label className="admin-label">
                     MOQ
                     <input
                       name="moq"
@@ -216,7 +216,7 @@ export default async function AdminProductPage({
                       className={field}
                     />
                   </label>
-                  <label className="text-sm">
+                  <label className="admin-label">
                     Lead time min
                     <input
                       name="leadTimeDaysMin"
@@ -226,7 +226,7 @@ export default async function AdminProductPage({
                       className={field}
                     />
                   </label>
-                  <label className="text-sm">
+                  <label className="admin-label">
                     Lead time max
                     <input
                       name="leadTimeDaysMax"
@@ -247,7 +247,7 @@ export default async function AdminProductPage({
                   by hand, and how old the rate behind them is */}
               <table className="mt-4 w-full text-sm">
                 <thead>
-                  <tr className="border-b border-neutral-200 text-left">
+                  <tr >
                     <th className="py-1">Currency</th>
                     <th className="py-1">Price</th>
                     <th className="py-1">Source</th>
@@ -262,7 +262,7 @@ export default async function AdminProductPage({
                     );
 
                     return (
-                      <tr key={currency} className="border-b border-neutral-100">
+                      <tr key={currency} >
                         <td className="py-2">{currency}</td>
                         <td className="py-2">
                           {price ? fromMinor(price.amountMinor, currency) : "—"}
@@ -339,7 +339,7 @@ export default async function AdminProductPage({
 
       {/* ── Use cases: which get promoted to landing pages ─ */}
       <section className="mt-12">
-        <h2 className="text-lg font-semibold">Applications</h2>
+        <h2 className="admin-section-title">Applications</h2>
         <p className="mt-1 text-sm text-neutral-500">
           Give a use case its own landing page once it has enough substance to
           stand alone. Thin pages hurt the whole site.
@@ -363,7 +363,7 @@ export default async function AdminProductPage({
               </p>
             </div>
 
-            <label className="text-sm">
+            <label className="admin-label">
               URL slug
               <input
                 name="scenarioSlug"
@@ -387,6 +387,6 @@ export default async function AdminProductPage({
           </form>
         ))}
       </section>
-    </main>
+    </>
   );
 }

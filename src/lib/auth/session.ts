@@ -2,6 +2,13 @@ export type AdminRole = "owner" | "staff";
 
 export type AdminSession = {
   userId: string;
+  /**
+   * Carried so the admin can name who is signed in. Without it the overview
+   * greeted people with their own row id, which tells them nothing and looks
+   * like a leak. Safe to keep here because session contents never leave the
+   * server — the cookie holds only an opaque token.
+   */
+  email: string;
   role: AdminRole;
 };
 
@@ -55,10 +62,13 @@ export async function readSession(
     const parsed = JSON.parse(raw) as Partial<AdminSession>;
     if (
       typeof parsed.userId === "string" &&
+      typeof parsed.email === "string" &&
       (parsed.role === "owner" || parsed.role === "staff")
     ) {
-      return { userId: parsed.userId, role: parsed.role };
+      return { userId: parsed.userId, email: parsed.email, role: parsed.role };
     }
+    // A session stored before email was carried is treated as absent, which
+    // costs one sign-in rather than rendering "undefined" at the top of a page.
     return null;
   } catch {
     // A corrupt stored value means not signed in, not an exception

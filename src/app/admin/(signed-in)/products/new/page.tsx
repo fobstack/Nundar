@@ -12,7 +12,7 @@ export default async function NewProductPage() {
   const { t } = await getAdminT();
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-10">
+    <>
       <Link href="/admin/products" className="text-sm underline underline-offset-4">
         ← {t.products.title}
       </Link>
@@ -27,9 +27,10 @@ export default async function NewProductPage() {
 
       <form
         action={createProductAction}
-        className="mt-8 space-y-4 rounded border border-neutral-200 bg-white p-6"
+        className="admin-card admin-card-pad"
+        style={{ display: "grid", gap: "var(--a-4)" }}
       >
-        <label className="block text-sm">
+        <label className="admin-label">
           {t.products.slug}
           <input
             name="slug"
@@ -44,17 +45,17 @@ export default async function NewProductPage() {
           </span>
         </label>
 
-        <label className="block text-sm">
+        <label className="admin-label">
           {t.products.name} ({DEFAULT_LOCALE.toUpperCase()})
           <input name="name" required className={field} />
         </label>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="text-sm">
+          <label className="admin-label">
             SKU
             <input name="sku" required className={`${field} font-mono`} />
           </label>
-          <label className="text-sm">
+          <label className="admin-label">
             {t.products.basePrice} ({BASE_CURRENCY})
             <input
               name="basePrice"
@@ -65,11 +66,11 @@ export default async function NewProductPage() {
               className={field}
             />
           </label>
-          <label className="text-sm">
+          <label className="admin-label">
             {t.products.stock}
             <input name="stock" type="number" min="0" defaultValue={0} required className={field} />
           </label>
-          <label className="text-sm">
+          <label className="admin-label">
             {t.products.moq}
             <input name="moq" type="number" min="1" defaultValue={1} required className={field} />
           </label>
@@ -77,15 +78,15 @@ export default async function NewProductPage() {
 
         <button
           type="submit"
-          className="w-full rounded bg-neutral-900 px-4 py-2 text-sm font-medium text-white"
+          className="admin-btn admin-btn-primary" style={{ width: "100%" }}
         >
           {t.common.create}
         </button>
-        <p className="text-xs text-neutral-500">
+        <p style={{ color: "var(--a-ink-3)", fontSize: "var(--a-text-xs)" }}>
           The product is created as a draft. Publish it from the edit page once it
           has images and content — an incomplete page is worse than no page.
         </p>
       </form>
-    </main>
+    </>
   );
 }

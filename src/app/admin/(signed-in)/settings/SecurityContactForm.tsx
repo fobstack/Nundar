@@ -3,8 +3,6 @@
 import { useActionState } from "react";
 import { saveSecurityContactAction } from "./actions";
 
-const field = "mt-1 w-full rounded border border-neutral-300 px-3 py-2 text-sm";
-
 /**
  * The one editable setting on this page.
  *
@@ -29,39 +27,51 @@ export function SecurityContactForm({
   const [state, action, pending] = useActionState(saveSecurityContactAction, null);
 
   return (
-    <form action={action} className="mt-4 max-w-xl">
-      <label className="text-sm">
+    <form action={action} style={{ maxWidth: 520 }}>
+      <label className="admin-label">
         {labels.email}
         <input
           type="email"
           name="securityContactEmail"
           defaultValue={initialValue}
           placeholder="security@yourdomain.com"
-          className={field}
+          className="admin-input"
         />
       </label>
 
-      <p className="mt-2 text-xs text-neutral-500">{labels.hint}</p>
+      <p className="admin-hint">{labels.hint}</p>
 
       {/* Stated here rather than in the docs, because this is where someone
           forms the belief that the address works. The Worker binding sends;
           receiving is Email Routing, configured in the Cloudflare dashboard. */}
-      <p className="mt-2 text-xs text-amber-700">{labels.inbound}</p>
+      <p
+        style={{
+          background: "var(--a-attention-soft)",
+          borderRadius: "var(--a-radius-sm)",
+          color: "var(--a-attention)",
+          fontSize: "var(--a-text-xs)",
+          margin: "var(--a-3) 0 0",
+          padding: "var(--a-3) var(--a-4)",
+        }}
+      >
+        {labels.inbound}
+      </p>
 
       {state?.error ? (
-        <p role="alert" className="mt-2 text-xs text-red-700">
+        <p role="alert" className="admin-error" style={{ marginTop: "var(--a-3)" }}>
           {labels.invalid}
         </p>
       ) : null}
 
       {state?.saved ? (
-        <p className="mt-2 text-xs text-green-700">{labels.saved}</p>
+        <p className="admin-note-ok" style={{ marginTop: "var(--a-3)" }}>{labels.saved}</p>
       ) : null}
 
       <button
         type="submit"
         disabled={pending}
-        className="mt-4 rounded bg-neutral-900 px-4 py-2 text-sm text-white disabled:opacity-40"
+        className="admin-btn admin-btn-primary"
+        style={{ marginTop: "var(--a-4)" }}
       >
         {labels.save}
       </button>

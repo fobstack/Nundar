@@ -23,7 +23,7 @@ export default async function AdminCustomerPage({
   }
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-10">
+    <>
       <Link href="/admin/customers" className="text-sm underline underline-offset-4">
         ← {t.customers.title}
       </Link>
@@ -45,7 +45,7 @@ export default async function AdminCustomerPage({
             {customer.addresses.map((address) => (
               <address
                 key={address.id}
-                className="rounded border border-neutral-200 bg-white p-4 text-sm not-italic"
+                className="admin-card admin-card-pad" style={{ fontStyle: "normal" }}
               >
                 <div className="font-medium">{address.recipient}</div>
                 <div className="mt-1 text-neutral-600">
@@ -67,11 +67,11 @@ export default async function AdminCustomerPage({
         <h2 className="text-sm font-medium text-neutral-500">
           {t.customers.orderHistory}
         </h2>
-        <table className="mt-2 w-full border-collapse bg-white text-sm">
+        <table className="admin-table">
           <tbody>
             {customer.orders.map((order) => (
-              <tr key={order.id} className="border-b border-neutral-100">
-                <td className="px-3 py-2">
+              <tr key={order.id} >
+                <td>
                   <Link
                     href={`/admin/orders/${order.orderNo}`}
                     className="font-mono text-xs underline underline-offset-4"
@@ -79,11 +79,11 @@ export default async function AdminCustomerPage({
                     {order.orderNo}
                   </Link>
                 </td>
-                <td className="px-3 py-2">{order.status}</td>
-                <td className="px-3 py-2">
+                <td>{order.status}</td>
+                <td>
                   {formatMoney(order.totalMinor, order.currency as Currency, "en")}
                 </td>
-                <td className="px-3 py-2 text-xs text-neutral-500">
+                <td>
                   {formatAdminDate(order.createdAt, locale)}
                 </td>
               </tr>
@@ -91,6 +91,6 @@ export default async function AdminCustomerPage({
           </tbody>
         </table>
       </section>
-    </main>
+    </>
   );
 }

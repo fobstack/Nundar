@@ -35,14 +35,14 @@ export default async function AdminOrderPage({
   const money = (minor: number) => formatMoney(minor, currency, locale);
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-10">
+    <>
       <Link href="/admin/orders" className="text-sm underline underline-offset-4">
         ← All orders
       </Link>
 
       <div className="mt-4 flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="font-mono text-xl font-semibold">{order.orderNo}</h1>
-        <span className="text-sm">{order.status}</span>
+        <span className="admin-label">{order.status}</span>
       </div>
 
       {order.status === "oversold" ? (
@@ -54,18 +54,18 @@ export default async function AdminOrderPage({
 
       <section className="mt-8">
         <h2 className="text-sm font-medium text-neutral-500">Items</h2>
-        <table className="mt-2 w-full border-collapse bg-white text-sm">
+        <table className="admin-table">
           <tbody>
             {order.items.map((item) => (
-              <tr key={item.id} className="border-b border-neutral-100">
-                <td className="px-3 py-2">
+              <tr key={item.id} >
+                <td>
                   {item.nameSnapshot}
                   <span className="ml-2 font-mono text-xs text-neutral-500">
                     {item.skuSnapshot}
                   </span>
                 </td>
-                <td className="px-3 py-2 text-right">× {item.quantity}</td>
-                <td className="px-3 py-2 text-right">
+                <td>× {item.quantity}</td>
+                <td>
                   {money(item.unitPriceMinor * item.quantity)}
                 </td>
               </tr>
@@ -110,7 +110,7 @@ export default async function AdminOrderPage({
             <form action={shipOrderAction} className="flex items-end gap-2">
               <input type="hidden" name="orderId" value={order.id} />
               <input type="hidden" name="orderNo" value={order.orderNo} />
-              <label className="text-sm">
+              <label className="admin-label">
                 Tracking number
                 <input
                   name="trackingNo"
@@ -162,6 +162,6 @@ export default async function AdminOrderPage({
           </p>
         ) : null}
       </section>
-    </main>
+    </>
   );
 }

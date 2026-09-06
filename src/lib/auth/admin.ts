@@ -56,5 +56,5 @@ export async function authenticateAdmin(
   }
 
   const role: AdminRole = user.role === "owner" ? "owner" : "staff";
-  return { ok: true, session: { userId: user.id, role } };
+  return { ok: true, session: { userId: user.id, email: user.email, role } };
 }

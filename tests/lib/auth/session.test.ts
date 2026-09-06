@@ -12,6 +12,7 @@ describe("createSession", () => {
   it("returns an opaque token that is not the user id", async () => {
     const token = await createSession(env.SESSIONS, {
       userId: "admin-1",
+      email: "admin@example.com",
       role: "owner",
     });
 
@@ -22,10 +23,12 @@ describe("createSession", () => {
   it("issues a distinct token each time", async () => {
     const a = await createSession(env.SESSIONS, {
       userId: "admin-1",
+      email: "admin@example.com",
       role: "owner",
     });
     const b = await createSession(env.SESSIONS, {
       userId: "admin-1",
+      email: "admin@example.com",
       role: "owner",
     });
 
@@ -37,11 +40,12 @@ describe("readSession", () => {
   it("resolves a valid token to its session", async () => {
     const token = await createSession(env.SESSIONS, {
       userId: "admin-7",
+      email: "admin@example.com",
       role: "staff",
     });
 
     const session = await readSession(env.SESSIONS, token);
-    expect(session).toEqual({ userId: "admin-7", role: "staff" });
+    expect(session).toEqual({ userId: "admin-7", email: "admin@example.com", role: "staff" });
   });
 
   it("returns null for an unknown token", async () => {
@@ -62,6 +66,7 @@ describe("destroySession", () => {
   it("makes the token unusable", async () => {
     const token = await createSession(env.SESSIONS, {
       userId: "admin-1",
+      email: "admin@example.com",
       role: "owner",
     });
 

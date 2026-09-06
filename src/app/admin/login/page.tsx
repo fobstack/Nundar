@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { getDb } from "@/db/client";
+import { getAdminT } from "@/lib/admin/locale";
+import { needsSetup } from "@/lib/admin/setup";
 import { authenticateAdmin } from "@/lib/auth/admin";
 import { currentAdmin } from "@/lib/auth/guard";
 import {
@@ -10,6 +12,7 @@ import {
   SESSION_COOKIE,
   SESSION_TTL_SECONDS,
 } from "@/lib/auth/session";
+import { Card } from "../_components/ui";
 
 export const metadata: Metadata = {
   title: "Admin sign in",
@@ -57,64 +60,78 @@ export default async function AdminLoginPage({
     redirect("/admin");
   }
 
+  // A shop with no owner has nothing to sign in to. Sending people to setup
+  // instead is what makes a button deploy usable without a command line.
+  if (await needsSetup(getDb())) {
+    redirect("/admin/setup");
+  }
+
+  const { t } = await getAdminT();
   const { error } = await searchParams;
 
   const message =
-    error === "locked"
-      ? "Too many failed attempts. Try again in 15 minutes."
-      : error
-        ? "Incorrect email or password."
-        : null;
+    error === "locked" ? t.login.locked : error ? t.login.invalid : null;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Nundar admin</h1>
-
-      {message ? (
-        <p
-          role="alert"
-          className="mt-6 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+    <main className="admin-centred">
+      <div className="admin-centred-card">
+        <h1
+          style={{
+            fontSize: "var(--a-text-2xl)",
+            fontWeight: 650,
+            letterSpacing: "-0.02em",
+            margin: "0 0 var(--a-6)",
+          }}
         >
-          {message}
-        </p>
-      ) : null}
+          {t.login.title}
+        </h1>
 
-      <form action={signIn} className="mt-6 space-y-4">
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium">
-            Email
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            required
-            autoComplete="username"
-            className="mt-1 w-full rounded border border-neutral-300 px-3 py-2"
-          />
-        </div>
+        {message ? (
+          <p className="admin-error" role="alert" style={{ marginBottom: "var(--a-4)" }}>
+            {message}
+          </p>
+        ) : null}
 
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium">
-            Password
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            required
-            autoComplete="current-password"
-            className="mt-1 w-full rounded border border-neutral-300 px-3 py-2"
-          />
-        </div>
+        <Card>
+          <form action={signIn}>
+            <label className="admin-label" htmlFor="email">
+              {t.login.email}
+              <input
+                autoComplete="username"
+                className="admin-input"
+                id="email"
+                name="email"
+                required
+                type="email"
+              />
+            </label>
 
-        <button
-          type="submit"
-          className="w-full rounded bg-neutral-900 px-3 py-2 text-white"
-        >
-          Sign in
-        </button>
-      </form>
+            <label
+              className="admin-label"
+              htmlFor="password"
+              style={{ display: "block", marginTop: "var(--a-4)" }}
+            >
+              {t.login.password}
+              <input
+                autoComplete="current-password"
+                className="admin-input"
+                id="password"
+                name="password"
+                required
+                type="password"
+              />
+            </label>
+
+            <button
+              className="admin-btn admin-btn-primary"
+              style={{ marginTop: "var(--a-6)", width: "100%" }}
+              type="submit"
+            >
+              {t.login.submit}
+            </button>
+          </form>
+        </Card>
+      </div>
     </main>
   );
 }
