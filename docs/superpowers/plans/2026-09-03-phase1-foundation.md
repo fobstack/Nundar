@@ -2544,3 +2544,42 @@ Everything below belongs to a later phase; any of it appearing here is scope cre
 - Any admin page or authentication (phase 3)
 - The rate-fetch cron handler and writing converted prices (phase 3; this phase only creates the tables and reserves the cron)
 - Cart, checkout, Stripe (phase 4)
+
+---
+
+## First real deployment, 2026-09-06
+
+Deployed to `nundar.jasoon-yee.workers.dev`. Two defects surfaced that only a
+real deployment could have found, both on the path every adopter follows.
+
+**`pnpm deploy` failed with `no such table: products`.** The build runs
+`generateStaticParams`, which reads the **local** D1 through miniflare, and
+miniflare keys its local storage on `database_id`. Filling the real id into
+`wrangler.jsonc` therefore pointed the build at a fresh, empty local database.
+The error names a missing table and says nothing about the id that caused it.
+
+Fixed by having `deploy` apply local migrations before building. Migrations are
+idempotent, so it costs nothing and makes the documented path work on a clean
+machine.
+
+The underlying fact is worth stating plainly, because it is not obvious: **the
+pages pre-rendered at build time come from the developer's local database**, not
+from production. Everything else is generated on demand and cached, so a
+production deploy from an empty local database is correct — it simply
+pre-renders nothing. Now documented in the README.
+
+**`db:migrate:local` still referenced the database by name.** The remote script
+was changed to use the binding `DB` back when the deploy button was added; the
+local one was missed. A shop that names its database anything other than
+`nundar` would have had local migrations fail while remote ones worked.
+
+**Verified in production**: all four locales, the product and use-case pages,
+sitemap, robots, admin sign-in. Canonicals and `hreflang` were wrong on the
+first deploy — they pointed at `localhost:3000`, because `NEXT_PUBLIC_SITE_URL`
+is a build-time value and the workers.dev address is not known until after the
+first deploy. Rebuilt with it set. `BreadcrumbList` structured data is correctly
+localised in all four languages, confirming the phase 7 fix in production.
+
+**ECB parsing verified against the live feed** rather than only the captured
+fixture: 30 currencies, EUR at 1, USD-based cross rates of EUR 0.860 and GBP
+0.739. The cron itself had not yet fired at 06:00 UTC.

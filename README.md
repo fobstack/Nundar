@@ -149,6 +149,11 @@ npx wrangler kv namespace create SESSIONS
 
 Put the returned IDs into `wrangler.jsonc`, replacing `local-placeholder-replace-before-deploy`. The database may have any name — migration scripts reference the **binding** `DB`, not the database name.
 
+> **The build reads your *local* database, not the remote one.** `generateStaticParams` runs on your machine, so the pages pre-rendered at build time come from local D1; everything else is generated on demand and cached. Two consequences worth knowing:
+>
+> - Changing `database_id` points miniflare at a different local database. It will be empty, which is why `pnpm deploy` applies local migrations before building — without them the build fails with a `no such table` error a long way from its cause.
+> - Seeding locally is optional for a deploy. An empty local database simply pre-renders nothing, and pages build on first request instead.
+
 ```bash
 npx wrangler secret put STRIPE_SECRET_KEY
 npx wrangler secret put STRIPE_WEBHOOK_SECRET
