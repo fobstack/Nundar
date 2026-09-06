@@ -69,7 +69,7 @@ The spec called for Stripe Elements. Elements needs `@stripe/stripe-js` and
 off our servers either way. The cost is that the buyer leaves for stripe.com,
 which weakens brand continuity.
 
-This is an open decision, recorded in the spec's divergence section.
+Settled in favour of hosted Checkout: for a template other people fork, two fewer dependencies outweighs an unbroken domain during payment. Recorded in the spec's divergence section.
 
 **The detail that breaks everything if missed:** `order_id` must go into
 `payment_intent_data.metadata`. Without it, a `payment_intent.succeeded` webhook

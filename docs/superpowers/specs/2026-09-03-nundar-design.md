@@ -555,11 +555,13 @@ These must be checked against current official documentation during implementati
 
 ## 13. Where the implementation diverged
 
-Recorded here rather than edited away, so the reasoning is auditable. Two of these are still open decisions.
+Recorded here rather than edited away, so the reasoning stays auditable and a later reader can see what was traded for what.
 
-**Stripe hosted Checkout instead of Elements** (6.2). Elements needs `@stripe/stripe-js` and `@stripe/react-stripe-js`; hosted Checkout needs neither and keeps card details equally far from our servers. The cost is that the buyer leaves for stripe.com, which weakens brand continuity. *Open: revisit if the branded checkout matters more than the two dependencies.*
+**Stripe hosted Checkout instead of Elements** (6.2). Elements needs `@stripe/stripe-js` and `@stripe/react-stripe-js`; hosted Checkout needs neither and keeps card details equally far from our servers. The cost is that the buyer leaves for stripe.com, which weakens brand continuity. **Settled**: for a template other people fork, two fewer dependencies is worth more than an unbroken domain during payment. Revisit only if brand continuity through checkout becomes a stated requirement.
 
-**PBKDF2-SHA256 instead of Argon2id** (7.1). Argon2 on Workers means adding a WASM library. PBKDF2 is available in WebCrypto with no dependency at all, and at 210k iterations (OWASP's guidance for PBKDF2-HMAC-SHA256) combined with login rate limiting it is adequate for a handful of admin accounts. *Open: Argon2id is the stronger primitive; the trade was made for a template where every dependency is one more thing an adopter has to trust.*
+**PBKDF2-SHA256 instead of Argon2id** (7.1). Argon2 on Workers means adding a WASM library. PBKDF2 is available in WebCrypto with no dependency at all, and at 210k iterations (OWASP's guidance for PBKDF2-HMAC-SHA256) combined with login rate limiting it is adequate for a handful of admin accounts. **Settled**: Argon2id remains the stronger primitive, and the threat it defends against — offline cracking of a stolen hash dump — is bounded here by there being a handful of accounts behind a rate limiter. Reconsider if admin accounts ever number in the thousands, or if a WASM Argon2 lands in the Workers runtime itself.
+
+The hash format is self-describing (`scheme$iterations$salt$digest`) and `needsRehash` upgrades a stored hash on the next successful sign-in, so switching later needs no password reset.
 
 **Dual-licensed MIT OR Apache-2.0 instead of MIT alone** (10). MIT says nothing about patents. Apache-2.0 adds an explicit patent grant and retaliation terms, which commercial adopters care about, and it mirrors Cloudflare's own tooling (`wrangler` is `MIT OR Apache-2.0`, `workerd` is Apache-2.0). Settled.
 

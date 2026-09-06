@@ -149,5 +149,4 @@ Both are recorded in the spec's divergence section.
 ## Still open
 
 - Customer-facing accounts (see the phase 5 record — a deliberate omission)
-- Argon2id and Stripe Elements remain unresolved against the spec
 - Deployment, a domain, and a live Stripe account

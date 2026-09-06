@@ -216,8 +216,8 @@ This mirrors Cloudflare's own tooling (`wrangler` is `MIT OR Apache-2.0`; `worke
 
 ## Translations
 
-This README is the authoritative version. Community translations are kept for convenience and may lag behind it:
+English is the authoritative version. Translations are provided for convenience and may lag behind it:
 
 - [简体中文](README.zh-CN.md)
 
-Corrections belong in the English version first.
+Corrections belong in the English version first. Translations into other languages are welcome — open a pull request adding `README.<code>.md` and a line here.

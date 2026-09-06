@@ -33,8 +33,11 @@ more thing an adopter has to trust and keep patched. PBKDF2 is in WebCrypto
 already, and at OWASP's recommended iteration count, behind login rate limiting,
 for a handful of admin accounts that sign in occasionally, it is adequate.
 
-Argon2id is the stronger primitive and this remains an open decision; it is
-recorded in the spec's divergence section rather than quietly dropped.
+Argon2id is the stronger primitive, and the decision was reviewed and kept: the
+threat it defends against is offline cracking of a stolen hash dump, which is
+bounded here by there being a handful of accounts behind a rate limiter. The
+stored format is self-describing and `needsRehash` upgrades a hash on the next
+sign-in, so switching later would need no password reset.
 
 Verification is constant-time. An unrecognised stored hash format is a failed
 verification rather than an exception, so a storage detail cannot surface as a
