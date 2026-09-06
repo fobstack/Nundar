@@ -42,7 +42,7 @@ export default async function AdminOrderPage({
 
       <div className="mt-4 flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="font-mono text-xl font-semibold">{order.orderNo}</h1>
-        <span className="admin-label">{order.status}</span>
+        <span className="text-sm font-medium">{order.status}</span>
       </div>
 
       {order.status === "oversold" ? (
@@ -54,7 +54,7 @@ export default async function AdminOrderPage({
 
       <section className="mt-8">
         <h2 className="text-sm font-medium text-neutral-500">Items</h2>
-        <table className="admin-table">
+        <table className="w-full border-collapse text-sm">
           <tbody>
             {order.items.map((item) => (
               <tr key={item.id} >
@@ -110,7 +110,7 @@ export default async function AdminOrderPage({
             <form action={shipOrderAction} className="flex items-end gap-2">
               <input type="hidden" name="orderId" value={order.id} />
               <input type="hidden" name="orderNo" value={order.orderNo} />
-              <label className="admin-label">
+              <label className="text-sm font-medium">
                 Tracking number
                 <input
                   name="trackingNo"

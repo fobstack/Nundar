@@ -49,7 +49,7 @@ export default async function TranslationWorkbench({
 
   return (
     <>
-      <h1 style={{ fontSize: "var(--a-text-2xl)", fontWeight: 650, letterSpacing: "-0.02em", margin: 0 }}>Translations</h1>
+      <h1 style={{ fontSize: "1.5rem", fontWeight: 650, letterSpacing: "-0.02em", margin: 0 }}>Translations</h1>
       <p className="mt-1 text-sm text-neutral-500">
         Compared against {DEFAULT_LOCALE.toUpperCase()}, the source language.
       </p>
@@ -98,7 +98,7 @@ export default async function TranslationWorkbench({
           return (
             <article
               key={status.productId}
-              className="admin-card admin-card-pad"
+              className="rounded-xl border bg-card p-5"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h3 className="font-medium">

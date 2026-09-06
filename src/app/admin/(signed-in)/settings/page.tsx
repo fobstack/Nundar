@@ -26,16 +26,16 @@ export default async function AdminSettingsPage() {
 
   return (
     <>
-      <h1 style={{ fontSize: "var(--a-text-2xl)", fontWeight: 650, letterSpacing: "-0.02em", margin: 0 }}>{t.settings.title}</h1>
+      <h1 style={{ fontSize: "1.5rem", fontWeight: 650, letterSpacing: "-0.02em", margin: 0 }}>{t.settings.title}</h1>
 
       <section className="mt-8">
-        <h2 className="admin-section-title">{t.settings.site}</h2>
+        <h2 className="mb-4 text-base font-semibold tracking-tight">{t.settings.site}</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <label className="admin-label">
+          <label className="text-sm font-medium">
             {t.settings.siteName}
             <div className={readOnly}>{SITE.name}</div>
           </label>
-          <label className="admin-label">
+          <label className="text-sm font-medium">
             {t.settings.siteUrl}
             <div className={readOnly}>{SITE.url}</div>
           </label>
@@ -48,7 +48,7 @@ export default async function AdminSettingsPage() {
       </section>
 
       <section className="mt-10">
-        <h2 className="admin-section-title">{t.settings.security}</h2>
+        <h2 className="mb-4 text-base font-semibold tracking-tight">{t.settings.security}</h2>
         <SecurityContactForm
           initialValue={settings.securityContactEmail}
           labels={{
@@ -63,19 +63,19 @@ export default async function AdminSettingsPage() {
       </section>
 
       <section className="mt-10">
-        <h2 className="admin-section-title">{t.settings.pricing}</h2>
+        <h2 className="mb-4 text-base font-semibold tracking-tight">{t.settings.pricing}</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
-          <label className="admin-label">
+          <label className="text-sm font-medium">
             {t.settings.bufferRate}
             <div className={readOnly}>{(PRICING.bufferRate * 100).toFixed(1)}%</div>
           </label>
-          <label className="admin-label">
+          <label className="text-sm font-medium">
             {t.settings.recalcThreshold}
             <div className={readOnly}>
               {(PRICING.recalcThreshold * 100).toFixed(1)}%
             </div>
           </label>
-          <label className="admin-label">
+          <label className="text-sm font-medium">
             {t.settings.rounding}
             <div className={readOnly}>{PRICING.roundingStrategy}</div>
           </label>
@@ -87,9 +87,9 @@ export default async function AdminSettingsPage() {
       </section>
 
       <section className="mt-10">
-        <h2 className="admin-section-title">{t.settings.admins}</h2>
+        <h2 className="mb-4 text-base font-semibold tracking-tight">{t.settings.admins}</h2>
 
-        <table className="admin-table">
+        <table className="w-full border-collapse text-sm">
           <thead>
             <tr >
               <th>{t.customers.email}</th>
@@ -153,15 +153,15 @@ export default async function AdminSettingsPage() {
 
         <form
           action={createAdminAction}
-          className="admin-card admin-card-pad" style={{ marginTop: "var(--a-6)" }}
+          className="rounded-xl border bg-card p-5" style={{ marginTop: "1.5rem" }}
         >
           <h3 className="font-medium">{t.settings.addAdmin}</h3>
           <div className="mt-3 grid gap-3 sm:grid-cols-3">
-            <label className="admin-label">
+            <label className="text-sm font-medium">
               {t.customers.email}
               <input name="email" type="email" required className={field} />
             </label>
-            <label className="admin-label">
+            <label className="text-sm font-medium">
               {t.login.password}
               <input
                 name="password"
@@ -171,7 +171,7 @@ export default async function AdminSettingsPage() {
                 className={field}
               />
             </label>
-            <label className="admin-label">
+            <label className="text-sm font-medium">
               {t.settings.role}
               <select name="role" defaultValue="staff" className={field}>
                 <option value="staff">{t.settings.staff}</option>
@@ -181,7 +181,7 @@ export default async function AdminSettingsPage() {
           </div>
           <button
             type="submit"
-            className="admin-btn admin-btn-primary" style={{ marginTop: "var(--a-4)" }}
+            className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/80" style={{ marginTop: "1rem" }}
           >
             {t.common.create}
           </button>

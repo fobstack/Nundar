@@ -17,7 +17,8 @@ import {
 
 const field =
   "mt-1 w-full rounded border border-neutral-300 px-3 py-2 text-sm";
-const button = "admin-btn admin-btn-primary";
+const button =
+  "inline-flex h-8 items-center justify-center rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/80";
 
 export default async function AdminProductPage({
   params,
@@ -47,13 +48,13 @@ export default async function AdminProductPage({
 
       {/* ── Multilingual content and SEO ───────────────── */}
       <section className="mt-10">
-        <h2 className="admin-section-title">Content &amp; SEO</h2>
+        <h2 className="mb-4 text-base font-semibold tracking-tight">Content &amp; SEO</h2>
 
         {product.translations.map((translation) => (
           <form
             key={translation.locale}
             action={saveTranslationAction}
-            className="admin-card admin-card-pad" style={{ marginTop: "var(--a-6)" }}
+            className="rounded-xl border bg-card p-5" style={{ marginTop: "1.5rem" }}
           >
             <input type="hidden" name="productId" value={product.id} />
             <input type="hidden" name="slug" value={product.slug} />
@@ -131,7 +132,7 @@ export default async function AdminProductPage({
 
       {/* ── Images ─────────────────────────────────────── */}
       <section className="mt-12">
-        <h2 className="admin-section-title">Images</h2>
+        <h2 className="mb-4 text-base font-semibold tracking-tight">Images</h2>
         <p className="mt-1 text-sm text-neutral-500">
           The first upload becomes the primary image. File names are derived from
           the product slug because they are an image-SEO signal.
@@ -140,7 +141,7 @@ export default async function AdminProductPage({
         {product.images.length > 0 ? (
           <div className="mt-4 grid grid-cols-4 gap-4">
             {product.images.map((image) => (
-              <figure key={image.id} className="admin-card" style={{ padding: "var(--a-2)" }}>
+              <figure key={image.id} className="rounded-xl border bg-card" style={{ padding: "0.5rem" }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={imageUrl(image.objectKey)}
@@ -166,7 +167,7 @@ export default async function AdminProductPage({
 
       {/* ── SKUs: stock, MOQ, lead time and pricing ────── */}
       <section className="mt-12">
-        <h2 className="admin-section-title">SKUs, stock &amp; pricing</h2>
+        <h2 className="mb-4 text-base font-semibold tracking-tight">SKUs, stock &amp; pricing</h2>
 
         {product.variants.map((variant) => {
           const base = variant.prices.find((p) => p.currency === BASE_CURRENCY);
@@ -174,7 +175,7 @@ export default async function AdminProductPage({
           return (
             <div
               key={variant.id}
-              className="admin-card admin-card-pad" style={{ marginTop: "var(--a-6)" }}
+              className="rounded-xl border bg-card p-5" style={{ marginTop: "1.5rem" }}
             >
               <h3 className="font-mono text-sm font-medium">{variant.sku}</h3>
 
@@ -183,7 +184,7 @@ export default async function AdminProductPage({
                 <input type="hidden" name="variantId" value={variant.id} />
 
                 <div className="grid gap-3 sm:grid-cols-5">
-                  <label className="admin-label">
+                  <label className="text-sm font-medium">
                     Base price ({BASE_CURRENCY})
                     <input
                       name="basePrice"
@@ -196,7 +197,7 @@ export default async function AdminProductPage({
                       className={field}
                     />
                   </label>
-                  <label className="admin-label">
+                  <label className="text-sm font-medium">
                     Stock
                     <input
                       name="stock"
@@ -206,7 +207,7 @@ export default async function AdminProductPage({
                       className={field}
                     />
                   </label>
-                  <label className="admin-label">
+                  <label className="text-sm font-medium">
                     MOQ
                     <input
                       name="moq"
@@ -216,7 +217,7 @@ export default async function AdminProductPage({
                       className={field}
                     />
                   </label>
-                  <label className="admin-label">
+                  <label className="text-sm font-medium">
                     Lead time min
                     <input
                       name="leadTimeDaysMin"
@@ -226,7 +227,7 @@ export default async function AdminProductPage({
                       className={field}
                     />
                   </label>
-                  <label className="admin-label">
+                  <label className="text-sm font-medium">
                     Lead time max
                     <input
                       name="leadTimeDaysMax"
@@ -339,7 +340,7 @@ export default async function AdminProductPage({
 
       {/* ── Use cases: which get promoted to landing pages ─ */}
       <section className="mt-12">
-        <h2 className="admin-section-title">Applications</h2>
+        <h2 className="mb-4 text-base font-semibold tracking-tight">Applications</h2>
         <p className="mt-1 text-sm text-neutral-500">
           Give a use case its own landing page once it has enough substance to
           stand alone. Thin pages hurt the whole site.
@@ -363,7 +364,7 @@ export default async function AdminProductPage({
               </p>
             </div>
 
-            <label className="admin-label">
+            <label className="text-sm font-medium">
               URL slug
               <input
                 name="scenarioSlug"

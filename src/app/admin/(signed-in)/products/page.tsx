@@ -1,18 +1,22 @@
 import { asc, eq } from "drizzle-orm";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { DEFAULT_LOCALE, LOCALES } from "@/config/locales";
 import { getDb } from "@/db/client";
 import * as schema from "@/db/schema";
 import { getAdminT } from "@/lib/admin/locale";
 import { requireAdmin } from "@/lib/auth/guard";
 import { formatMoney } from "@/lib/money";
-import {
-  Card,
-  Chip,
-  PageHead,
-  ProductStatusChip,
-  TableEmpty,
-} from "../../_components/ui";
+import { Chip, PageHead, ProductStatusChip } from "../../_components/ui";
 
 export default async function AdminProductsPage() {
   await requireAdmin();
@@ -49,27 +53,34 @@ export default async function AdminProductsPage() {
       <PageHead
         title={t.products.title}
         action={
-          <Link className="admin-btn admin-btn-primary" href="/admin/products/new">
+          <Button render={<Link href="/admin/products/new" />}>
             {t.products.newProduct}
-          </Link>
+          </Button>
         }
       />
 
-      <Card padded={false}>
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>{t.products.name}</th>
-              <th>{t.products.slug}</th>
-              <th>{t.products.status}</th>
-              <th className="num">{t.products.skus}</th>
-              <th className="num">{t.products.from}</th>
-              <th>{t.products.translations}</th>
-            </tr>
-          </thead>
-          <tbody>
+      <Card className="overflow-hidden p-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t.products.name}</TableHead>
+              <TableHead>{t.products.slug}</TableHead>
+              <TableHead>{t.products.status}</TableHead>
+              <TableHead className="text-right">{t.products.skus}</TableHead>
+              <TableHead className="text-right">{t.products.from}</TableHead>
+              <TableHead>{t.products.translations}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {products.length === 0 ? (
-              <TableEmpty colSpan={6}>{t.products.empty}</TableEmpty>
+              <TableRow>
+                <TableCell
+                  className="h-24 text-center text-muted-foreground"
+                  colSpan={6}
+                >
+                  {t.products.empty}
+                </TableCell>
+              </TableRow>
             ) : (
               products.map((product) => {
                 const own = variants.filter((v) => v.productId === product.id);
@@ -82,21 +93,26 @@ export default async function AdminProductsPage() {
                 const missing = missingLocales(product.id);
 
                 return (
-                  <tr key={product.id}>
-                    <td>
-                      <Link href={`/admin/products/${product.slug}`}>
+                  <TableRow key={product.id}>
+                    <TableCell>
+                      <Link
+                        className="font-medium text-primary hover:underline"
+                        href={`/admin/products/${product.slug}`}
+                      >
                         {nameOf(product.id)}
                       </Link>
-                    </td>
-                    <td style={{ color: "var(--a-ink-3)" }}>{product.slug}</td>
-                    <td>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {product.slug}
+                    </TableCell>
+                    <TableCell>
                       <ProductStatusChip status={product.status} />
-                    </td>
-                    <td className="num">{own.length}</td>
-                    <td className="num">
+                    </TableCell>
+                    <TableCell className="tabular text-right">{own.length}</TableCell>
+                    <TableCell className="tabular text-right">
                       {from === null ? "—" : formatMoney(from, "USD", "en")}
-                    </td>
-                    <td>
+                    </TableCell>
+                    <TableCell>
                       {missing.length === 0 ? (
                         <Chip tone="ok">{t.products.complete}</Chip>
                       ) : (
@@ -104,13 +120,13 @@ export default async function AdminProductsPage() {
                           {t.products.missing} {missing.join(", ")}
                         </Chip>
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </Card>
     </>
   );

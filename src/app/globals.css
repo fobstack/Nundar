@@ -1,26 +1,187 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  /*
+   * The admin's palette, expressed as shadcn's semantic tokens.
+   *
+   * The organising rule is unchanged: **colour means something.** The base is
+   * near-monochrome cool grey, and saturation is reserved for state —
+   * needs-action, healthy, broken. In an interface whose job is scanning for
+   * what is wrong, decorative colour competes with the signal and wins.
+   *
+   * Only the admin renders shadcn components. The storefront paints itself from
+   * its own theme tokens, which are scoped to `.theme-<name>` precisely so the
+   * two cannot collide.
+   */
+  --radius: 0.375rem;
+
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.264 0.017 252);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.264 0.017 252);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.264 0.017 252);
+
+  /* One accent, used only for things you can act on. */
+  --primary: oklch(0.474 0.075 219);
+  --primary-foreground: oklch(1 0 0);
+
+  --secondary: oklch(0.966 0.005 247);
+  --secondary-foreground: oklch(0.264 0.017 252);
+  --muted: oklch(0.966 0.005 247);
+  --muted-foreground: oklch(0.573 0.021 253);
+  --accent: oklch(0.966 0.005 247);
+  --accent-foreground: oklch(0.264 0.017 252);
+
+  --destructive: oklch(0.505 0.184 27.5);
+
+  --border: oklch(0.906 0.011 247);
+  --input: oklch(0.865 0.017 247);
+  --ring: oklch(0.474 0.075 219);
+
+  /* State. These are the only saturated colours in the interface, and each is
+     always paired with a label — the interface still works in greyscale. */
+  --state-ok: oklch(0.487 0.108 154);
+  --state-ok-soft: oklch(0.958 0.026 154);
+  --state-attention: oklch(0.531 0.117 63);
+  --state-attention-soft: oklch(0.963 0.03 78);
+  --state-danger: oklch(0.505 0.184 27.5);
+  --state-danger-soft: oklch(0.957 0.024 22);
+  --state-idle: oklch(0.5 0.017 253);
+  --state-idle-soft: oklch(0.966 0.005 247);
+
+  /* The rail is the one dark surface: it separates navigation from work. */
+  --sidebar: oklch(0.223 0.017 254);
+  --sidebar-foreground: oklch(0.73 0.021 249);
+  --sidebar-primary: oklch(0.474 0.075 219);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.276 0.019 254);
+  --sidebar-accent-foreground: oklch(0.968 0.005 247);
+  --sidebar-border: oklch(0.297 0.019 254);
+  --sidebar-ring: oklch(0.474 0.075 219);
+
+  --chart-1: oklch(0.474 0.075 219);
+  --chart-2: oklch(0.487 0.108 154);
+  --chart-3: oklch(0.531 0.117 63);
+  --chart-4: oklch(0.573 0.021 253);
+  --chart-5: oklch(0.505 0.184 27.5);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@layer base {
+  /* State chips. Colour reinforces the label; it never carries the meaning alone. */
+  .badge-ok {
+    background: var(--state-ok-soft);
+    color: var(--state-ok);
+  }
+  .badge-attention {
+    background: var(--state-attention-soft);
+    color: var(--state-attention);
+  }
+  .badge-danger {
+    background: var(--state-danger-soft);
+    color: var(--state-danger);
+  }
+  .badge-idle {
+    background: var(--state-idle-soft);
+    color: var(--state-idle);
+  }
 }

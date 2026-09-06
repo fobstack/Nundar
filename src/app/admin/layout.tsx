@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Public_Sans } from "next/font/google";
-import "./admin.css";
 
 /**
  * Public Sans, the face of the US design system, built for dense
@@ -10,7 +9,7 @@ import "./admin.css";
  * mistaken for each other.
  */
 const publicSans = Public_Sans({
-  variable: "--font-public-sans",
+  variable: "--font-sans",
   subsets: ["latin"],
   display: "swap",
 });
@@ -22,11 +21,17 @@ export const metadata: Metadata = {
 };
 
 /**
- * The frame every admin page shares: tokens, typeface, and staying out of the
- * index. The navigation rail is not here — signing in and first-run setup have
- * no shop to navigate yet, and showing them a rail full of links they cannot
- * follow was a real defect in the previous layout.
+ * The frame every admin page shares: the typeface, the surface colour, and
+ * staying out of the index.
+ *
+ * The navigation rail is not here — signing in and first-run setup have no shop
+ * to navigate yet, and showing them a rail full of links they cannot follow was
+ * a real defect in the previous layout.
  */
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  return <div className={`admin-root ${publicSans.variable}`}>{children}</div>;
+  return (
+    <div className={`${publicSans.variable} min-h-screen bg-muted/40 font-sans`}>
+      {children}
+    </div>
+  );
 }

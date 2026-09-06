@@ -27,10 +27,10 @@ export default async function NewProductPage() {
 
       <form
         action={createProductAction}
-        className="admin-card admin-card-pad"
-        style={{ display: "grid", gap: "var(--a-4)" }}
+        className="rounded-xl border bg-card p-5"
+        style={{ display: "grid", gap: "1rem" }}
       >
-        <label className="admin-label">
+        <label className="text-sm font-medium">
           {t.products.slug}
           <input
             name="slug"
@@ -45,17 +45,17 @@ export default async function NewProductPage() {
           </span>
         </label>
 
-        <label className="admin-label">
+        <label className="text-sm font-medium">
           {t.products.name} ({DEFAULT_LOCALE.toUpperCase()})
           <input name="name" required className={field} />
         </label>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="admin-label">
+          <label className="text-sm font-medium">
             SKU
             <input name="sku" required className={`${field} font-mono`} />
           </label>
-          <label className="admin-label">
+          <label className="text-sm font-medium">
             {t.products.basePrice} ({BASE_CURRENCY})
             <input
               name="basePrice"
@@ -66,11 +66,11 @@ export default async function NewProductPage() {
               className={field}
             />
           </label>
-          <label className="admin-label">
+          <label className="text-sm font-medium">
             {t.products.stock}
             <input name="stock" type="number" min="0" defaultValue={0} required className={field} />
           </label>
-          <label className="admin-label">
+          <label className="text-sm font-medium">
             {t.products.moq}
             <input name="moq" type="number" min="1" defaultValue={1} required className={field} />
           </label>
@@ -78,11 +78,11 @@ export default async function NewProductPage() {
 
         <button
           type="submit"
-          className="admin-btn admin-btn-primary" style={{ width: "100%" }}
+          className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/80" style={{ width: "100%" }}
         >
           {t.common.create}
         </button>
-        <p style={{ color: "var(--a-ink-3)", fontSize: "var(--a-text-xs)" }}>
+        <p style={{ color: "var(--muted-foreground)", fontSize: "0.75rem" }}>
           The product is created as a draft. Publish it from the edit page once it
           has images and content — an incomplete page is worse than no page.
         </p>

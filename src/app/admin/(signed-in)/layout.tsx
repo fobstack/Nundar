@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { AdminLocalePicker } from "@/components/AdminLocalePicker";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { getAdminT } from "@/lib/admin/locale";
-import { RailNav, type RailItem } from "../_components/RailNav";
+import { AdminSidebar, type AdminNavItem } from "../_components/AdminSidebar";
 
 export default async function SignedInLayout({
   children,
@@ -11,49 +11,34 @@ export default async function SignedInLayout({
   const { locale, t } = await getAdminT();
 
   // Six links do not need section headings; headings at this size are chrome.
-  // A hairline instead marks where the work changes: keeping the catalogue
-  // correct, then working through what it sold.
-  const items: RailItem[] = [
-    { href: "/admin", label: t.nav.overview },
-    { href: "/admin/products", label: t.nav.products, startsGroup: true },
-    { href: "/admin/translations", label: t.nav.translations },
-    { href: "/admin/orders", label: t.nav.orders, startsGroup: true },
-    { href: "/admin/customers", label: t.nav.customers },
-    { href: "/admin/settings", label: t.nav.settings, startsGroup: true },
+  // A rule instead marks where the work changes: keeping the catalogue correct,
+  // then working through what it sold.
+  const items: AdminNavItem[] = [
+    { key: "overview", href: "/admin", label: t.nav.overview },
+    { key: "products", href: "/admin/products", label: t.nav.products, startsGroup: true },
+    { key: "translations", href: "/admin/translations", label: t.nav.translations },
+    { key: "orders", href: "/admin/orders", label: t.nav.orders, startsGroup: true },
+    { key: "customers", href: "/admin/customers", label: t.nav.customers },
+    { key: "settings", href: "/admin/settings", label: t.nav.settings, startsGroup: true },
   ];
 
   return (
-    <div className="admin-shell">
-        <aside className="admin-rail">
-          <Link className="admin-rail-brand" href="/admin">
-            Nundar
-          </Link>
+    <SidebarProvider>
+      <AdminSidebar items={items} signOutLabel={t.nav.signOut}>
+        <div className="px-2 pb-1">
+          <AdminLocalePicker locale={locale} />
+        </div>
+      </AdminSidebar>
 
-          <RailNav items={items} />
+      <SidebarInset className="bg-muted/40">
+        {/* The trigger is the only chrome in the header: on a narrow screen it
+            opens the rail, on a wide one it collapses it to icons. */}
+        <header className="flex h-12 items-center gap-2 px-4 md:px-8">
+          <SidebarTrigger className="-ml-1" />
+        </header>
 
-          <div className="admin-rail-foot">
-            <AdminLocalePicker locale={locale} />
-            <form action="/admin/logout" method="post" style={{ marginTop: "var(--a-3)" }}>
-              <button
-                className="admin-rail-link"
-                style={{
-                  background: "none",
-                  border: 0,
-                  cursor: "pointer",
-                  font: "inherit",
-                  padding: "7px 0",
-                  textAlign: "left",
-                  width: "100%",
-                }}
-                type="submit"
-              >
-                {t.nav.signOut}
-              </button>
-            </form>
-          </div>
-        </aside>
-
-      <main className="admin-main">{children}</main>
-    </div>
+        <main className="min-w-0 px-4 pb-16 md:px-8">{children}</main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

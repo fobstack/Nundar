@@ -2,6 +2,10 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { getDb } from "@/db/client";
 import { getAdminT } from "@/lib/admin/locale";
 import { completeSetup, needsSetup } from "@/lib/admin/setup";
@@ -11,7 +15,6 @@ import {
   SESSION_COOKIE,
   SESSION_TTL_SECONDS,
 } from "@/lib/auth/session";
-import { Card } from "../_components/ui";
 
 export const metadata: Metadata = {
   title: "Set up Nundar",
@@ -81,90 +84,79 @@ export default async function AdminSetupPage({
             : null;
 
   return (
-    <main className="admin-centred">
-      <div className="admin-centred-card">
-        <h1
-          style={{
-            fontSize: "var(--a-text-2xl)",
-            fontWeight: 650,
-            letterSpacing: "-0.02em",
-            margin: 0,
-          }}
-        >
-          {t.setup.title}
-        </h1>
-        <p style={{ color: "var(--a-ink-2)", margin: "8px 0 var(--a-6)" }}>
-          {t.setup.lead}
-        </p>
+    <main className="flex min-h-screen items-center justify-center px-5 py-8">
+      <div className="w-full max-w-md">
+        <h1 className="text-2xl font-semibold tracking-tight">{t.setup.title}</h1>
+        <p className="mt-2 mb-6 text-muted-foreground">{t.setup.lead}</p>
 
         {message ? (
-          <p className="admin-error" role="alert" style={{ marginBottom: "var(--a-4)" }}>
+          <p
+            className="mb-4 rounded-md px-4 py-3 text-sm"
+            role="alert"
+            style={{
+              background: "var(--state-danger-soft)",
+              color: "var(--state-danger)",
+            }}
+          >
             {message}
           </p>
         ) : null}
 
         <Card>
-          <form action={createFirstOwner}>
-            <label className="admin-label" htmlFor="email">
-              {t.login.email}
-              <input
-                autoComplete="username"
-                className="admin-input"
-                id="email"
-                name="email"
-                required
-                type="email"
-              />
-            </label>
+          <CardContent>
+            <form action={createFirstOwner} className="grid gap-4">
+              <div className="grid gap-1.5">
+                <Label htmlFor="email">{t.login.email}</Label>
+                <Input
+                  autoComplete="username"
+                  id="email"
+                  name="email"
+                  required
+                  type="email"
+                />
+              </div>
 
-            <label
-              className="admin-label"
-              htmlFor="password"
-              style={{ display: "block", marginTop: "var(--a-4)" }}
-            >
-              {t.login.password}
-              <input
-                autoComplete="new-password"
-                className="admin-input"
-                id="password"
-                minLength={12}
-                name="password"
-                required
-                type="password"
-              />
-            </label>
-            <p className="admin-hint">{t.setup.passwordHint}</p>
+              <div className="grid gap-1.5">
+                <Label htmlFor="password">{t.login.password}</Label>
+                <Input
+                  autoComplete="new-password"
+                  id="password"
+                  minLength={12}
+                  name="password"
+                  required
+                  type="password"
+                />
+                <p className="text-xs text-muted-foreground">{t.setup.passwordHint}</p>
+              </div>
 
-            <label
-              className="admin-label"
-              htmlFor="confirmPassword"
-              style={{ display: "block", marginTop: "var(--a-4)" }}
-            >
-              {t.setup.confirm}
-              <input
-                autoComplete="new-password"
-                className="admin-input"
-                id="confirmPassword"
-                minLength={12}
-                name="confirmPassword"
-                required
-                type="password"
-              />
-            </label>
+              <div className="grid gap-1.5">
+                <Label htmlFor="confirmPassword">{t.setup.confirm}</Label>
+                <Input
+                  autoComplete="new-password"
+                  id="confirmPassword"
+                  minLength={12}
+                  name="confirmPassword"
+                  required
+                  type="password"
+                />
+              </div>
 
-            <button
-              className="admin-btn admin-btn-primary"
-              style={{ marginTop: "var(--a-6)", width: "100%" }}
-              type="submit"
-            >
-              {t.setup.submit}
-            </button>
-          </form>
+              <Button className="mt-2 w-full" type="submit">
+                {t.setup.submit}
+              </Button>
+            </form>
+          </CardContent>
         </Card>
 
         {/* Said here rather than buried in documentation, because this is the
             moment the risk exists and the moment it stops existing. */}
-        <p className="admin-hint" style={{ marginTop: "var(--a-4)" }}>
+        <p
+          className="mt-4 rounded-md px-4 py-3 text-xs"
+          style={{
+            background: "var(--state-attention-soft)",
+            color: "var(--state-attention)",
+          }}
+        >
           {t.setup.raceWarning}
         </p>
       </div>

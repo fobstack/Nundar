@@ -1,4 +1,14 @@
 import Link from "next/link";
+import { Card } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Currency } from "@/config/currency";
 import type { Locale } from "@/config/locales";
 import { getDb } from "@/db/client";
@@ -8,7 +18,7 @@ import { requireAdmin } from "@/lib/auth/guard";
 import { formatMoney } from "@/lib/money";
 import { listOrders } from "@/lib/orders/admin";
 import { ORDER_STATUSES, type OrderStatus } from "@/lib/orders/state";
-import { Card, OrderStatusChip, PageHead, TableEmpty } from "../../_components/ui";
+import { OrderStatusChip, PageHead } from "../../_components/ui";
 
 export default async function AdminOrdersPage({
   searchParams,
@@ -25,95 +35,80 @@ export default async function AdminOrdersPage({
 
   const orders = await listOrders(getDb(), filter);
 
-  const tabs: { key: string | undefined; label: string; href: string }[] = [
-    { key: undefined, label: t.common.all, href: "/admin/orders" },
-    ...ORDER_STATUSES.map((value) => ({
-      key: value,
-      label: value,
-      href: `/admin/orders?status=${value}`,
-    })),
-  ];
-
   return (
     <>
       <PageHead title={t.orders.title} />
 
-      {/* Segmented control rather than a row of underlined links: these are
-          filters on one list, and they should look like one control with a
-          current selection. */}
-      <nav
-        style={{
-          background: "var(--a-sunken)",
-          borderRadius: "var(--a-radius)",
-          display: "inline-flex",
-          flexWrap: "wrap",
-          gap: 2,
-          marginBottom: "var(--a-6)",
-          padding: 3,
-        }}
-      >
-        {tabs.map((tab) => {
-          const current = filter?.status === tab.key;
-          return (
-            <Link
-              aria-current={current ? "page" : undefined}
-              href={tab.href}
-              key={tab.label}
-              style={{
-                background: current ? "var(--a-surface)" : "transparent",
-                borderRadius: "var(--a-radius-sm)",
-                boxShadow: current ? "0 1px 2px rgba(27,33,41,.12)" : undefined,
-                color: current ? "var(--a-ink)" : "var(--a-ink-2)",
-                fontSize: "var(--a-text-sm)",
-                fontWeight: current ? 600 : 500,
-                padding: "5px 11px",
-              }}
+      {/* One control with a current selection, rather than a row of underlined
+          links: these are filters on a single list. */}
+      <Tabs className="mb-6" value={filter?.status ?? "all"}>
+        <TabsList>
+          <TabsTrigger render={<Link href="/admin/orders" />} value="all">
+            {t.common.all}
+          </TabsTrigger>
+          {ORDER_STATUSES.map((value) => (
+            <TabsTrigger
+              key={value}
+              render={<Link href={`/admin/orders?status=${value}`} />}
+              value={value}
             >
-              {tab.label}
-            </Link>
-          );
-        })}
-      </nav>
+              {value}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
-      <Card padded={false}>
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>{t.orders.order}</th>
-              <th>{t.orders.status}</th>
-              <th className="num">{t.orders.total}</th>
-              <th>{t.orders.locale}</th>
-              <th>{t.orders.placed}</th>
-            </tr>
-          </thead>
-          <tbody>
+      <Card className="overflow-hidden p-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t.orders.order}</TableHead>
+              <TableHead>{t.orders.status}</TableHead>
+              <TableHead className="text-right">{t.orders.total}</TableHead>
+              <TableHead>{t.orders.locale}</TableHead>
+              <TableHead>{t.orders.placed}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {orders.length === 0 ? (
-              <TableEmpty colSpan={5}>{t.orders.empty}</TableEmpty>
+              <TableRow>
+                <TableCell
+                  className="h-24 text-center text-muted-foreground"
+                  colSpan={5}
+                >
+                  {t.orders.empty}
+                </TableCell>
+              </TableRow>
             ) : (
               orders.map((order) => (
-                <tr key={order.id}>
-                  <td>
-                    <Link href={`/admin/orders/${order.orderNo}`}>{order.orderNo}</Link>
-                  </td>
-                  <td>
+                <TableRow key={order.id}>
+                  <TableCell>
+                    <Link
+                      className="font-medium text-primary hover:underline"
+                      href={`/admin/orders/${order.orderNo}`}
+                    >
+                      {order.orderNo}
+                    </Link>
+                  </TableCell>
+                  <TableCell>
                     <OrderStatusChip status={order.status} />
-                  </td>
-                  <td className="num">
+                  </TableCell>
+                  <TableCell className="tabular text-right">
                     {formatMoney(
                       order.totalMinor,
                       order.currency as Currency,
                       order.locale as Locale,
                     )}
-                  </td>
-                  <td style={{ color: "var(--a-ink-2)" }}>{order.locale}</td>
-                  <td style={{ color: "var(--a-ink-3)" }}>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{order.locale}</TableCell>
+                  <TableCell className="text-muted-foreground">
                     {formatAdminDate(order.createdAt, locale)}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </Card>
     </>
   );

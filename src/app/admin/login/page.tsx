@@ -12,7 +12,10 @@ import {
   SESSION_COOKIE,
   SESSION_TTL_SECONDS,
 } from "@/lib/auth/session";
-import { Card } from "../_components/ui";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export const metadata: Metadata = {
   title: "Admin sign in",
@@ -73,63 +76,55 @@ export default async function AdminLoginPage({
     error === "locked" ? t.login.locked : error ? t.login.invalid : null;
 
   return (
-    <main className="admin-centred">
-      <div className="admin-centred-card">
-        <h1
-          style={{
-            fontSize: "var(--a-text-2xl)",
-            fontWeight: 650,
-            letterSpacing: "-0.02em",
-            margin: "0 0 var(--a-6)",
-          }}
-        >
+    <main className="flex min-h-screen items-center justify-center px-5 py-8">
+      <div className="w-full max-w-md">
+        <h1 className="mb-6 text-2xl font-semibold tracking-tight">
           {t.login.title}
         </h1>
 
         {message ? (
-          <p className="admin-error" role="alert" style={{ marginBottom: "var(--a-4)" }}>
+          <p
+            className="mb-4 rounded-md px-4 py-3 text-sm"
+            role="alert"
+            style={{
+              background: "var(--state-danger-soft)",
+              color: "var(--state-danger)",
+            }}
+          >
             {message}
           </p>
         ) : null}
 
         <Card>
-          <form action={signIn}>
-            <label className="admin-label" htmlFor="email">
-              {t.login.email}
-              <input
-                autoComplete="username"
-                className="admin-input"
-                id="email"
-                name="email"
-                required
-                type="email"
-              />
-            </label>
+          <CardContent>
+            <form action={signIn} className="grid gap-4">
+              <div className="grid gap-1.5">
+                <Label htmlFor="email">{t.login.email}</Label>
+                <Input
+                  autoComplete="username"
+                  id="email"
+                  name="email"
+                  required
+                  type="email"
+                />
+              </div>
 
-            <label
-              className="admin-label"
-              htmlFor="password"
-              style={{ display: "block", marginTop: "var(--a-4)" }}
-            >
-              {t.login.password}
-              <input
-                autoComplete="current-password"
-                className="admin-input"
-                id="password"
-                name="password"
-                required
-                type="password"
-              />
-            </label>
+              <div className="grid gap-1.5">
+                <Label htmlFor="password">{t.login.password}</Label>
+                <Input
+                  autoComplete="current-password"
+                  id="password"
+                  name="password"
+                  required
+                  type="password"
+                />
+              </div>
 
-            <button
-              className="admin-btn admin-btn-primary"
-              style={{ marginTop: "var(--a-6)", width: "100%" }}
-              type="submit"
-            >
-              {t.login.submit}
-            </button>
-          </form>
+              <Button className="mt-2 w-full" type="submit">
+                {t.login.submit}
+              </Button>
+            </form>
+          </CardContent>
         </Card>
       </div>
     </main>

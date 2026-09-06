@@ -45,7 +45,7 @@ export default async function AdminCustomerPage({
             {customer.addresses.map((address) => (
               <address
                 key={address.id}
-                className="admin-card admin-card-pad" style={{ fontStyle: "normal" }}
+                className="rounded-xl border bg-card p-5" style={{ fontStyle: "normal" }}
               >
                 <div className="font-medium">{address.recipient}</div>
                 <div className="mt-1 text-neutral-600">
@@ -67,7 +67,7 @@ export default async function AdminCustomerPage({
         <h2 className="text-sm font-medium text-neutral-500">
           {t.customers.orderHistory}
         </h2>
-        <table className="admin-table">
+        <table className="w-full border-collapse text-sm">
           <tbody>
             {customer.orders.map((order) => (
               <tr key={order.id} >
