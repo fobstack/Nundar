@@ -171,14 +171,20 @@ The status endpoint returns the order number and status only. No amounts, no
 addresses. Order numbers are enumerable, and the rate limit is what makes
 probing them expensive.
 
-## Known gap
+## The gap this phase shipped with, since fixed
 
-**The transactional path is not translated.** `AddToCart`, the cart view, the
-checkout form and the order status component all carry hardcoded English, in all
-four languages. A French buyer reads French product content and French
-application notes, then hits "Add to cart", "Your cart is empty" and "Subtotal"
-in English at exactly the moment they were about to pay.
+**The transactional path was not translated.** `AddToCart`, the cart view, the
+checkout form and the order status component all carried hardcoded English, in
+all four languages. A French buyer read French product content and French
+application notes, then hit "Add to cart", "Your cart is empty" and "Subtotal"
+in English at exactly the moment they were about to pay. The browser tab said
+"Cart" too.
 
-This was found in phase 7 while building a second theme, and is not fixed here.
-The shared string catalogue added then (`src/lib/storefront/i18n.ts`) is the
-place it belongs.
+It survived this long because the SEO content — the part that gets reviewed —
+was perfectly multilingual, and nobody walks the checkout in a language they do
+not read. It was found while building a second theme, which forced an audit of
+every string the storefront renders.
+
+Fixed in `0f68be1`, against the shared catalogue in
+`src/lib/storefront/i18n.ts`. The page titles needed `generateMetadata`, since a
+static `metadata` export cannot see the locale.

@@ -127,11 +127,14 @@ Then http://localhost:3000/admin/login
 
 Click the **Deploy to Cloudflare** button above. Cloudflare copies the repository into your own GitHub account, provisions the D1 database, both R2 buckets and the KV namespace, writes the generated IDs back into the config, runs the migrations and deploys.
 
-Three things remain afterwards:
+Four things remain afterwards:
 
 1. **Attach your own domain.** The default `*.workers.dev` address will not do — canonicals and `hreflang` are built from the real domain, so leaving it as-is breaks your SEO. Point `NEXT_PUBLIC_SITE_URL` at the real address.
-2. **Enable your sending domain** so order emails are trusted: `npx wrangler email sending enable yourdomain.com` (the domain's DNS must be on Cloudflare).
+2. **Enable your sending domain** so order emails are trusted: `npx wrangler email sending enable yourdomain.com` (the domain's DNS must be on Cloudflare). Until a sending domain is onboarded, Cloudflare only lets a Worker send to verified destination addresses in your account.
 3. **Create an admin account**: `pnpm admin:create you@example.com --remote`
+4. **Set a security contact** under Settings in the admin. It is published at `/.well-known/security.txt` ([RFC 9116](https://www.rfc-editor.org/rfc/rfc9116)), which is where researchers and scanners look before they resort to a public disclosure. Leave it empty and no file is served, which is the honest default.
+
+   Note that the Worker's email binding only **sends**. To receive mail at that address you also need [Email Routing](https://developers.cloudflare.com/email-service/) configured for the domain in the Cloudflare dashboard.
 
 ### Deploying by hand
 

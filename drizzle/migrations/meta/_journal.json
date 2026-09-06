@@ -8,6 +8,13 @@
       "when": 1788530483123,
       "tag": "0000_stale_black_knight",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1788623903412,
+      "tag": "0001_nice_victor_mancha",
+      "breakpoints": true
     }
   ]
 }

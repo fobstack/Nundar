@@ -7,9 +7,21 @@ through GitHub's [private vulnerability reporting][gh-private] on this
 repository — that is the channel we monitor, and it keeps the report
 confidential until a fix ships.
 
-> Maintainers: once the project has its own domain, add `security@<domain>` here
-> as a second channel. Some researchers will not open a GitHub account to file a
-> report, and a dead-end contact costs you the disclosure.
+### Reporting a vulnerability in a deployed shop
+
+If you found this in a running Nundar storefront rather than in this
+repository, that deployment publishes its own contact at
+`/.well-known/security.txt` ([RFC 9116][rfc9116]). Report it there — the
+operator of that shop is not necessarily anyone here.
+
+> Operators: set your address under **Settings -> Security contact** in the
+> admin. Leaving it empty serves no `security.txt` at all, which is the right
+> default: a file naming an address nobody reads spends a researcher's goodwill
+> before they give up.
+>
+> Note that Cloudflare's Worker email binding only **sends**. To receive mail at
+> that address you also need Email Routing configured for the domain in the
+> Cloudflare dashboard.
 
 Include: what you found, how to reproduce it, and what an attacker could achieve.
 A working proof of concept helps but is not required.
@@ -18,6 +30,7 @@ You will get an acknowledgement within 3 working days and an assessment within
 10. If the report is valid we will agree a disclosure date with you before
 publishing.
 
+[rfc9116]: https://www.rfc-editor.org/rfc/rfc9116
 [gh-private]: https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability
 
 ## Supported versions

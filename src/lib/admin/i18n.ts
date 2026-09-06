@@ -175,6 +175,15 @@ const MESSAGES = {
       staff: "Staff",
       removeAdmin: "Remove",
       cannotRemoveSelf: "You cannot remove your own account.",
+      security: "Security contact",
+      securityEmail: "Security contact address",
+      securityHint:
+        "Published at /.well-known/security.txt, where researchers and scanners look for a way to report a vulnerability. Leave empty to publish nothing.",
+      securityInbound:
+        "Cloudflare's Worker email binding only sends. To receive mail at this address, set up Email Routing for the domain in the Cloudflare dashboard.",
+      securityInvalid: "That does not look like an email address.",
+      save: "Save",
+      saved: "Saved",
     },
   },
 
@@ -311,6 +320,15 @@ const MESSAGES = {
       staff: "员工",
       removeAdmin: "移除",
       cannotRemoveSelf: "不能移除自己的账号。",
+      security: "安全联系方式",
+      securityEmail: "安全联系邮箱",
+      securityHint:
+        "发布在 /.well-known/security.txt，安全研究者与扫描器会到这里找漏洞上报方式。留空则不发布。",
+      securityInbound:
+        "Cloudflare 的 Worker 邮件绑定只能发信。要让这个地址能收信，需在 Cloudflare 控制台为该域名配置 Email Routing。",
+      securityInvalid: "这不像是一个邮箱地址。",
+      save: "保存",
+      saved: "已保存",
     },
   },
 } as const;

@@ -5,6 +5,8 @@ import { listAdmins } from "@/lib/admin/admins";
 import { formatAdminDate } from "@/lib/admin/i18n";
 import { getAdminT } from "@/lib/admin/locale";
 import { requireOwner } from "@/lib/auth/guard";
+import { getSettings } from "@/lib/settings/settings";
+import { SecurityContactForm } from "./SecurityContactForm";
 import {
   changeRoleAction,
   createAdminAction,
@@ -20,6 +22,7 @@ export default async function AdminSettingsPage() {
   const session = await requireOwner();
   const { locale, t } = await getAdminT();
   const admins = await listAdmins(getDb());
+  const settings = await getSettings(getDb());
 
   return (
     <main className="mx-auto max-w-4xl px-6 py-10">
@@ -42,6 +45,21 @@ export default async function AdminSettingsPage() {
           <code>NEXT_PUBLIC_SITE_URL</code>. They are build-time values because
           canonical URLs and hreflang are baked into statically generated pages.
         </p>
+      </section>
+
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold">{t.settings.security}</h2>
+        <SecurityContactForm
+          initialValue={settings.securityContactEmail}
+          labels={{
+            email: t.settings.securityEmail,
+            hint: t.settings.securityHint,
+            inbound: t.settings.securityInbound,
+            invalid: t.settings.securityInvalid,
+            save: t.settings.save,
+            saved: t.settings.saved,
+          }}
+        />
       </section>
 
       <section className="mt-10">

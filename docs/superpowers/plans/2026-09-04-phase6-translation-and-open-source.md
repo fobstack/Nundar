@@ -71,7 +71,22 @@ security controls rather than style choices, and the residual risks already
 known. That last part is the one most projects skip, and it is the one that
 makes the document worth reading.
 
-The security contact is still a placeholder pending a domain.
+**The security contact is a setting, not a constant.** Every deployment is a
+different operator with a different address, so a hardcoded one in SECURITY.md
+would be wrong for everyone who forks this. It is stored in `site_settings`,
+edited under Settings in the admin, and published at `/.well-known/security.txt`
+(RFC 9116) — which is where a researcher probing the live site looks, as opposed
+to SECURITY.md, which is read by people already on GitHub.
+
+An empty address serves no file at all. That is deliberate: a `security.txt`
+naming an address nobody reads spends a researcher's goodwill before they give
+up, and is worse than publishing nothing.
+
+The distinction that matters and is easy to get wrong: Cloudflare's Worker email
+binding **sends** only. Receiving mail at the published address needs Email
+Routing configured for the domain in the dashboard. The admin says so at the
+point where someone forms the belief that the address works, rather than leaving
+it in documentation nobody reads.
 
 ### The three findings from the security review (`999deca`)
 
@@ -134,6 +149,5 @@ Both are recorded in the spec's divergence section.
 ## Still open
 
 - Customer-facing accounts (see the phase 5 record — a deliberate omission)
-- The transactional path is not translated (see the phase 4 record — a defect)
 - Argon2id and Stripe Elements remain unresolved against the spec
 - Deployment, a domain, and a live Stripe account

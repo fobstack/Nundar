@@ -9,6 +9,7 @@ import {
   createAdmin,
   deleteAdmin,
 } from "@/lib/admin/admins";
+import { saveSetting } from "@/lib/settings/settings";
 
 const createSchema = z.object({
   email: z.string().email(),
@@ -54,4 +55,36 @@ export async function changeRoleAction(formData: FormData) {
     actingUserId: session.userId,
   });
   revalidatePath("/admin/settings");
+}
+
+/**
+ * Save the security contact address.
+ *
+ * Owner-only like everything else on this page: the address is published to the
+ * public at /.well-known/security.txt, so being able to change it is being able
+ * to redirect vulnerability reports.
+ */
+export async function saveSecurityContactAction(
+  _previous: { error?: string; saved?: boolean } | null,
+  formData: FormData,
+): Promise<{ error?: string; saved?: boolean }> {
+  await requireOwner();
+
+  const value = z
+    .object({ securityContactEmail: z.string().max(254) })
+    .parse({ securityContactEmail: formData.get("securityContactEmail") ?? "" });
+
+  const result = await saveSetting(
+    getDb(),
+    "securityContactEmail",
+    value.securityContactEmail,
+  );
+
+  if (!result.ok) {
+    return { error: result.reason };
+  }
+
+  revalidatePath("/admin/settings");
+  // security.txt is served dynamically, so nothing else needs invalidating
+  return { saved: true };
 }
