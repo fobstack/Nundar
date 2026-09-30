@@ -27,7 +27,7 @@ function main(): void {
 Setup complete.
 
   pnpm dev                  start the storefront at http://localhost:3000/en
-  pnpm admin:create <email> <password>   create an admin account
+  pnpm admin:create <email> create an admin account (prompts for the password)
   pnpm test                 run the test suite
 
 Deploying needs a Cloudflare account — see the README.
