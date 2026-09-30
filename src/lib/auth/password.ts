@@ -7,12 +7,23 @@
  * a high enough iteration count, combined with login rate limiting, is adequate
  * for a handful of admin accounts logging in occasionally.
  *
- * 210k iterations follows OWASP's guidance for PBKDF2-HMAC-SHA256. Going higher
- * adds real CPU time to every login, which is a poor trade against the Workers
- * CPU limit.
+ * The iteration count is bounded by the platform, not by OWASP. Cloudflare's
+ * production WebCrypto refuses PBKDF2 above 100,000 iterations outright
+ * ("iteration counts above 100000 are not supported"), so OWASP's 600,000 — and
+ * the 210,000 this file used to set — cannot run on Workers at all. The local
+ * workerd does not enforce that ceiling, which is how 210,000 passed every test
+ * here while sign-in could never succeed in production.
+ *
+ * 50,000 rather than the 100,000 maximum because of CPU: measured on a real
+ * account at about 10 ms against about 35 ms, and the Workers Free plan allows
+ * 10 ms of CPU per request. Login rate limiting (five attempts, then a
+ * fifteen-minute lockout) carries the rest of the defence.
  */
 const SCHEME = "pbkdf2-sha256";
-const ITERATIONS = 210_000;
+const ITERATIONS = 50_000;
+
+/** The most PBKDF2 iterations Cloudflare's production WebCrypto will run */
+const PLATFORM_MAX_ITERATIONS = 100_000;
 const SALT_BYTES = 16;
 const KEY_BITS = 256;
 
@@ -83,6 +94,18 @@ export async function verifyPassword(
 
   const iterations = Number(parts[1]);
   if (!Number.isInteger(iterations) || iterations <= 0) {
+    return false;
+  }
+
+  // Refused before deriving, so local development behaves as production does:
+  // there the derivation throws, and a hash that verifies locally but never in
+  // production is exactly how this went unnoticed. The caller answers as for a
+  // wrong password, so the account's existence is not revealed; the log line is
+  // for the operator and carries nothing that identifies the account.
+  if (iterations > PLATFORM_MAX_ITERATIONS) {
+    console.warn(
+      `[auth] a stored password hash uses ${iterations} PBKDF2 iterations, above the Workers ceiling of ${PLATFORM_MAX_ITERATIONS}, and can never verify. Recreate the account with \`pnpm admin:create <email> --remote\`.`,
+    );
     return false;
   }
 

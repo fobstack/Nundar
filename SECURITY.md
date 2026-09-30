@@ -46,7 +46,7 @@ Knowing where the trust boundaries are is the point of this section.
 | Data | Where it lives | Notes |
 |---|---|---|
 | Card numbers, CVV | **Never touches Nundar** | Payment happens on Stripe's hosted checkout. The server never sees card data, so it is out of scope for PCI DSS SAQ-A purposes. |
-| Admin passwords | D1, PBKDF2-SHA256 (210k iterations), per-user random salt | Never logged, never returned by an API. |
+| Admin passwords | D1, PBKDF2-SHA256 (50k iterations; Cloudflare Workers refuse more than 100k), per-user random salt | Never logged, never returned by an API. |
 | Admin sessions | KV, opaque 256-bit random token | The cookie carries only the token; role and identity live server-side so they cannot be forged client-side. |
 | Customer addresses, emails | D1, and a snapshot on the order | Excluded from all logs. |
 | Stripe keys, webhook secret | `wrangler secret` / `.dev.vars` | Never in the repository. `.dev.vars` is gitignored. |
@@ -112,6 +112,13 @@ Stated plainly rather than left for an auditor to find:
   data, prices recompute from it. The 2% drift threshold and the buffer limit
   the blast radius, and a fetch failure keeps the previous snapshot, but no
   sanity band on the rate itself is enforced yet.
+- **Admin password hashing is weaker than OWASP recommends.** OWASP's figure
+  for PBKDF2-HMAC-SHA256 is 600,000 iterations; Cloudflare Workers refuse
+  anything above 100,000, and Nundar uses 50,000 so that a sign-in fits the
+  Free plan's 10 ms CPU budget. Against a stolen hash dump this is a real
+  reduction in cracking cost. What bounds it is that there are only a handful
+  of admin accounts and sign-in is rate limited; long, unique admin passwords
+  matter more here than they would under a stronger hash.
 
 ## Dependency posture
 
