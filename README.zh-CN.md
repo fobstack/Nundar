@@ -64,7 +64,7 @@ pnpm dev
 进后台：
 
 ```bash
-pnpm admin:create you@example.com 'your-password'
+pnpm admin:create you@example.com     # 密码从终端输入，不走命令行参数
 ```
 
 然后访问 http://localhost:3000/admin/login
@@ -139,7 +139,7 @@ NEXT_PUBLIC_SITE_URL=https://yourdomain.com
 pnpm deploy
 pnpm db:migrate:remote
 pnpm db:seed:remote          # 可选，灌示例数据
-pnpm admin:create you@example.com 'password' --remote
+pnpm admin:create you@example.com --remote
 ```
 
 最后在 Stripe 控制台把 webhook 指向 `https://yourdomain.com/api/webhooks/stripe`，订阅 `payment_intent.succeeded`。
@@ -155,7 +155,7 @@ pnpm admin:create you@example.com 'password' --remote
 | `pnpm db:generate` | 由 schema 生成迁移 SQL |
 | `pnpm db:migrate:local` / `:remote` | 应用迁移 |
 | `pnpm db:seed:local` / `:remote` | 灌示例数据（幂等） |
-| `pnpm admin:create <email> <pw>` | 建后台账号，加 `--remote` 建在线上 |
+| `pnpm admin:create <email>` | 建后台账号，加 `--remote` 建在线上 |
 | `pnpm cf-typegen` | 由 wrangler.jsonc 重新生成绑定类型 |
 | `pnpm preview` | 本地预览 Workers 产物 |
 | `pnpm deploy` | 构建并部署 |
