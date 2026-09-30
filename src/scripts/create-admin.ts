@@ -110,7 +110,11 @@ async function main(): Promise<void> {
       "wrangler",
       "d1",
       "execute",
-      "nundar",
+      // The binding, never the database name: a shop deployed with the Deploy
+      // to Cloudflare button names its database after its own project, and
+      // wrangler cannot find "nundar" there. The binding is fixed by the code
+      // (env.DB), so it is the one identifier every deployment shares.
+      "DB",
       remote ? "--remote" : "--local",
       "--command",
       sql,

@@ -64,7 +64,7 @@
     "db:migrate:local": "wrangler d1 migrations apply DB --local",
     "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
     "db:seed:build": "tsx src/scripts/write-seed-sql.ts",
-    "db:seed:local": "pnpm db:seed:build && wrangler d1 execute nundar --local --file=./drizzle/seed.sql",
+    "db:seed:local": "pnpm db:seed:build && wrangler d1 execute DB --local --file=./drizzle/seed.sql",
     "db:seed:remote": "pnpm db:seed:build && wrangler d1 execute DB --remote --file=./drizzle/seed.sql",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "pnpm db:migrate:local && opennextjs-cloudflare build && pnpm db:migrate:remote && opennextjs-cloudflare deploy",
