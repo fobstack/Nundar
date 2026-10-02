@@ -194,26 +194,97 @@ describe('seed/shop-sample.sql', () => {
       );
     }
   });
+});
 
-  it('keeps each identity file in step with its bundle’s own slugs', async () => {
+/**
+ * `mallok.json` pins a bundle's translation group.
+ *
+ * It is not optional here. Published with the Mallok CLI, a bundle that has no
+ * identity file gets a **separate** translation group for each language
+ * (mallok 0.1.0-rc.7), which leaves every language version an orphan: no
+ * hreflang, no language switcher. The file is what keeps them together.
+ */
+describe('bundle identity', () => {
+  interface Identity {
+    translation_group?: string;
+    items?: Record<string, { id?: string; slug?: string; path?: string }>;
+  }
+
+  async function readIdentity(item: Item): Promise<Identity | null> {
+    try {
+      return JSON.parse(
+        await readFile(
+          join(CONTENT, item.kind, item.bundle, 'mallok.json'),
+          'utf8',
+        ),
+      ) as Identity;
+    } catch {
+      return null;
+    }
+  }
+
+  it('pins the translation group of every bundle with more than one language', async () => {
     const site = await readSite();
     const items = await loadItems(site.defaultLocale);
-    const identity = JSON.parse(
-      await readFile(
-        join(CONTENT, 'product', 'stainless-ball-valve-dn50', 'mallok.json'),
-        'utf8',
-      ),
-    ) as { items: Record<string, { slug: string; path: string }> };
-
-    for (const [locale, entry] of Object.entries(identity.items)) {
-      const item = items.find(
-        (other) =>
-          other.kind === 'product' &&
-          other.bundle === 'stainless-ball-valve-dn50' &&
-          other.locale === locale,
-      );
-      assert.equal(entry.slug, item?.slug);
-      assert.ok(entry.path.endsWith(`/${entry.slug}`));
+    const bundles = new Map<string, Item[]>();
+    for (const item of items) {
+      const key = `${item.kind}/${item.bundle}`;
+      bundles.set(key, [...(bundles.get(key) ?? []), item]);
     }
+
+    let checked = 0;
+    for (const [key, members] of bundles) {
+      if (members.length < 2) {
+        continue;
+      }
+      const first = members[0];
+      assert.ok(first !== undefined);
+      const identity = await readIdentity(first);
+      assert.ok(
+        identity !== null,
+        `content/${key} has ${members.length} languages and no mallok.json, so the CLI would publish each as its own translation group`,
+      );
+      assert.match(
+        identity.translation_group ?? '',
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+        `content/${key}/mallok.json needs a UUID translation_group`,
+      );
+      checked += 1;
+    }
+    assert.ok(checked > 0);
+  });
+
+  it('keeps each identity file in step with its bundle’s languages and slugs', async () => {
+    const site = await readSite();
+    const items = await loadItems(site.defaultLocale);
+    const ids = new Set<string>();
+
+    for (const item of items) {
+      const identity = await readIdentity(item);
+      if (identity === null) {
+        continue;
+      }
+      const entry = identity.items?.[item.locale];
+      assert.ok(
+        entry !== undefined,
+        `content/${item.kind}/${item.bundle}/mallok.json has no entry for "${item.locale}"`,
+      );
+      assert.equal(entry.slug, item.slug);
+      assert.ok(
+        entry.path?.endsWith(`/${item.slug}`),
+        `${entry.path} does not end in the slug ${item.slug}`,
+      );
+      // The default language is unprefixed, every other one carries its code.
+      assert.equal(
+        entry.path?.startsWith(`/${item.locale}/`),
+        item.locale !== site.defaultLocale,
+      );
+      assert.ok(
+        entry.id !== undefined && !ids.has(entry.id),
+        `content/${item.kind}/${item.bundle} reuses the id ${entry.id}`,
+      );
+      ids.add(entry.id);
+    }
+    assert.ok(ids.size > 0);
   });
 });

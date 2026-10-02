@@ -1,0 +1,29 @@
+{
+  "translation_group": "3e904cb2-5d7f-4083-8c41-8f2dbe609142",
+  "items": {
+    "en": {
+      "id": "8e3f50b7-4d9a-4e40-9c6d-30219f5ead01",
+      "created_at": "2026-10-01T00:00:00Z",
+      "path": "/contact",
+      "slug": "contact"
+    },
+    "de": {
+      "id": "8e3f50b7-4d9a-4e40-9c6d-30219f5ead02",
+      "created_at": "2026-10-01T00:00:00Z",
+      "path": "/de/kontakt",
+      "slug": "kontakt"
+    },
+    "fr": {
+      "id": "8e3f50b7-4d9a-4e40-9c6d-30219f5ead03",
+      "created_at": "2026-10-01T00:00:00Z",
+      "path": "/fr/contact",
+      "slug": "contact"
+    },
+    "es": {
+      "id": "8e3f50b7-4d9a-4e40-9c6d-30219f5ead04",
+      "created_at": "2026-10-01T00:00:00Z",
+      "path": "/es/contacto",
+      "slug": "contacto"
+    }
+  }
+}

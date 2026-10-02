@@ -269,6 +269,18 @@ try {
     `the sample variants should attach to the published product; ${variants.length} did`,
   );
 
+  // Every language of one bundle has to land in one translation group, or
+  // hreflang cannot connect them. The product pins its group in mallok.json;
+  // the other bundles have theirs assigned on import, so check one of those.
+  const groups = await query(
+    `SELECT COUNT(DISTINCT translation_group) AS n, COUNT(*) AS rows
+     FROM content WHERE kind = 'application'`,
+  );
+  expect(
+    groups[0].n === 1 && groups[0].rows === 4,
+    `the application note should be four languages in one translation group; found ${JSON.stringify(groups[0])}`,
+  );
+
   // 4. The pages a buyer and a crawler receive.
   const product = await page('/products/stainless-ball-valve-dn50');
   expect(product.status === 200, `the product page returned ${product.status}`);
@@ -304,6 +316,10 @@ try {
     application.status === 200 &&
       application.html.includes('href="/products/stainless-ball-valve-dn50"'),
     'the application note does not link back to its product',
+  );
+  expect(
+    application.html.includes('/es/applications/lineas-agua-de-mar-offshore'),
+    'the application note carries no hreflang to its Spanish version',
   );
 
   const collection = await page('/collections/corrosion-resistant-valves');
