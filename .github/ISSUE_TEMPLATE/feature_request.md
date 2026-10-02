@@ -12,6 +12,8 @@ Describe the situation, not the solution.
 **What you have considered**
 
 **Scope check**
-Nundar is a single-tenant storefront template. Multi-tenant SaaS features,
-marketplace/multi-vendor flows and B2B quotation are deliberately out of scope —
-see the "Out of scope" section of the design spec.
+Nundar is a shop plugin and a commerce theme for Mallok, for a single shop on
+its own Cloudflare account. Multi-tenant SaaS and marketplace or multi-vendor
+flows are deliberately out of scope. Anything about pages, content, languages,
+the admin or caching in general belongs to Mallok rather than here — see the
+design spec in `docs/superpowers/specs/`.

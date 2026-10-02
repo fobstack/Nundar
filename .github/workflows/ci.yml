@@ -16,31 +16,29 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v6
-
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
-          cache: pnpm
+          node-version-file: .nvmrc
+          cache: npm
 
-      - run: pnpm install --frozen-lockfile
+      # npm, not pnpm: Mallok's CLI installs and upgrades with npm only, and
+      # refuses a project that carries another manager's lockfile
+      - run: npm ci
 
-      # Runs the exact command the README gives a new contributor: generate
-      # migrations, create the tables, load the seed data. Using it instead of
-      # the three underlying commands means CI also proves `pnpm setup` still
-      # works — the first command someone runs from the docs failing is the most
-      # discouraging kind of breakage.
-      #
-      # The build depends on this: generateStaticParams reads the local D1 for
-      # the product and use-case lists, so without the tables it fails with
-      # "no such table".
-      - run: pnpm setup
+      - run: npm run lint
 
-      - run: pnpm typecheck
+      - run: npm run typecheck
 
-      - run: pnpm lint
+      # The project checks run in Node; the shop plugin's and the theme's tests
+      # run inside the real workerd runtime, not a Node mock
+      - run: npm test
 
-      # Tests run inside the real workerd runtime, not a Node mock
-      - run: pnpm test
+      # Stages the admin and theme assets, then a production build
+      - run: npm run build
 
-      - run: pnpm build
+      # A real request to a real Worker: it boots, migrates and renders
+      - run: npm run smoke
+
+      # The whole shop on a real Worker: settings, content published with the
+      # Mallok CLI, the seed, pages in two languages, the cart
+      - run: npm run smoke:shop

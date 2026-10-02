@@ -3,9 +3,10 @@
 ## Why
 
 ## How it was verified
-- [ ] `pnpm test`
-- [ ] `pnpm typecheck`
-- [ ] `pnpm lint`
+- [ ] `npm run lint`
+- [ ] `npm run typecheck`
+- [ ] `npm test`
+- [ ] `npm run smoke:shop` (when the change touches the plugin, the theme or the content)
 - [ ] Checked in the browser (describe what you clicked)
 
 ## Spec impact

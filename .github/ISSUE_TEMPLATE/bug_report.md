@@ -15,6 +15,7 @@ labels: bug
 
 **Environment**
 - Local dev or deployed to Cloudflare?
+- Mallok version (`package.json`):
 - Node version:
 - Browser (if relevant):
 
