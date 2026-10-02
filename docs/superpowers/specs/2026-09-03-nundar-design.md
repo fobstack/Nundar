@@ -3,6 +3,8 @@
 > An open-source commerce engine for cross-border trade, built on Cloudflare
 > Status: design settled, ready for implementation planning
 > Date: 2026-09-03
+>
+> **Partly superseded (2026-09-30).** Nundar is now a shop plugin and a commerce theme on Mallok: see `2026-09-30-nundar-on-mallok-design.md`. The stack (§2), the architecture (§3), the rendering strategy (§5.2), the admin (§7) and the deviations recorded in §13 describe the previous standalone Next.js implementation, kept at the tag `nextjs-final`. The commerce decisions — the data model's rules (§4.3), pricing (§4.4), MOQ and lead time (§4.5), the SEO foundations (§5.3), no switching by IP (§5.4) and the transaction rules (§6) — still hold.
 
 ## 1. What this is
 

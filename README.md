@@ -1,209 +1,152 @@
 # Nundar
 
-**Open-source commerce engine for Cloudflare.** Built for cross-border sellers who want to rank for what buyers actually search — not fight for the head term everyone else is bidding on.
+**A shop plugin and a commerce theme for [Mallok](https://github.com/fobstack/mallok).** Built for cross-border sellers who want to rank for what buyers actually search — not fight for the head term everyone else is bidding on.
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/FobStack/Nundar)
-[![CI](https://github.com/FobStack/Nundar/actions/workflows/ci.yml/badge.svg)](https://github.com/FobStack/Nundar/actions/workflows/ci.yml)
+[![CI](https://github.com/fobstack/Nundar/actions/workflows/ci.yml/badge.svg)](https://github.com/fobstack/Nundar/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](LICENSE)
+
+> **Status: in development.** Nundar is being rebuilt on Mallok. The catalogue side works today. Prices on pages, the cart page and checkout are not there yet — see [What works today](#what-works-today). It is not ready to run a real shop.
 
 ---
 
 ## The problem
 
-If you manufacture something and want to sell it abroad, you have three unsatisfying options:
+If you manufacture something and want to sell it abroad, a product is usually treated as **one page**. That is the mistake. A buyer searching *"ball valve for offshore platform seawater lines"* is far closer to purchase than one searching *"ball valve"* — and almost nobody is competing for the first phrase.
 
-- **Marketplaces** (Alibaba, Amazon) hand you traffic but keep the customer. You compete on price against people selling the same thing, and the relationship is theirs, not yours.
-- **Hosted storefronts** (Shopify and friends) give you your own store — and the same templates, the same page structure and the same SEO surface as everyone else on the platform. You still have to buy traffic.
-- **Self-hosted platforms** (Medusa, Saleor, Bagisto) give you ownership, but you inherit servers to run, and their product pages are built for browsing a catalogue rather than for being found.
-
-All three treat a product as **one page**. That is the mistake. A buyer searching *"ball valve for offshore platform seawater lines"* is far closer to purchase than one searching *"ball valve"* — and almost nobody is competing for the first phrase.
-
-## What Nundar does differently
+## What Nundar does about it
 
 **A product is a content system, not a page.**
 
-Every product carries structured content in four languages:
-
-| Content type | Answers | Example search term it can win |
+| Content | Answers | Example search it can win |
 |---|---|---|
-| **Description** | What is it | `316L stainless ball valve DN50` |
-| **Features** | What is it like | `high temperature resistant ball valve` |
-| **Applications** | Where is it used, and why | `ball valve for offshore platform seawater lines` |
+| **Product** | What is it | `316L stainless ball valve DN50` |
+| **Application note** | Where is it used, and why | `ball valve for offshore platform seawater lines` |
+| **Collection** | Which products share this property | `corrosion-resistant valves` |
 
-Applications are the engine. Write one with real substance, flip a switch in the admin, and it becomes **its own landing page** — its own URL, title, and structured data, with a **localised slug per language**:
+An application note is its own landing page, with its own URL, title and structured data, and **its own slug in each language**:
 
 ```
-/en/products/stainless-ball-valve-dn50/offshore-seawater-lines
-/de/products/stainless-ball-valve-dn50/offshore-seewasserleitungen
-/fr/products/stainless-ball-valve-dn50/circuits-eau-de-mer-offshore
-/es/products/stainless-ball-valve-dn50/lineas-agua-de-mar-offshore
+/applications/offshore-seawater-lines
+/de/applications/offshore-seewasserleitungen
+/fr/applications/circuits-eau-de-mer-offshore
+/es/applications/lineas-agua-de-mar-offshore
 ```
 
-Four languages × N applications. One product with three real applications becomes twelve pages that each answer a specific buying question — cross-linked with correct `hreflang`, listed in the sitemap, statically generated at the edge.
+Each links to the product it discusses, the product lists the notes written about it, and every language version points at the others with correct `hreflang`.
 
-**The switch matters as much as the feature.** Applications stay inside the product page until you decide one is substantial enough to stand alone. Thin pages published for the sake of page count drag down the whole domain, so promoting one is a deliberate act rather than a default.
+**Writing one is a deliberate act.** A product's features, and the applications that do not deserve a page of their own, stay inside the product page. A page per feature would only multiply near-identical pages across products, which drags a whole domain down. Attribute searches are served by collections instead: one page that gathers the products sharing a property, so a buyer can compare them.
 
-## Why Cloudflare
+## How it is built
 
-Everything runs on Workers: D1 for data, R2 for images, KV for sessions and carts, Durable Objects for cache coordination, Cron for exchange rates, Email for order notifications. No servers, no containers, no separate database bill.
+Nundar is not a second application beside Mallok. A shop is a Mallok site with two things added:
 
-**Local development needs no Cloudflare account at all** — D1, R2 and KV are simulated by miniflare, and the tests run inside the real `workerd` runtime rather than a Node mock.
+| Part | Where | What it owns |
+|---|---|---|
+| **Shop plugin** | `src/plugins/shop/` | Variants, prices per currency, stock, minimum order quantities, the cart, exchange-rate repricing |
+| **Commerce theme** | `src/theme/` | How product, application, collection and list pages look, in four languages |
+| **Sample content** | `content/`, `seed/` | A product, its application note, a collection and a contact page |
 
-## What is in the box
+Mallok provides everything else: content and its editor, languages and `hreflang`, the sitemap, the admin and sign-in, media, the edge cache, email. That boundary is deliberate — commerce logic lives only in the plugin, and nothing about pages is reimplemented here.
 
-**Storefront**
+Everything runs on Cloudflare Workers with D1 and R2. Local development needs no Cloudflare account.
 
-- Statically generated product and application pages in four languages, with complete `hreflang`, self-referencing canonicals, and `Product` / `Offer` / `Article` / `BreadcrumbList` structured data
-- Per-language sitemap generated from the database; unpublished applications are excluded
-- Static pages with live stock and prices patched in on the client, so a page never promises stock it no longer has
-- Cart, checkout and order tracking for guests — no forced account creation
+## What works today
 
-**Admin**
+Nundar builds on `mallok@0.1.0-rc.7`. Some of the shop needs extension points Mallok does not have yet; those parts wait for them rather than being worked around.
 
-- English interface, with Chinese available, kept separate from the storefront's buyer languages
-- Product creation, multilingual content, SEO fields with length guidance
-- Image upload to R2 with the format verified from file headers, and mandatory alt text
-- Order management driven by an explicit state machine
-- Customer records, sales dashboard, administrator management
-- **Translation workbench** showing exactly which language is missing which field
+| | Works today | Waits for Mallok's next plugin API |
+|---|---|---|
+| **Pages** | Product, application, collection, list and contact pages in English, German, French and Spanish; `hreflang`, canonicals, sitemap; no client JavaScript | Prices, variants and availability on the page; `Offer` structured data; recent products on the home page |
+| **Catalogue data** | Variants, prices as integer minor units, stock, MOQ, lead time, a made-to-order policy | Editing them in the admin (read-only for now; the sample data is loaded from SQL) |
+| **Pricing** | USD base price; EUR and GBP derived from ECB rates with a buffer, rounding to a price point and a drift threshold; manual prices never overwritten | |
+| **Cart** | Add, set and remove through a plain form POST, with MOQ and stock enforced server-side | The cart page; submitting a cart as one inquiry |
+| **Checkout** | | Payment, orders and order email (the next phase) |
 
-**Commercial logic that is easy to get wrong, and is tested**
+The reasoning and the plan are in [`docs/superpowers/specs/2026-09-30-nundar-on-mallok-design.md`](docs/superpowers/specs/2026-09-30-nundar-on-mallok-design.md).
+
+### Commerce rules that are easy to get wrong, and are tested
 
 - Money is always integer minor units. Never a float, anywhere.
-- Prices are recomputed server-side at checkout. The cart stores quantities only — never a price.
-- Stock is decremented **after** payment confirms, with a conditional update that cannot go negative and compensation if it partially fails.
-- Stripe webhooks are signature-verified and idempotent, because Stripe redelivers.
-- MOQ and lead time are first-class fields, enforced in three places.
-- One base price in USD; EUR and GBP derive from ECB rates with a configurable buffer and psychological rounding — and only move when the rate drifts past a threshold, so prices do not wobble daily.
-
-**397 tests**, all running in the real Workers runtime.
-
-## Theming
-
-The storefront ships a theme system modelled on how Astro handles themes. Routes fetch data, emit SEO metadata and supply interface strings; themes decide only what things look like:
-
-```
-src/themes/
-├── contract.ts        what every view receives — TypeScript enforces completeness
-├── registry.ts        theme selection, via the THEME environment variable
-├── default/           technical: hairline borders, sharp corners, catalogue-first
-│   ├── tokens.css     colour, type, spacing — redefine these and the whole site changes
-│   ├── layout/        shell, header, footer
-│   └── views/         one component per page type
-└── editorial/         serif, warm paper, soft shadows, application-notes-first
-```
-
-Two themes ship, and they are deliberately opposites — serif against grotesque, shadows against hairlines, a home page that leads with application notes against one that leads with the catalogue. The second exists to keep the contract honest: a contract with one implementation is only a guess.
-
-**SEO logic never lives in a theme.** `hreflang`, canonicals and structured data stay in the route layer, so a broken theme can make the site ugly but cannot damage its indexing.
-
-**Interface strings never live in a theme either.** Breadcrumbs and commerce vocabulary come from a shared catalogue, so a theme author who speaks no German can still ship a German-correct storefront. A theme owns its voice — hero copy, section headings — and nothing else. The rule: if getting it wrong is a bug, it is shared; if getting it different is a design choice, it belongs to the theme.
-
-To build your own: copy a theme directory, rename its scope class in `tokens.css` and `layout/Shell.tsx` to match the new name, register it, set `THEME=yourtheme`, rebuild.
+- The cart stores variants and quantities only — never a price.
+- MOQ is enforced by the form *and* by the server, because a form can be bypassed.
+- Stock carries a database constraint, so a payment's decrement cannot go negative: a test proves the whole D1 batch rolls back.
+- A manually set price is never overwritten by an exchange-rate refresh.
+- Language is decided by the URL alone, never by the visitor's IP.
 
 ## Quick start
 
-Requires Node.js 20+ and pnpm. **No Cloudflare account needed.**
+Requires Node.js 22 and npm. **No Cloudflare account needed.**
 
 ```bash
-git clone https://github.com/FobStack/Nundar.git
+git clone https://github.com/fobstack/Nundar.git
 cd Nundar
-pnpm install
-pnpm setup     # generates migrations, creates the local database, loads sample data
-pnpm dev
+npm ci
+npm run build        # stages the admin and the theme's assets
+npm run smoke:shop   # the whole shop, end to end, on a throwaway local Worker
 ```
 
-Open http://localhost:3000/en — or `/de`, `/fr`, `/es`.
+`smoke:shop` is the fastest way to see everything working together: it creates an administrator, applies `site.json`, publishes `content/` with the Mallok CLI, loads the sample variants, requests the pages in two languages and adds to the cart.
 
-For the admin:
+### A local shop you can browse
 
 ```bash
-pnpm admin:create you@example.com     # password is read from stdin, never an argument
+# First time only: local secrets. Never commit .dev.vars.
+(umask 077; set -C; printf 'MALLOK_SECRET=%s\nMALLOK_SETUP_KEY=%s\n' \
+  "$(openssl rand -hex 32)" "$(openssl rand -hex 32)" > .dev.vars)
+
+npm run dev
 ```
 
-Then http://localhost:3000/admin/login
-
-## Deploying
-
-Click the **Deploy to Cloudflare** button above. Cloudflare copies the repository into your own GitHub account, provisions the D1 database, both R2 buckets and the KV namespace, writes the generated IDs back into the config, runs the migrations and deploys.
-
-Four things remain afterwards:
-
-1. **Attach your own domain.** The default `*.workers.dev` address will not do — canonicals and `hreflang` are built from the real domain, so leaving it as-is breaks your SEO. Point `NEXT_PUBLIC_SITE_URL` at the real address.
-2. **Enable your sending domain** so order emails are trusted: `npx wrangler email sending enable yourdomain.com` (the domain's DNS must be on Cloudflare). Until a sending domain is onboarded, Cloudflare only lets a Worker send to verified destination addresses in your account.
-3. **Create an admin account**: `pnpm admin:create you@example.com --remote`
-4. **Set a security contact** under Settings in the admin. It is published at `/.well-known/security.txt` ([RFC 9116](https://www.rfc-editor.org/rfc/rfc9116)), which is where researchers and scanners look before they resort to a public disclosure. Leave it empty and no file is served, which is the honest default.
-
-   Note that the Worker's email binding only **sends**. To receive mail at that address you also need [Email Routing](https://developers.cloudflare.com/email-service/) configured for the domain in the Cloudflare dashboard.
-
-### Deploying by hand
+1. Open the URL Wrangler prints, at `/_mallok/setup`, and enter the `MALLOK_SETUP_KEY` from `.dev.vars` to create the administrator.
+2. In the admin, switch the **Shop** plugin on, and create an API token with the `content:write` and `settings:write` scopes.
+3. With that token in your environment, apply the settings, publish the content and load the sample variants:
 
 ```bash
-npx wrangler login
-
-npx wrangler d1 create nundar
-npx wrangler r2 bucket create nundar-media
-npx wrangler r2 bucket create nundar-inc-cache
-npx wrangler kv namespace create SESSIONS
+export MALLOK_TOKEN=<the token>
+npm run settings:apply -- http://localhost:8787
+npx mallok publish ./content --url http://localhost:8787
+npm run seed:local
 ```
 
-Put the returned IDs into `wrangler.jsonc`, replacing `local-placeholder-replace-before-deploy`. The database may have any name — migration scripts reference the **binding** `DB`, not the database name.
-
-> **The build reads your *local* database, not the remote one.** `generateStaticParams` runs on your machine, so the pages pre-rendered at build time come from local D1; everything else is generated on demand and cached. Two consequences worth knowing:
->
-> - Changing `database_id` points miniflare at a different local database. It will be empty, which is why `pnpm deploy` applies local migrations before building — without them the build fails with a `no such table` error a long way from its cause.
-> - Seeding locally is optional for a deploy. An empty local database simply pre-renders nothing, and pages build on first request instead.
-
-```bash
-npx wrangler secret put STRIPE_SECRET_KEY
-npx wrangler secret put STRIPE_WEBHOOK_SECRET
-npx wrangler secret put MAIL_FROM_ADDRESS
-
-pnpm deploy
-pnpm db:seed:remote                            # optional sample catalogue
-pnpm admin:create you@example.com --remote
-```
-
-Finally, point a Stripe webhook at `https://yourdomain.com/api/webhooks/stripe` subscribed to `payment_intent.succeeded`. **Order status depends on it** — without the webhook, paid orders never leave `pending`.
+The site is at `/` (English), `/de/`, `/fr/` and `/es/`.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `pnpm setup` | Prepare everything for local development |
-| `pnpm dev` | Development server |
-| `pnpm test` | Test suite, inside the real Workers runtime |
-| `pnpm typecheck` / `pnpm lint` | Type and lint checks |
-| `pnpm db:generate` | Generate migration SQL from the schema |
-| `pnpm db:migrate:local` / `:remote` | Apply migrations |
-| `pnpm db:seed:local` / `:remote` | Load sample data (idempotent) |
-| `pnpm admin:create <email>` | Create an admin; add `--remote` for production |
-| `pnpm cf-typegen` | Regenerate binding types after changing `wrangler.jsonc` |
-| `pnpm deploy` | Build, migrate and deploy |
+| `npm run dev` | Local development server, with local D1 and R2 |
+| `npm run build` | Stage assets, then a production build (a deploy dry run) |
+| `npm test` | Project checks, then the plugin and theme tests inside the real Workers runtime |
+| `npm run lint` / `npm run typecheck` | Lint and type checks |
+| `npm run smoke` | A real request to a real local Worker |
+| `npm run smoke:shop` | The whole shop on a real local Worker |
+| `npm run settings:apply -- <origin>` | Apply `site.json` to a running site (`MALLOK_TOKEN` in the environment) |
+| `npm run seed:local` | Load the sample variants into the local database |
 
-## Markets it ships with
+## Deploying
 
-| Locale | Markets | Default currency |
+Not yet. A deployed shop today would show a catalogue with no prices and no cart page. When Nundar is ready, deployment is Mallok's own: `npx mallok create . --slug <slug>`, which creates the Worker, the D1 database and the R2 bucket on your own Cloudflare account. That path has not been run for this repository.
+
+## Languages and currencies
+
+| Language | URL | Default currency |
 |---|---|---|
-| `en` (default, carries `x-default`) | US, UK, Canada, Australia | USD |
-| `de` | Germany, Austria, Switzerland | EUR |
-| `fr` | France, Belgium, French Canada | EUR |
-| `es` | Spain, Latin America | EUR |
+| English (default, carries `x-default`) | `/…` | USD |
+| German | `/de/…` | EUR |
+| French | `/fr/…` | EUR |
+| Spanish | `/es/…` | EUR |
 
-Currencies: USD (base), EUR, GBP. Adding a language means adding a config entry and translating content — no schema change, because translations live in their own tables rather than in `name_en` / `name_de` columns.
-
-## Scope
-
-Nundar is a **single-tenant storefront**: one deployment, one shop, your own Cloudflare account, your own Stripe account. Multi-tenant SaaS, marketplace and B2B quotation flows are deliberately out of scope — the design document explains why.
+Currencies: USD (the base, priced by hand), EUR and GBP. Adding a language means adding it to `site.json` and to the theme's `locales/`, then translating content — no schema change, because every language version is its own content item.
 
 ## Design decisions
 
-Architecture, data model, and the reasoning behind each trade-off:
+- [`docs/superpowers/specs/2026-09-30-nundar-on-mallok-design.md`](docs/superpowers/specs/2026-09-30-nundar-on-mallok-design.md) — how Nundar is built on Mallok, and why
+- [`docs/superpowers/specs/2026-09-03-nundar-design.md`](docs/superpowers/specs/2026-09-03-nundar-design.md) — the original design; its commerce decisions still hold, its architecture is superseded
+- [`docs/superpowers/plans/`](docs/superpowers/plans/) — phase plans, and what implementation uncovered
 
-- [`docs/superpowers/specs/`](docs/superpowers/specs/) — the design specification
-- [`docs/superpowers/plans/`](docs/superpowers/plans/) — phase plans, and what implementation actually uncovered
+Read the specs before changing anything structural. If a change contradicts a recorded decision, update the spec in the same pull request and explain the new reasoning.
 
-Read the spec before changing anything structural. If your change contradicts a decision recorded there, update the spec in the same pull request and explain the new reasoning.
+The previous implementation, a standalone Next.js application, is kept at the tag `nextjs-final`.
 
 ## Contributing
 
@@ -211,13 +154,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Contributions require a signed [ICLA](CL
 
 ## Security
 
-Please do not open a public issue for a security problem. [SECURITY.md](SECURITY.md) documents the trust boundaries, the design decisions that are security controls rather than style choices, and the residual risks we already know about.
+Please do not open a public issue for a security problem. See [SECURITY.md](SECURITY.md).
 
 ## License
 
-Dual-licensed under **MIT OR Apache-2.0**, at your option.
-
-This mirrors Cloudflare's own tooling (`wrangler` is `MIT OR Apache-2.0`; `workerd` is Apache-2.0). MIT alone says nothing about patents; Apache-2.0 adds an explicit patent grant and retaliation terms, which matters to commercial adopters.
+Dual-licensed under **MIT OR Apache-2.0**, at your option. Mallok, which Nundar depends on, is Apache-2.0.
 
 ## Translations
 
@@ -225,4 +166,4 @@ English is the authoritative version. Translations are provided for convenience 
 
 - [简体中文](README.zh-CN.md)
 
-Corrections belong in the English version first. Translations into other languages are welcome — open a pull request adding `README.<code>.md` and a line here.
+Corrections belong in the English version first.

@@ -78,8 +78,9 @@ What replaces each is set out in §3 and §8.
 
 **`collection` (attribute collection page)**
 - One page per attribute that buyers search for, such as "high-temperature ball valves", listing every product that has it, with its key parameters for comparison.
-- Fields: `products` (`reference[]` to `product`), `summary`.
-- This is how attribute queries are won: a browseable hierarchy across products rather than a page per product. It needs no Mallok change.
+- A product names its collection in a `collection` field (`reference` to `collection`), and the collection page lists the products that name it through `content.backrefs.product`.
+- This is how attribute queries are won: a browseable hierarchy across products rather than a page per product.
+- **Corrected during phase 1A.** The first draft had the collection list its products in a `reference[]` field and said this needed no Mallok change. Mallok resolves `reference` only (`mallok: src/worker/render.ts:386,406`), so a `reference[]` reaches a template as bare slugs. With a single reference a product belongs to one collection; a product in several collections needs Mallok to resolve `reference[]` (§7).
 
 ### 4.2 Shop plugin tables
 
@@ -87,12 +88,16 @@ All shop tables are language-independent and keyed by the product's `translation
 
 ```sql
 p_shop_variant(id, product_group, sku UNIQUE, option_values JSON, moq, lead_time_min, lead_time_max,
-               stock INTEGER NOT NULL CHECK (stock >= 0), weight_grams, status)
+               stock INTEGER NOT NULL CHECK (stock >= 0),
+               stock_policy,  -- track | made_to_order
+               weight_grams, status, sort_order, created_at, updated_at)
 p_shop_price(variant_id, currency, amount_minor, source,  -- base | auto | manual
              rate_used, updated_at, PRIMARY KEY (variant_id, currency))
-p_shop_rate(base, quote, rate, fetched_at, source, PRIMARY KEY (base, quote))
+p_shop_rate(base_currency, quote_currency, rate, reference_date, fetched_at, source,
+            PRIMARY KEY (base_currency, quote_currency))
 p_shop_cart(id, currency, locale, created_at, updated_at, expires_at)
 p_shop_cart_line(cart_id, variant_id, quantity, PRIMARY KEY (cart_id, variant_id))
+p_shop_state(key PRIMARY KEY, value, updated_at)  -- cron state: last rate attempt, repricing cursor
 p_shop_order(id, order_no UNIQUE, status, currency, subtotal_minor, shipping_minor, tax_minor, total_minor,
              stripe_session_id, stripe_payment_intent_id UNIQUE, shipping_address JSON, email, locale,
              tracking_no, created_at, updated_at)
@@ -107,7 +112,11 @@ p_shop_stock_adjustment(id, variant_id, delta, reason, ref_id, created_at)
 - A decrement that would go negative violates the constraint and rolls back the whole payment write.
 - This replaces Nundar's manual compensation loop (`src/lib/orders/orders.ts`).
 - The docs do not say whether a zero-row `UPDATE` counts as a failure. That is why the design relies on the constraint rather than on `WHERE stock >= qty`.
-- **Must be proven by a workerd test before it is relied on.**
+- **Proven in phase 1A.** `test/shop/schema.test.ts` shows, inside workerd, that a decrement which would go negative rolls back the whole batch, including a decrement made earlier in it, and that a conditional `UPDATE` matching no row does not.
+
+**`stock_policy` was added in phase 1A.** The owner's decision to show availability as a state (§11 decision 6) needs the data to say which state applies: a `track` variant is limited by its stock, and a `made_to_order` variant is always orderable and shows its lead time instead.
+
+The order tables are created in phase 2, with the payment flow that uses them.
 
 ## 5. Request flows
 
@@ -233,6 +242,10 @@ Mallok's roadmap says a storefront needs "exactly the six plugin capabilities 0.
 | API-11 | ~~An "always prefix" locale mode~~ — **not needed**: the unprefixed default language is accepted (§11 decision 1) | | |
 | API-12 | ~~A translation-completeness view and admin roles~~ — **deferred**: one administrator is accepted for now (§11 decision 7) | | |
 | — | Close the theme script-validation gap: once a theme declares any `clientScripts`, `assertNoUndeclaredScripts` stops scanning its templates, so undeclared `<script>` and `on*=` pass (`mallok: src/core/theme-package.ts:262-264`) | The commerce theme declares the currency-switch script and would otherwise bypass every script check | 5.1 |
+| — | Resolve `reference[]` fields in `content.refs` and `content.backrefs` | Only `reference` is resolved (`mallok: src/worker/render.ts:386,406`); a `reference[]` reaches a template as bare slugs | A product in more than one collection (§4.1) |
+| — | Supply `recent.<kind>` on the home page for every kind, as `THEME_FORMAT.md §7.4` documents | The Worker's home page loads articles only (`mallok: src/worker/pages/home.page.ts`); the static build supplies every kind, so the two paths disagree | Products and application notes on the home page |
+| — | Publish every language of one bundle into one translation group | The CLI posts each language without a group when the bundle has no `mallok.json`, and the server assigns a new group each time (`mallok: src/cli/publish.ts`) — against `CONTENT_FORMAT.md §2` rule 1 | Hand-written multilingual content; worked around with a `mallok.json` per bundle |
+| — | Site template gaps: no type declarations for text-module imports; no `MALLOK_SETUP_KEY` in `.dev.vars.example`; `mallok publish . --with-settings` scans `node_modules` and resolves kinds before applying the settings | Found while building this site from the template | Developer experience |
 
 Client JavaScript: add-to-cart, cart and checkout need none (§5.2). The only script is the currency switch (§5.1), which the theme declares through the existing `clientScripts` mechanism. A third-party theme may declare scripts as long as the admin shows them (`mallok: docs/THEME_FORMAT.md §9`), so Mallok's contract needs no new exception, only the validation fix in the last row.
 
@@ -347,7 +360,23 @@ The phases follow Mallok's own roadmap (`mallok: docs/PRODUCT_VISION.md §9`: 0.
    - Decision: Mallok is published (`0.1.0-rc.7` on npm, `latest`).
    - The owner implements the Mallok extension points in the Mallok project from a separate task list; Nundar work starts now against that plan.
 
-## 12. How this design was checked
+## 12. What phase 1A changed or found
+
+Recorded here rather than edited away, so a later reader can see what the design said, what the build found, and why they differ.
+
+**Phase 1 is split in two.** Phase 1A is everything that can be built on `mallok@0.1.0-rc.7`: the site skeleton, the plugin's data layer and logic, the add-to-cart route, the theme, the sample content, the tests and the documentation. Phase 1B is what needs Mallok's extension points: prices on pages, the cart page, editing variants in the admin, the inquiry cart. Nothing in 1A works around a missing extension point.
+
+**npm, not pnpm.** Mallok's CLI installs and upgrades with npm only and refuses a project carrying another lockfile (`mallok: docs/CLI.md §3.1`).
+
+**The currency switch moved to phase 1B.** Its script swaps prices that are already in the page, and no prices are in the page until the render-data hook exists. Written now, it would have nothing to act on and could not be tested.
+
+**System fonts.** The theme fetches nothing to draw text. The previous storefront's typeface would mean bundling font files, which is a separate decision.
+
+**Repricing was restructured, not just ported.** The previous loop read and wrote every price in its own query. On a real catalogue that passes D1's limit of 50 queries per invocation on the Free plan, and it does not fit a cron tick whose CPU budget every plugin shares. It now reads one batch and writes one statement per chunk, and resumes from a cursor across ticks. A test counts the round trips.
+
+**Three Mallok behaviours differ from its documentation**, each listed in §7: `reference[]` is not resolved, the home page receives articles only, and the CLI splits a bundle's languages across translation groups.
+
+## 13. How this design was checked
 
 - **Mallok claims** were read from source and docs at `0af520b`. Four limits were confirmed in code:
   - body pre-parsing;
@@ -359,8 +388,8 @@ The phases follow Mallok's own roadmap (`mallok: docs/PRODUCT_VISION.md §9`: 0.
   - D1 `batch()`, limits and pricing;
   - KV limits;
   - cache purge availability.
-- **Nundar claims** were read from the current `main`.
+- **Claims about the previous implementation** were read from the Next.js code, now at the tag `nextjs-final`.
+- **D1 batch behaviour** was tested in workerd during phase 1A: a `CHECK` failure rolls the batch back, and a conditional `UPDATE` matching no row does not fail it.
 - **Not verified:**
   - Mallok's CPU figures, which are its own single measurements;
-  - whether a zero-row `UPDATE` fails a D1 batch, which is why §4.2 uses a `CHECK` constraint instead;
   - the behaviour of any Mallok change proposed in §7, none of which exists yet.

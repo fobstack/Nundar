@@ -5,31 +5,52 @@ Thanks for taking the time to contribute.
 ## Getting set up
 
 ```bash
-pnpm install
-pnpm setup      # generates migrations, creates the local DB, loads sample data
-pnpm dev
+npm ci
+npm run build        # stages the admin and the theme's assets
+npm run smoke:shop   # the whole shop on a throwaway local Worker
 ```
 
-No Cloudflare account is needed for local development — D1, R2 and KV are all
-simulated locally by miniflare.
+No Cloudflare account is needed for local development: D1 and R2 are simulated
+locally. The README has the steps for a local shop you can browse.
+
+**npm, not pnpm or yarn.** Nundar is a Mallok site, and Mallok's CLI installs
+and upgrades with npm only; it refuses a project that carries another
+manager's lockfile.
+
+**Adding a dependency needs npm 11.** npm 10.9.7, which ships with Node 22,
+fails while adding some packages to this tree
+(`Cannot read properties of null (reading 'edgesOut')`). Use
+`npx npm@11 install <package>`. `npm ci` works with either version.
 
 ## Before you open a pull request
 
 ```bash
-pnpm test        # runs in the real Workers runtime, not a Node mock
-pnpm typecheck
-pnpm lint
+npm run lint
+npm run typecheck
+npm test             # project checks, then tests inside the real Workers runtime
+npm run smoke:shop   # when you touched the plugin, the theme or the content
 ```
 
-All three must pass. New logic needs matching tests.
+All must pass. New logic needs matching tests, and a test for a fix has to be
+seen failing without the fix.
+
+## Where things go
+
+| Change | Place |
+|---|---|
+| Prices, stock, the cart, anything about buying | The shop plugin, `src/plugins/shop/` |
+| How a page looks, interface strings | The commerce theme, `src/theme/` |
+| Pages, content, languages, the admin, caching in general | Not here: that is [Mallok](https://github.com/fobstack/mallok) |
+
+If a change needs something Mallok does not offer, the answer is an extension
+point in Mallok, not a workaround here.
 
 ## Design decisions live in `docs/`
 
 Before changing anything structural, read
-`docs/superpowers/specs/2026-09-03-nundar-design.md`. It records not just what
-the system does but **why** — the reasoning behind decisions like storing money
-as integer minor units, decrementing stock only after payment, and never
-redirecting by IP.
+`docs/superpowers/specs/2026-09-30-nundar-on-mallok-design.md`. It records not
+just what the system does but **why**. The commerce decisions in the original
+spec, `2026-09-03-nundar-design.md`, still hold.
 
 If your change contradicts a decision recorded there, update the spec in the
 same pull request and explain the new reasoning.
@@ -39,16 +60,18 @@ same pull request and explain the new reasoning.
 | Area | Rule |
 |---|---|
 | Money | Always integer minor units (`amount_minor`). Never floats. |
-| Language | Determined solely by the URL prefix. Never redirect or rewrite by IP — it stops crawlers from seeing other languages. |
-| Translations | Split into `*_translations` tables. Never add `name_en` / `name_de` style columns. |
-| Content blocks | Features and use cases match across languages via `group_key`. |
-| Order status | Only the transitions in `src/lib/orders/state.ts` are legal. |
-| Stock | Decremented after payment is confirmed, never at add-to-cart or order creation. |
-| Webhooks | Must be idempotent. Stripe redelivers. |
-| Secrets | Never in the repo. Use `wrangler secret` or `.dev.vars`. |
-| Remote D1 commands | Reference the **binding** (`DB`), never the database name. Someone deploying via the button gets a database named after their own project, and a hardcoded name breaks their migrations. |
-| Prices | Never accepted from the client. Recomputed server-side at checkout, always. |
-| Dependencies | Ask whether the platform already provides it. Every dependency is inherited attack surface. |
+| Prices | Never accepted from a client. The cart stores variants and quantities only. |
+| MOQ | Enforced by the form and again by the server. A form can be bypassed. |
+| Stock | Protected by `CHECK (stock >= 0)`. A decrement that would oversell fails, and rolls back the whole D1 batch it is part of — keep it that way rather than relying on `WHERE stock >= qty`, which matches no row without failing. |
+| Manual prices | Never overwritten by an exchange-rate refresh. |
+| Language | Decided by the URL alone. Never redirect or switch by IP — crawlers would see one language. |
+| References | A `reference` field names the target's slug **in the same language**. `test/content.test.ts` checks the sample content. |
+| Multilingual bundles | Every bundle with more than one language carries a `mallok.json`. Without it the Mallok CLI publishes each language as a separate translation group. |
+| Database access | Raw SQL through D1, no ORM. Batch reads and writes: a tick of the cron shares one invocation's CPU budget with every other plugin. |
+| Migrations | Additive only, idempotent, and a comment has a line to itself — Mallok's migrator drops whole-line comments and then splits on semicolons. |
+| Theme | No `<script>`, no inline event handlers. Anything interactive is declared in `theme.json`'s `clientScripts`. |
+| Secrets | Never in the repository. `.dev.vars` locally, Worker secrets when deployed. |
+| Dependencies | Ask whether the platform or Mallok already provides it. Every dependency is inherited attack surface. |
 
 ## Contributor licensing — read this before your first PR
 
@@ -77,24 +100,24 @@ first — open an issue titled "CCLA request".
 
 ## Security
 
-Never open a public issue for a security problem. See [SECURITY.md](SECURITY.md)
-for private reporting, the trust boundaries, and the design decisions that are
-security controls rather than style choices.
+Never open a public issue for a security problem. See [SECURITY.md](SECURITY.md).
 
 ## Commit messages
 
 Conventional Commits, one concern per commit:
 
 ```
-feat: add bulk price import to the admin
-fix: stop the cart from pricing archived products
-docs: explain the group_key mechanism
+feat: add bulk price import to the shop plugin
+fix: stop the cart from pricing archived variants
+docs: explain how references resolve per language
 ```
 
 ## Adding a language
 
-1. Add the locale to `src/config/locales.ts` and map its default currency.
-2. Translate content through the admin — the Translations workbench shows what
-   is missing.
+1. Add the locale to `site.json` (`locales`, and a `nav` entry).
+2. Add `src/theme/locales/<locale>.json` and list the locale in
+   `src/theme/theme.json`.
+3. Translate content: add `index.<locale>.md` to each bundle, give it its own
+   `slug`, and add the language to the bundle's `mallok.json`.
 
-No schema change is needed. That is the point of the translation tables.
+No schema change is needed: every language version is its own content item.
