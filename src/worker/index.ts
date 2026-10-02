@@ -6,15 +6,20 @@
  * the exact version in `package.json`. Upgrading is `mallok upgrade --to
  * <version>`, not a merge.
  *
- * What Nundar adds is on this page: the shop plugin, which holds the commerce
- * logic, beside Mallok's own inquiry plugin. Both are build-time choices —
- * changing either needs a deploy.
+ * What Nundar adds is on this page:
+ *
+ * - the commerce theme, which decides how the shop looks;
+ * - the shop plugin, which holds the commerce logic;
+ * - Mallok's own inquiry plugin, for the request-a-quote form.
+ *
+ * All three are build-time choices — changing any of them needs a deploy.
  */
 
-import { atelier, createMallok, inquiry } from 'mallok/worker';
+import { createMallok, inquiry } from 'mallok/worker';
 import { shop } from '../plugins/shop/index.js';
+import { nundarTheme } from '../theme/index.js';
 
 export default createMallok({
-  theme: atelier,
+  theme: nundarTheme,
   plugins: [inquiry, shop],
 });

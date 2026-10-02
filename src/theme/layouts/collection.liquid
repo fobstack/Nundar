@@ -1,0 +1,33 @@
+{% layout "layouts/base" %}
+{% block content %}
+<article class="shell detail">
+  <nav class="crumbs" aria-label="{{ t.breadcrumb }}">
+    <a href="{{ site.home_path }}">{{ t.home }}</a>
+    <span aria-hidden="true">/</span><span aria-current="page">{{ content.title }}</span>
+  </nav>
+
+  <header class="detail-head">
+    <p class="eyebrow">{{ t.collection_eyebrow }}</p>
+    <h1 class="detail-title">{{ content.title }}</h1>
+    {% if content.description != "" %}<p class="detail-lede">{{ content.description }}</p>{% endif %}
+  </header>
+
+  {% if content.html != "" %}<div class="prose">{{ content.html }}</div>{% endif %}
+
+  {%- comment -%}
+    A collection gathers the products that share one property, so a buyer
+    searching for that property can compare them on one page. The products are
+    the ones whose `collection` field names this page.
+  {%- endcomment -%}
+  <section class="more">
+    <div class="section-head"><h2>{{ t.products_in_collection }}</h2></div>
+    {% if content.backrefs.product.size > 0 %}
+    <div class="card-grid">
+      {% for item in content.backrefs.product %}{% render "partials/card", item: item %}{% endfor %}
+    </div>
+    {% else %}
+    <p class="empty">{{ t.empty }}</p>
+    {% endif %}
+  </section>
+</article>
+{% endblock %}

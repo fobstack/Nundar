@@ -1,0 +1,116 @@
+{
+  "id": "nundar",
+  "name": "Nundar",
+  "description": "A commerce theme: specification-first product pages, application notes that stand as their own landing pages, and collections that gather products by attribute. Script-free.",
+  "version": "0.1.0",
+  "themeApi": 1,
+  "home": "layouts/home.liquid",
+  "kinds": {
+    "page": {
+      "layout": "layouts/page.liquid",
+      "label": "Page"
+    },
+    "article": {
+      "layout": "layouts/article.liquid",
+      "listLayout": "layouts/list.liquid",
+      "label": "Article",
+      "base": "news"
+    },
+    "product": {
+      "layout": "layouts/product.liquid",
+      "listLayout": "layouts/list.liquid",
+      "label": "Product",
+      "base": "products",
+      "fields": {
+        "standard": {
+          "type": "string",
+          "label": "Standard",
+          "help": "The standard the product is made to, for example EN 10204 3.1.",
+          "group": "Specification"
+        },
+        "material": {
+          "type": "string",
+          "label": "Material",
+          "group": "Specification"
+        },
+        "specs": {
+          "type": "keyvalue",
+          "label": "Specifications",
+          "help": "Shown as a table under the description.",
+          "group": "Specification"
+        },
+        "collection": {
+          "type": "reference",
+          "kind": "collection",
+          "label": "Collection",
+          "help": "Slug of the collection this product is listed in.",
+          "group": "Classification"
+        },
+        "gallery": {
+          "type": "image[]",
+          "label": "Gallery",
+          "help": "Relative paths under images/.",
+          "max": 12
+        },
+        "datasheet": {
+          "type": "file",
+          "label": "Datasheet",
+          "accept": [".pdf"],
+          "group": "Specification"
+        }
+      }
+    },
+    "application": {
+      "layout": "layouts/application.liquid",
+      "listLayout": "layouts/list.liquid",
+      "label": "Application",
+      "base": "applications",
+      "fields": {
+        "product": {
+          "type": "reference",
+          "kind": "product",
+          "label": "Product",
+          "help": "Slug of the product this application note is about.",
+          "required": true
+        },
+        "spec_highlights": {
+          "type": "keyvalue",
+          "label": "Parameters that matter here",
+          "help": "The few specifications this application depends on."
+        }
+      }
+    },
+    "collection": {
+      "layout": "layouts/collection.liquid",
+      "listLayout": "layouts/list.liquid",
+      "label": "Collection",
+      "base": "collections"
+    }
+  },
+  "options": {
+    "accent": {
+      "type": "color",
+      "label": "Accent colour",
+      "default": "#0e5a6e"
+    },
+    "hero_title": {
+      "type": "string",
+      "label": "Home page headline",
+      "default": "Specified for the application, not just the catalogue."
+    },
+    "hero_lede": {
+      "type": "text",
+      "label": "Home page paragraph",
+      "default": "Browse products by what they are, by where they are used, and by the properties that matter for your project."
+    },
+    "contact_href": {
+      "type": "string",
+      "label": "Link for the request-a-quote button",
+      "default": "/contact"
+    }
+  },
+  "locales": ["en", "de", "fr", "es"],
+  "defaultLocale": "en",
+  "imageWidths": [480, 960, 1440],
+  "clientScripts": []
+}

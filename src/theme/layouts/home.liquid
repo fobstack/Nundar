@@ -1,0 +1,54 @@
+{% layout "layouts/base" %}
+{% block content %}
+<section class="hero">
+  <div class="shell">
+    <h1 class="hero-title">{{ theme.options.hero_title }}</h1>
+    <p class="hero-lede">{{ theme.options.hero_lede }}</p>
+    <a class="btn btn-solid" href="{{ theme.options.contact_href }}">{{ t.request_quote }}</a>
+  </div>
+</section>
+
+{% if recent.product.size > 0 %}
+<section class="shell band">
+  <div class="section-head"><h2>{{ t.product }}</h2></div>
+  <div class="card-grid">
+    {% for item in recent.product limit: 6 %}{% render "partials/card", item: item %}{% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{%- comment -%}
+  Application notes are the shop's long-tail pages: each answers one buying
+  question, so the home page links to them directly rather than leaving them
+  to be found through a product.
+{%- endcomment -%}
+{% if recent.application.size > 0 %}
+<section class="shell band">
+  <div class="section-head">
+    <h2>{{ t.application }}</h2>
+    <p>{{ t.applications_aside }}</p>
+  </div>
+  <div class="card-grid">
+    {% for item in recent.application limit: 6 %}{% render "partials/card", item: item, eyebrow: t.application_note %}{% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if recent.collection.size > 0 %}
+<section class="shell band">
+  <div class="section-head"><h2>{{ t.collection }}</h2></div>
+  <div class="card-grid">
+    {% for item in recent.collection limit: 6 %}{% render "partials/card", item: item %}{% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if recent.article.size > 0 %}
+<section class="shell band">
+  <div class="section-head"><h2>{{ t.article }}</h2></div>
+  <div class="card-grid">
+    {% for item in recent.article limit: 3 %}{% render "partials/card", item: item %}{% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,52 @@
+{% layout "layouts/base" %}
+{% block content %}
+<article class="shell detail">
+  <nav class="crumbs" aria-label="{{ t.breadcrumb }}">
+    <a href="{{ site.home_path }}">{{ t.home }}</a>
+    {% if content.refs.product %}<span aria-hidden="true">/</span><a href="{{ content.refs.product.path }}">{{ content.refs.product.title }}</a>{% endif %}
+    <span aria-hidden="true">/</span><span aria-current="page">{{ content.title }}</span>
+  </nav>
+
+  <header class="detail-head">
+    <p class="eyebrow">{{ t.application_note }}</p>
+    <h1 class="detail-title">{{ content.title }}</h1>
+    {% if content.description != "" %}<p class="detail-lede">{{ content.description }}</p>{% endif %}
+  </header>
+
+  <div class="detail-grid">
+    <div class="detail-main">
+      <div class="prose">{{ content.html }}</div>
+
+      {% assign highlights = content.frontmatter.spec_highlights %}
+      {% if highlights != blank %}
+      <section class="specs">
+        <h2>{{ t.spec_highlights }}</h2>
+        <table class="spec-table">
+          <tbody>
+            {% for pair in highlights %}<tr><th scope="row">{{ pair[0] }}</th><td>{{ pair[1] }}</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </section>
+      {% endif %}
+    </div>
+
+    {% if content.refs.product %}
+    <aside class="spec-card">
+      <p class="eyebrow">{{ t.the_part }}</p>
+      <p class="spec-card-title"><a href="{{ content.refs.product.path }}">{{ content.refs.product.title }}</a></p>
+      {% if content.refs.product.description != blank %}<p>{{ content.refs.product.description }}</p>{% endif %}
+      <a class="btn btn-solid btn-block" href="{{ content.refs.product.path }}">{{ t.view_product }}</a>
+    </aside>
+    {% endif %}
+  </div>
+
+  {% if content.siblings.size > 0 %}
+  <section class="more">
+    <div class="section-head"><h2>{{ t.other_applications }}</h2></div>
+    <div class="card-grid">
+      {% for item in content.siblings limit: 3 %}{% render "partials/card", item: item, eyebrow: t.application_note %}{% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</article>
+{% endblock %}

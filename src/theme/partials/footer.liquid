@@ -1,0 +1,11 @@
+<footer class="footer">
+  <div class="shell footer-in">
+    <div>
+      <p class="footer-name">{{ site.name }}</p>
+      {% if site.tagline != "" %}<p class="footer-tagline">{{ site.tagline }}</p>{% endif %}
+    </div>
+    <nav aria-label="{{ t.footer_nav }}">
+      {% for item in site.nav %}<a href="{{ item.href }}">{{ item.label }}</a>{% endfor %}
+    </nav>
+  </div>
+</footer>

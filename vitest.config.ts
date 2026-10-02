@@ -42,6 +42,6 @@ export default defineConfig({
     }),
   ],
   test: {
-    include: ['test/shop/**/*.test.ts'],
+    include: ['test/shop/**/*.test.ts', 'test/theme/**/*.test.ts'],
   },
 });

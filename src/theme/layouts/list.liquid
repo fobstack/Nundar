@@ -1,0 +1,19 @@
+{% layout "layouts/base" %}
+{% block content %}
+<section class="shell detail">
+  <header class="detail-head">
+    <h1 class="detail-title">{{ page.title }}</h1>
+  </header>
+  {% if list.items.size > 0 %}
+  <div class="card-grid">
+    {% for item in list.items %}{% render "partials/card", item: item %}{% endfor %}
+  </div>
+  {% else %}
+  <p class="empty">{{ t.empty }}</p>
+  {% endif %}
+  <nav class="pager" aria-label="{{ t.pagination }}">
+    {% if list.prev_path != "" %}<a href="{{ list.prev_path }}">← {{ t.prev }}</a>{% endif %}
+    {% if list.has_next %}<a href="{{ list.next_path }}">{{ t.next }} →</a>{% endif %}
+  </nav>
+</section>
+{% endblock %}

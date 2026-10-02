@@ -66,11 +66,17 @@ async function bootstrap(): Promise<void> {
   token = ((await minted.json()) as { token: string }).token;
 
   const settings = await api('PATCH', '/_mallok/api/settings', {
-    locales: ['en', 'de'],
+    locales: ['en', 'de', 'fr', 'es'],
     kinds: {
       page: { base: '' },
       article: { base: 'news' },
       product: { base: 'products' },
+      application: { base: 'applications' },
+      collection: { base: 'collections' },
+    },
+    nav: {
+      en: [{ label: 'Products', href: '/products' }],
+      de: [{ label: 'Produkte', href: '/de/products' }],
     },
   });
   if (!settings.ok) {
@@ -83,6 +89,11 @@ async function bootstrap(): Promise<void> {
   if (!enabled.ok) {
     throw new Error(`The shop plugin was refused: ${await enabled.text()}`);
   }
+
+  // The first request above cached the home page as it was before any of
+  // these settings existed. No purge token is bound in tests, so drop it by
+  // hand rather than have a test read a page from before its own set-up.
+  await caches.default.delete(new Request(`${ORIGIN}/`));
 }
 
 /** Brings the site up once per test file. */
@@ -91,32 +102,46 @@ export function ensureSite(): Promise<void> {
   return ready;
 }
 
-export interface TestProduct {
+export interface TestContent {
   readonly id: string;
   readonly path: string;
   readonly translationGroup: string;
 }
 
-/** Creates a product content item through the management API. */
-export async function createProduct(input: {
+export type TestProduct = TestContent;
+
+/**
+ * Creates a content item through the management API.
+ *
+ * `frontmatter` is YAML, written as it would be in an `index.md`, without the
+ * `title` line or the `---` fences.
+ */
+export async function createContent(input: {
+  readonly kind: string;
   readonly title: string;
   readonly slug: string;
   readonly locale?: string;
   readonly translationGroup?: string;
   readonly status?: 'draft' | 'published';
-}): Promise<TestProduct> {
+  readonly frontmatter?: string;
+  readonly body?: string;
+}): Promise<TestContent> {
+  const frontmatter = [
+    `title: ${input.title}`,
+    ...(input.frontmatter === undefined ? [] : [input.frontmatter.trim()]),
+  ].join('\n');
   const created = await api('POST', '/_mallok/api/content', {
-    kind: 'product',
+    kind: input.kind,
     slug: input.slug,
     locale: input.locale ?? 'en',
     status: input.status ?? 'published',
     ...(input.translationGroup === undefined
       ? {}
       : { translationGroup: input.translationGroup }),
-    markdown: `---\ntitle: ${input.title}\n---\n\nBody.\n`,
+    markdown: `---\n${frontmatter}\n---\n\n${input.body ?? 'Body.'}\n`,
   });
   if (created.status !== 201) {
-    throw new Error(`Product was refused: ${await created.text()}`);
+    throw new Error(`Content was refused: ${await created.text()}`);
   }
   const { id, path } = (await created.json()) as { id: string; path: string };
   const row = await db()
@@ -124,9 +149,20 @@ export async function createProduct(input: {
     .bind(id)
     .first<{ translation_group: string }>();
   if (row === null) {
-    throw new Error('The created product is not in the content table.');
+    throw new Error('The created content is not in the content table.');
   }
   return { id, path, translationGroup: row.translation_group };
+}
+
+/** Creates a product content item through the management API. */
+export function createProduct(input: {
+  readonly title: string;
+  readonly slug: string;
+  readonly locale?: string;
+  readonly translationGroup?: string;
+  readonly status?: 'draft' | 'published';
+}): Promise<TestProduct> {
+  return createContent({ kind: 'product', ...input });
 }
 
 const NOW = '2026-10-01T00:00:00.000Z';

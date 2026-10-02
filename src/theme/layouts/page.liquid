@@ -1,0 +1,10 @@
+{% layout "layouts/base" %}
+{% block content %}
+<article class="shell detail">
+  <header class="detail-head">
+    <h1 class="detail-title">{{ content.title }}</h1>
+    {% if content.description != "" %}<p class="detail-lede">{{ content.description }}</p>{% endif %}
+  </header>
+  <div class="prose">{{ content.html }}</div>
+</article>
+{% endblock %}

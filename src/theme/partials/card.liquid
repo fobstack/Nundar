@@ -1,0 +1,15 @@
+{%- comment -%}
+  One item in a grid: a product, an application note, a collection, an article.
+  Called as {% render "partials/card", item: item, eyebrow: "…" %}.
+{%- endcomment -%}
+<a class="card" href="{{ item.path }}">
+  <div class="card-art">
+    {% if item.cover != blank %}<img src="{{ item.cover }}" alt="" width="960" height="720" loading="lazy" decoding="async">{% endif %}
+  </div>
+  <div class="card-body">
+    {% if eyebrow != blank %}<p class="eyebrow">{{ eyebrow }}</p>{% endif %}
+    <h3>{{ item.title }}</h3>
+    {% if item.description != blank %}<p>{{ item.description }}</p>{% endif %}
+    {% if item.frontmatter.standard %}<p class="card-meta mono">{{ item.frontmatter.standard }}</p>{% endif %}
+  </div>
+</a>

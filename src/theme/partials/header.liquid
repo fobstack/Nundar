@@ -1,0 +1,32 @@
+<header class="topbar">
+  <div class="shell topbar-in">
+    <a class="brand" href="{{ site.home_path }}">{{ site.name }}</a>
+    {%- comment -%}
+      The mobile menu is a checkbox and a label: the one disclosure pattern
+      that needs no JavaScript and can still be forced open by CSS at wide
+      viewports. A <details> element cannot be, so the desktop navigation
+      would vanish with it.
+    {%- endcomment -%}
+    <input class="menu-toggle" type="checkbox" id="menu-toggle" aria-label="{{ t.menu }}">
+    <label class="menu-button" for="menu-toggle" aria-hidden="true"><span></span><span></span><span></span></label>
+    <nav class="menu-nav" aria-label="{{ t.nav }}">
+      {% for item in site.nav %}<a href="{{ item.href }}"{% if item.active %} aria-current="page"{% endif %}>{{ item.label }}</a>{% endfor %}
+      {%- comment -%}
+        Each language is named in its own words, because a reader looking for
+        their language scans for its own name. A <details> disclosure is a
+        real dropdown with no script, and it scales past two languages.
+      {%- endcomment -%}
+      {% if page.alternates.size > 1 %}
+      <details class="langs">
+        <summary aria-label="{{ t.language }}">{% for alt in page.alternates %}{% if alt.locale == site.locale %}{{ alt.name }}{% endif %}{% endfor %}</summary>
+        <ul>
+          {% for alt in page.alternates %}
+          <li><a href="{{ alt.href }}" hreflang="{{ alt.locale }}" lang="{{ alt.locale }}"{% if alt.locale == site.locale %} aria-current="true"{% endif %}>{{ alt.name }}</a></li>
+          {% endfor %}
+        </ul>
+      </details>
+      {% endif %}
+      <a class="btn btn-solid" href="{{ theme.options.contact_href }}">{{ t.request_quote }}</a>
+    </nav>
+  </div>
+</header>

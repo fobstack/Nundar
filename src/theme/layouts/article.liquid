@@ -1,0 +1,24 @@
+{% layout "layouts/base" %}
+{% block content %}
+<article class="shell detail">
+  <nav class="crumbs" aria-label="{{ t.breadcrumb }}">
+    <a href="{{ site.home_path }}">{{ t.home }}</a>
+    <span aria-hidden="true">/</span><span aria-current="page">{{ content.title }}</span>
+  </nav>
+  <header class="detail-head">
+    <h1 class="detail-title">{{ content.title }}</h1>
+    {% if content.description != "" %}<p class="detail-lede">{{ content.description }}</p>{% endif %}
+    {% if content.published_at %}<p class="meta"><time datetime="{{ content.published_at }}">{{ content.published_at | date: "%Y-%m-%d" }}</time></p>{% endif %}
+  </header>
+  <div class="prose">{{ content.html }}</div>
+
+  {% if content.siblings.size > 0 %}
+  <section class="more">
+    <div class="section-head"><h2>{{ t.article }}</h2></div>
+    <div class="card-grid">
+      {% for item in content.siblings limit: 3 %}{% render "partials/card", item: item %}{% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</article>
+{% endblock %}

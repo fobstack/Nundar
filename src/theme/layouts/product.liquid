@@ -1,0 +1,89 @@
+{% layout "layouts/base" %}
+{% block content %}
+<article class="shell detail">
+  <nav class="crumbs" aria-label="{{ t.breadcrumb }}">
+    <a href="{{ site.home_path }}">{{ t.home }}</a>
+    {% if content.refs.collection %}<span aria-hidden="true">/</span><a href="{{ content.refs.collection.path }}">{{ content.refs.collection.title }}</a>{% endif %}
+    <span aria-hidden="true">/</span><span aria-current="page">{{ content.title }}</span>
+  </nav>
+
+  <header class="detail-head">
+    <h1 class="detail-title">{{ content.title }}</h1>
+    {% if content.description != "" %}<p class="detail-lede">{{ content.description }}</p>{% endif %}
+  </header>
+
+  <div class="detail-grid">
+    <div class="detail-main">
+      {% assign shots = content.frontmatter.gallery %}
+      {% assign has_gallery = false %}
+      {% for path in shots %}{% if content.images[path] %}{% assign has_gallery = true %}{% endif %}{% endfor %}
+      {% if has_gallery %}
+      <figure class="gallery" role="group" aria-label="{{ t.gallery }}">
+        {% for path in shots %}
+          {% assign shot = content.images[path] %}
+          {% if shot %}
+          <img src="{{ shot.url }}"{% if shot.srcset != "" %} srcset="{{ shot.srcset }}" sizes="(max-width: 60rem) 100vw, 44rem"{% endif %}{% if shot.width %} width="{{ shot.width }}" height="{{ shot.height }}"{% endif %} alt="{% if shot.alt != "" %}{{ shot.alt }}{% else %}{{ content.title }} {{ forloop.index }}{% endif %}" loading="{% if forloop.first %}eager{% else %}lazy{% endif %}" decoding="async">
+          {% endif %}
+        {% endfor %}
+      </figure>
+      {% endif %}
+
+      {%- comment -%}
+        The body carries the product's features and the applications that have
+        not been given a page of their own. Keeping them here is deliberate:
+        they strengthen this page for attribute searches, where a page per
+        feature would only multiply near-identical pages.
+      {%- endcomment -%}
+      <div class="prose">{{ content.html }}</div>
+
+      {% assign specs = content.frontmatter.specs %}
+      {% if specs != blank %}
+      <section class="specs">
+        <h2>{{ t.specifications }}</h2>
+        <table class="spec-table">
+          <tbody>
+            {% for pair in specs %}<tr><th scope="row">{{ pair[0] }}</th><td>{{ pair[1] }}</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </section>
+      {% endif %}
+    </div>
+
+    <aside class="spec-card">
+      <dl>
+        {% if content.frontmatter.material %}<div><dt>{{ t.material }}</dt><dd>{{ content.frontmatter.material }}</dd></div>{% endif %}
+        {% if content.frontmatter.standard %}<div><dt>{{ t.standard }}</dt><dd class="mono">{{ content.frontmatter.standard }}</dd></div>{% endif %}
+      </dl>
+      <a class="btn btn-solid btn-block" href="{{ theme.options.contact_href }}">{{ t.request_quote }}</a>
+      {% assign sheet = content.files[content.frontmatter.datasheet] %}
+      {% if sheet %}<a class="datasheet" href="{{ sheet }}" download>{{ t.datasheet }}</a>{% endif %}
+    </aside>
+  </div>
+
+  {%- comment -%}
+    The application notes written about this product. Each is its own landing
+    page; Mallok resolves them from the `product` reference they declare, so
+    nothing here has to be kept in step by hand.
+  {%- endcomment -%}
+  {% if content.backrefs.application.size > 0 %}
+  <section class="more">
+    <div class="section-head">
+      <h2>{{ t.application }}</h2>
+      <p>{{ t.applications_aside }}</p>
+    </div>
+    <div class="card-grid">
+      {% for item in content.backrefs.application %}{% render "partials/card", item: item, eyebrow: t.application_note %}{% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% if content.siblings.size > 0 %}
+  <section class="more">
+    <div class="section-head"><h2>{{ t.related_products }}</h2></div>
+    <div class="card-grid">
+      {% for item in content.siblings limit: 3 %}{% render "partials/card", item: item %}{% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</article>
+{% endblock %}

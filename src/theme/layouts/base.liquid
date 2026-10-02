@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="{{ page.locale }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% if page.kind == "home" %}{{ site.name }}{% if site.tagline != "" %} — {{ site.tagline }}{% endif %}{% else %}{{ page.title }} — {{ site.name }}{% endif %}</title>
+  {% if page.description != "" %}<meta name="description" content="{{ page.description }}">{% endif %}
+  <link rel="canonical" href="{{ page.canonical }}">
+  {%- comment -%}
+    page.head carries hreflang (with x-default) and the structured data, both
+    emitted by Mallok. Leaving it out breaks the site's multilingual indexing,
+    which is the one thing a theme must never be able to do by accident.
+  {%- endcomment -%}
+  {{ page.head }}
+  <link rel="stylesheet" href="{{ theme.asset_base }}/style.css">
+</head>
+<body style="--accent: {{ theme.options.accent }}">
+  <a class="skip" href="#main">{{ t.skip }}</a>
+  {% render "partials/header" %}
+  <main id="main">{% block content %}{% endblock %}</main>
+  {% render "partials/footer" %}
+</body>
+</html>
