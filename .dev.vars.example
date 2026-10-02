@@ -1,29 +1,13 @@
-# Template for local environment variables. Copy to .dev.vars and fill in real
-# values — .dev.vars is gitignored.
+# Copy to `.dev.vars` for `wrangler dev`. Never commit `.dev.vars`.
 #
-#   cp .dev.vars.example .dev.vars
-#
-# Local development and tests need no secrets at all: D1, R2 and KV are
-# simulated by miniflare, migrations are applied through wrangler, and
-# drizzle-kit only generates SQL without connecting to anything.
-#
-# The variables below are needed once you deploy. Uncomment and fill them in:
+# Local only: the deployed Worker reads these from Worker secrets, which
+# `mallok create` sets with `wrangler secret put`.
 
-# Stripe payments
-# STRIPE_SECRET_KEY=
-# STRIPE_WEBHOOK_SECRET=
-# NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+# Signs sessions and encrypts stored plugin keys. Any 32 random bytes:
+#   openssl rand -base64 32
+MALLOK_SECRET=change-me-to-32-random-bytes
 
-# Admin session signing key (generate with: openssl rand -base64 32)
-# SESSION_SECRET=
-
-# From address for transactional email
-# MAIL_FROM_ADDRESS=
-
-# Theme, resolved at build time. Leave empty for the default.
-# Ships with two: "default" (technical, hairline borders, catalogue-first) and
-# "editorial" (serif, warm paper, soft shadows, application-notes-first).
-# To add your own: copy a theme directory under a new name, rename its scope
-# class in tokens.css and layout/Shell.tsx to match, register it in
-# src/themes/registry.ts, then put that name here.
-THEME=
+# Optional. With a zone-scoped Cache Purge token, an edit is visible
+# immediately; without one it is visible when the cached page expires.
+# CF_API_TOKEN=
+# CF_ZONE_ID=

@@ -1,39 +1,27 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
+    "target": "es2022",
+    "module": "preserve",
     "moduleResolution": "bundler",
-    "resolveJsonModule": true,
+    "lib": ["es2023"],
+    "types": ["@cloudflare/workers-types", "node"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "verbatimModuleSyntax": true,
     "isolatedModules": true,
-    "jsx": "react-jsx",
-    "incremental": true,
-    // cloudflare:test types (env, applyD1Migrations, ...) used by the test files
-    "types": ["@cloudflare/vitest-pool-workers/types"],
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "paths": {
-      "@/*": ["./src/*"]
-    }
+    // On, and it has to be: `@cloudflare/workers-types` and `@types/node` both
+    // declare `console`, `crypto`, `Blob`, `TextDecoder` and two dozen more,
+    // so checking them together reports about forty conflicts that belong to
+    // neither package. Mallok's own published declarations are checked with it
+    // off, by a consumer project that installs the tarball and nothing else —
+    // that is the setting that caught them reaching for zod, mdast and hast.
+    "skipLibCheck": true,
+    "noEmit": true
   },
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
-    "**/*.mts"
-  ],
-  // src/worker.ts imports .open-next/worker.js, a build artefact produced later
-  // in the same build and therefore absent while typechecking. It is a thin
-  // wiring layer; the logic it wires up lives in the testable src/lib.
-  "exclude": ["node_modules", "src/worker.ts"]
+  "include": ["src/**/*.ts", "test/**/*.ts", "*.ts"]
 }

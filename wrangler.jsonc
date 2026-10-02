@@ -1,103 +1,83 @@
+/**
+ * This site's Cloudflare configuration.
+ *
+ * `mallok create` fills in the Worker name, the D1 database id, the R2 bucket
+ * and — if you gave one — the custom domain. It edits this file in place;
+ * there is no second, nested config anywhere.
+ *
+ * The "Deploy to Cloudflare" button reads this file too, which is why every
+ * binding carries a default name.
+ */
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "nundar",
-  // Custom entry: reuses OpenNext's fetch handler and adds the cron scheduled handler
-  "main": "src/worker.ts",
-  // Must not exceed the newest date the local workerd binary supports, or
-  // vitest-pool-workers refuses to start
-  "compatibility_date": "2026-08-22",
-  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
-
+  "name": "mallok-nundar",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2026-08-01",
+  "workers_dev": true,
+  "minify": true,
+  // Static Assets carries the admin app (`_mallok/app/**`) and the theme's
+  // files (`theme/<id>/<version>/**`). `mallok prepare` stages both into
+  // `dist/assets` before a build. A request that matches one is served by
+  // Cloudflare without invoking the Worker.
   "assets": {
+    "directory": "./dist/assets",
     "binding": "ASSETS",
-    "directory": ".open-next/assets"
+    "not_found_handling": "none"
   },
-
-  "observability": {
-    "enabled": true
-  },
-
-  // The primary database.
-  //
-  // database_id is a local placeholder: development and tests run against
-  // miniflare's simulated D1 and never read it. Deploying with the Deploy to
-  // Cloudflare button provisions the database and writes the real id back here.
-  // Deploying by hand means running `wrangler d1 create <name>` and pasting the
-  // returned id in.
-  //
-  // Migration and seed scripts always reference the **binding** DB, never the
-  // database name: someone else's deployment may name the database differently,
-  // and a hardcoded name would send their migrations looking for a database
-  // that does not exist.
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "nundar",
-      "database_id": "local-placeholder-replace-before-deploy",
-      "migrations_dir": "drizzle/migrations"
+      "database_name": "mallok-nundar-db",
+      "database_id": "00000000-0000-0000-0000-000000000000"
     }
   ],
-
   "r2_buckets": [
-    // Product originals and their pre-generated size variants
     {
-      // Must not be called IMAGES: that name is reserved by Cloudflare Images,
-      // and using it makes `wrangler types` emit ImagesBinding instead of R2Bucket
       "binding": "MEDIA",
-      "bucket_name": "nundar-media"
-    },
-    // OpenNext's incremental (ISR) cache
-    {
-      "binding": "NEXT_INC_CACHE_R2_BUCKET",
-      "bucket_name": "nundar-inc-cache"
+      "bucket_name": "mallok-nundar-media"
     }
   ],
-
-  // Guest carts, admin sessions, rate-limit counters
-  "kv_namespaces": [
-    {
-      "binding": "SESSIONS",
-      "id": "local-placeholder-replace-before-deploy"
-    }
-  ],
-
-  // Transactional email (order confirmation, shipping notice). The sending
-  // domain must be enabled first:
-  // npx wrangler email sending enable <yourdomain.com>
-  "send_email": [{ "name": "EMAIL" }],
-
-  // OpenNext's revalidation queue requires the Worker to reference itself
-  "services": [
-    {
-      "binding": "WORKER_SELF_REFERENCE",
-      "service": "nundar"
-    }
-  ],
-
-  // The ISR trio: the queue deduplicates time-based revalidation, the sharded
-  // tag cache backs on-demand revalidation, and BucketCachePurge does the purging
-  "durable_objects": {
-    "bindings": [
-      { "name": "NEXT_CACHE_DO_QUEUE", "class_name": "DOQueueHandler" },
-      { "name": "NEXT_TAG_CACHE_DO_SHARDED", "class_name": "DOShardedTagCache" },
-      { "name": "NEXT_CACHE_DO_PURGE", "class_name": "BucketCachePurge" }
-    ]
-  },
-
-  "migrations": [
-    {
-      "tag": "v1",
-      "new_sqlite_classes": [
-        "DOQueueHandler",
-        "DOShardedTagCache",
-        "BucketCachePurge"
-      ]
-    }
-  ],
-
-  // Daily at 06:00 UTC: pull ECB rates and recompute prices whose drift passed
-  // the threshold
+  // One trigger per site: scheduled publishing and the media reclaim.
   "triggers": {
-    "crons": ["0 6 * * *"]
+    "crons": ["* * * * *"]
+  },
+  // Best-effort protection for plugin routes such as inquiry submission. The
+  // namespace id must be unique within the account; `mallok create` derives a
+  // stable one from the site slug.
+  "ratelimits": [
+    {
+      "name": "RATE_LIMITER",
+      "namespace_id": "510736757",
+      "simple": { "limit": 10, "period": 60 }
+    }
+  ],
+  "vars": {
+    "MALLOK_SITE": "nundar",
+    // Filled in by `mallok create --domain`. The Worker copies it into
+    // `site.domain` when the wizard finishes, so canonical URLs, hreflang and
+    // the sitemap describe the host the site is actually served on.
+    "MALLOK_DOMAIN": ""
+    // There is no var here asking for a setup key. The first-run wizard
+    // requires one by **default**: a site with no `MALLOK_SETUP_KEY` refuses
+    // to create an administrator at all, rather than falling back to letting
+    // anyone through. That window — between the first deploy and the secrets
+    // being set — is when a site is claimable by whoever finds its address,
+    // and it used to depend on a var being present and spelled correctly.
+    //
+    // `MALLOK_DEV_ALLOW_SETUP_WITHOUT_KEY` turns the requirement off for
+    // local `wrangler dev`, where there is no `mallok create` to mint a
+    // secret. It must never appear here: `mallok create` refuses to deploy a
+    // configuration that carries it.
+  },
+  // A theme's templates and stylesheets are bundled as plain text.
+  "rules": [
+    {
+      "type": "Text",
+      "globs": ["**/*.liquid", "**/*.css", "**/*.sql", "**/*.md"],
+      "fallthrough": true
+    }
+  ],
+  "observability": {
+    "enabled": true
   }
 }
