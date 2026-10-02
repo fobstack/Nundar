@@ -3,9 +3,15 @@
   Called as {% render "partials/card", item: item, eyebrow: "…" %}.
 {%- endcomment -%}
 <a class="card" href="{{ item.path }}">
+  {%- comment -%}
+    No cover, no picture frame: an application note or a collection usually
+    has none, and an empty grey block above its title reads as a broken image.
+  {%- endcomment -%}
+  {% if item.cover != blank %}
   <div class="card-art">
-    {% if item.cover != blank %}<img src="{{ item.cover }}" alt="" width="960" height="720" loading="lazy" decoding="async">{% endif %}
+    <img src="{{ item.cover }}" alt="" width="960" height="720" loading="lazy" decoding="async">
   </div>
+  {% endif %}
   <div class="card-body">
     {% if eyebrow != blank %}<p class="eyebrow">{{ eyebrow }}</p>{% endif %}
     <h3>{{ item.title }}</h3>
