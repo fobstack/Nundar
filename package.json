@@ -22,7 +22,9 @@
     "test": "npm run test:project && npm run test:shop",
     "smoke": "node scripts/smoke.mjs",
     "test:project": "node --experimental-strip-types --test \"test/*.test.ts\"",
-    "test:shop": "vitest run"
+    "test:shop": "vitest run",
+    "seed:local": "wrangler d1 execute DB --local --file=seed/shop-sample.sql",
+    "smoke:shop": "node scripts/smoke-shop.mjs"
   },
   "dependencies": {
     "mallok": "0.1.0-rc.7",

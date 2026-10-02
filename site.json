@@ -4,33 +4,92 @@
   "defaultLocale": "en",
   "locales": ["en", "de", "fr", "es"],
   "kinds": {
-    "page": { "base": "" },
-    "article": { "base": "news" },
-    "product": { "base": "products" },
-    "application": { "base": "applications" },
-    "collection": { "base": "collections" }
+    "page": {
+      "base": ""
+    },
+    "article": {
+      "base": "news"
+    },
+    "product": {
+      "base": "products"
+    },
+    "application": {
+      "base": "applications"
+    },
+    "collection": {
+      "base": "collections"
+    }
   },
   "nav": {
     "en": [
-      { "label": "Products", "href": "/products" },
-      { "label": "Applications", "href": "/applications" },
-      { "label": "Collections", "href": "/collections" }
+      {
+        "label": "Products",
+        "href": "/products"
+      },
+      {
+        "label": "Applications",
+        "href": "/applications"
+      },
+      {
+        "label": "Collections",
+        "href": "/collections"
+      }
     ],
     "de": [
-      { "label": "Produkte", "href": "/de/products" },
-      { "label": "Anwendungen", "href": "/de/applications" },
-      { "label": "Kollektionen", "href": "/de/collections" }
+      {
+        "label": "Produkte",
+        "href": "/de/products"
+      },
+      {
+        "label": "Anwendungen",
+        "href": "/de/applications"
+      },
+      {
+        "label": "Kollektionen",
+        "href": "/de/collections"
+      }
     ],
     "fr": [
-      { "label": "Produits", "href": "/fr/products" },
-      { "label": "Applications", "href": "/fr/applications" },
-      { "label": "Collections", "href": "/fr/collections" }
+      {
+        "label": "Produits",
+        "href": "/fr/products"
+      },
+      {
+        "label": "Applications",
+        "href": "/fr/applications"
+      },
+      {
+        "label": "Collections",
+        "href": "/fr/collections"
+      }
     ],
     "es": [
-      { "label": "Productos", "href": "/es/products" },
-      { "label": "Aplicaciones", "href": "/es/applications" },
-      { "label": "Colecciones", "href": "/es/collections" }
+      {
+        "label": "Productos",
+        "href": "/es/products"
+      },
+      {
+        "label": "Aplicaciones",
+        "href": "/es/applications"
+      },
+      {
+        "label": "Colecciones",
+        "href": "/es/collections"
+      }
     ]
   },
-  "themeOptions": {}
+  "themeOptions": {
+    "contact_href": "/contact",
+    "$locales": {
+      "de": {
+        "contact_href": "/de/kontakt"
+      },
+      "fr": {
+        "contact_href": "/fr/contact"
+      },
+      "es": {
+        "contact_href": "/es/contacto"
+      }
+    }
+  }
 }
