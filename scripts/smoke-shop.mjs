@@ -20,7 +20,7 @@
 
 import { execFile, spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -215,23 +215,13 @@ try {
   const { token } = await minted.json();
   const authorised = { ...json, authorization: `Bearer ${token}` };
 
-  const site = JSON.parse(await readFile('site.json', 'utf8'));
-  const settings = await fetch(`${base}/_mallok/api/settings`, {
-    method: 'PATCH',
-    headers: authorised,
-    body: JSON.stringify({
-      name: site.name,
-      tagline: site.tagline,
-      locales: site.locales,
-      kinds: site.kinds,
-      nav: site.nav,
-      themeOptions: site.themeOptions,
-    }),
-    signal: timeout(),
-  });
-  expect(
-    settings.ok,
-    `settings returned ${settings.status}: ${await settings.clone().text()}`,
+  // The same script the README gives an operator. The token travels in the
+  // environment, as it would for them.
+  const operator = { env: { ...process.env, MALLOK_TOKEN: token } };
+  await run(
+    process.execPath,
+    [join(process.cwd(), 'scripts/apply-settings.mjs'), base],
+    operator,
   );
 
   const enabled = await fetch(`${base}/_mallok/api/plugins/shop/enabled`, {
@@ -243,7 +233,7 @@ try {
   expect(enabled.ok, `enabling the shop plugin returned ${enabled.status}`);
 
   // 2. The sample content, through the same CLI an operator uses.
-  await run(mallok, ['publish', './content', '--url', base, '--token', token]);
+  await run(mallok, ['publish', './content', '--url', base], operator);
 
   // 3. The sample variants. The plugin's tables exist by now: Mallok created
   //    them on the first request.

@@ -4,8 +4,13 @@
 # `mallok create` sets with `wrangler secret put`.
 
 # Signs sessions and encrypts stored plugin keys. Any 32 random bytes:
-#   openssl rand -base64 32
+#   openssl rand -hex 32
 MALLOK_SECRET=change-me-to-32-random-bytes
+
+# The one-time key the first-run wizard at /_mallok/setup asks for. Without it
+# a local site cannot be claimed. Any random value:
+#   openssl rand -hex 32
+MALLOK_SETUP_KEY=change-me-to-a-random-setup-key
 
 # Optional. With a zone-scoped Cache Purge token, an edit is visible
 # immediately; without one it is visible when the cached page expires.
