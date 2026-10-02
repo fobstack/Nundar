@@ -1,0 +1,79 @@
+import { describe, expect, it } from 'vitest';
+import {
+  formatMoney,
+  fromMinor,
+  multiplyMinor,
+  sumMinor,
+  toMinor,
+} from '../../src/plugins/shop/lib/money.js';
+
+describe('toMinor', () => {
+  it('converts a decimal amount to integer minor units', () => {
+    expect(toMinor(99, 'USD')).toBe(9900);
+    expect(toMinor(99.5, 'USD')).toBe(9950);
+    expect(toMinor(0.01, 'USD')).toBe(1);
+  });
+
+  it('rounds rather than truncates float artefacts', () => {
+    // Under IEEE 754, 1.005 is really 1.00499999…, and truncating gives 100.
+    expect(toMinor(1.005, 'USD')).toBe(101);
+  });
+
+  it('rejects non-finite input instead of producing NaN money', () => {
+    expect(() => toMinor(Number.NaN, 'USD')).toThrow(/finite/i);
+    expect(() => toMinor(Number.POSITIVE_INFINITY, 'USD')).toThrow(/finite/i);
+  });
+});
+
+describe('fromMinor', () => {
+  it('converts integer minor units back to a decimal amount', () => {
+    expect(fromMinor(9900, 'USD')).toBe(99);
+    expect(fromMinor(9199, 'EUR')).toBe(91.99);
+  });
+
+  it('rejects non-integer minor units', () => {
+    expect(() => fromMinor(99.5, 'USD')).toThrow(/integer/i);
+  });
+});
+
+describe('multiplyMinor', () => {
+  it('keeps the result an integer', () => {
+    expect(multiplyMinor(9900, 0.92)).toBe(9108);
+    expect(multiplyMinor(9900, 1.03)).toBe(10197);
+  });
+
+  it('rounds half away from zero', () => {
+    expect(multiplyMinor(101, 0.5)).toBe(51);
+    expect(multiplyMinor(-101, 0.5)).toBe(-51);
+  });
+
+  it('rejects a non-integer amount or a non-finite factor', () => {
+    expect(() => multiplyMinor(99.5, 2)).toThrow(/integer/i);
+    expect(() => multiplyMinor(100, Number.NaN)).toThrow(/finite/i);
+  });
+});
+
+describe('sumMinor', () => {
+  it('adds integer amounts without float drift', () => {
+    expect(sumMinor([1010, 2020, 3030])).toBe(6060);
+    expect(sumMinor([])).toBe(0);
+  });
+
+  it('refuses a float hiding among the amounts', () => {
+    expect(() => sumMinor([100, 0.5])).toThrow(/integer/i);
+  });
+});
+
+describe('formatMoney', () => {
+  it('formats per locale and currency', () => {
+    // Assert on the essential fragments only, so the test does not pin down
+    // where a given ICU version puts spaces and symbols.
+    const usd = formatMoney(9900, 'USD', 'en');
+    expect(usd).toContain('99');
+    expect(usd).toContain('$');
+
+    const eur = formatMoney(9199, 'EUR', 'de');
+    expect(eur).toContain('91,99');
+    expect(eur).toContain('€');
+  });
+});

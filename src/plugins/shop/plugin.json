@@ -1,0 +1,68 @@
+{
+  "id": "shop",
+  "name": "Shop",
+  "version": "0.1.0",
+  "description": "Variants, prices in several currencies, stock, minimum order quantities and a cart for a Mallok site.",
+  "pluginApi": 1,
+  "hooks": ["scheduled"],
+  "routes": [
+    {
+      "path": "cart",
+      "method": "POST",
+      "rateLimit": true
+    }
+  ],
+  "settings": {
+    "buffer_rate": {
+      "type": "number",
+      "label": "Exchange buffer",
+      "help": "Added on top of the exchange rate when a price is converted, to absorb rate movement and cross-border payment fees. 0.03 is 3%.",
+      "default": 0.03,
+      "min": 0,
+      "max": 0.5,
+      "group": "Pricing"
+    },
+    "recalc_threshold": {
+      "type": "number",
+      "label": "Repricing threshold",
+      "help": "A converted price is recomputed only once the rate has drifted this far from the rate it was computed at. 0.02 is 2%.",
+      "default": 0.02,
+      "min": 0,
+      "max": 0.5,
+      "group": "Pricing"
+    },
+    "rounding": {
+      "type": "select",
+      "label": "Price rounding",
+      "help": "How a converted price is rounded up to a price point: to the next .99, or to the next whole unit.",
+      "choices": ["ending99", "integer"],
+      "default": "ending99",
+      "group": "Pricing"
+    }
+  },
+  "panels": [
+    {
+      "id": "variants",
+      "label": "Variants",
+      "type": "table",
+      "table": "p_shop_variant",
+      "columns": [
+        { "field": "sku", "label": "SKU" },
+        { "field": "stock", "label": "Stock" },
+        { "field": "moq", "label": "Minimum order" },
+        { "field": "stock_policy", "label": "Stock policy", "type": "badge" },
+        { "field": "status", "label": "Status", "type": "badge" },
+        { "field": "updated_at", "label": "Updated", "type": "datetime" }
+      ],
+      "filters": ["status", "stock_policy"],
+      "detail": [
+        "product_group",
+        "option_values",
+        "lead_time_min",
+        "lead_time_max",
+        "weight_grams"
+      ],
+      "orderBy": "updated_at"
+    }
+  ]
+}

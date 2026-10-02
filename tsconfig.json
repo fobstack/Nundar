@@ -4,7 +4,12 @@
     "module": "preserve",
     "moduleResolution": "bundler",
     "lib": ["es2023"],
-    "types": ["@cloudflare/workers-types", "node"],
+    // The pool's types supply `cloudflare:test` for the shop plugin's tests.
+    "types": [
+      "@cloudflare/workers-types",
+      "@cloudflare/vitest-pool-workers/types",
+      "node"
+    ],
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noUnusedLocals": true,
