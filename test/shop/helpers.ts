@@ -9,6 +9,7 @@
  */
 
 import { env, SELF } from 'cloudflare:test';
+import { vi } from 'vitest';
 
 export const ORIGIN = 'https://shop-test.example';
 
@@ -263,6 +264,11 @@ export async function setRate(
 export async function clearShopTables(): Promise<void> {
   await db().batch(
     [
+      'p_shop_outbox',
+      'p_shop_stock_adjustment',
+      'p_shop_stripe_event',
+      'p_shop_order_line',
+      'p_shop_order',
       'p_shop_cart_line',
       'p_shop_cart',
       'p_shop_price',
@@ -271,4 +277,98 @@ export async function clearShopTables(): Promise<void> {
       'p_shop_state',
     ].map((table) => db().prepare(`DELETE FROM ${table}`)),
   );
+}
+
+export async function stockOf(variantId: string): Promise<number | null> {
+  const row = await db()
+    .prepare('SELECT stock FROM p_shop_variant WHERE id = ?')
+    .bind(variantId)
+    .first<{ stock: number }>();
+  return row?.stock ?? null;
+}
+
+export async function setStock(
+  variantId: string,
+  stock: number,
+): Promise<void> {
+  await db()
+    .prepare('UPDATE p_shop_variant SET stock = ? WHERE id = ?')
+    .bind(stock, variantId)
+    .run();
+}
+
+/**
+ * A database that is the real one, except at the moments a test names.
+ *
+ * `before` and `after` run around each `batch`, counted from zero. A test
+ * uses them to do what cannot be arranged from outside: change the data
+ * between a function's reading and its writing, or make a write that has
+ * committed look as if its answer never came back.
+ */
+export function interceptBatches(hooks: {
+  readonly before?: (index: number) => Promise<void> | void;
+  readonly after?: (index: number) => Promise<void> | void;
+}): D1Database {
+  const real = db();
+  let index = 0;
+  return {
+    prepare: (sql: string) => real.prepare(sql),
+    batch: async (statements: D1PreparedStatement[]) => {
+      const current = index;
+      index += 1;
+      await hooks.before?.(current);
+      const results = await real.batch(statements);
+      await hooks.after?.(current);
+      return results;
+    },
+  } as unknown as D1Database;
+}
+
+export interface OutboxEntry {
+  id: string;
+  topic: string;
+  order_id: string;
+  ref: string | null;
+  handled_at: string | null;
+}
+
+/** Every outbox row, in the order it was written. */
+export async function outboxRows(): Promise<OutboxEntry[]> {
+  const { results } = await db()
+    .prepare(
+      `SELECT id, topic, order_id, ref, handled_at FROM p_shop_outbox
+       ORDER BY created_at, id`,
+    )
+    .all<OutboxEntry>();
+  return results;
+}
+
+/**
+ * Runs `work` and returns how many calls reached D1 while it ran.
+ *
+ * Counted on the prototypes the real objects share: a statement's own
+ * execution, and the database's batch. A batch is one call however many
+ * statements it carries, which is the unit a round trip is measured in.
+ */
+export async function countD1Calls(
+  work: () => Promise<unknown>,
+): Promise<number> {
+  const statementPrototype = Object.getPrototypeOf(
+    db().prepare('SELECT 1'),
+  ) as D1PreparedStatement;
+  const databasePrototype = Object.getPrototypeOf(db()) as D1Database;
+  const spies = [
+    vi.spyOn(databasePrototype, 'batch'),
+    vi.spyOn(statementPrototype, 'run'),
+    vi.spyOn(statementPrototype, 'all'),
+    vi.spyOn(statementPrototype, 'first'),
+  ];
+  try {
+    await work();
+    return spies.reduce((total, spy) => total + spy.mock.calls.length, 0);
+  } finally {
+    for (const spy of spies) {
+      spy.mockRestore();
+    }
+  }
 }

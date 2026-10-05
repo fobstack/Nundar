@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { DEFAULT_PRICING_RULES } from '../../src/plugins/shop/lib/pricing.js';
 import {
   readRates,
@@ -7,6 +7,7 @@ import {
 } from '../../src/plugins/shop/lib/rates.js';
 import {
   clearShopTables,
+  countD1Calls,
   db,
   ensureSite,
   priceOf,
@@ -257,31 +258,12 @@ describe('repricing', () => {
     await setRate('EUR', 0.92);
     await setRate('GBP', 0.79);
 
-    // Count every call that reaches D1, on the prototypes the real objects
-    // share: a statement's own execution, and the database's batch.
-    const statementPrototype = Object.getPrototypeOf(
-      db().prepare('SELECT 1'),
-    ) as D1PreparedStatement;
-    const databasePrototype = Object.getPrototypeOf(db()) as D1Database;
-    const spies = [
-      vi.spyOn(databasePrototype, 'batch'),
-      vi.spyOn(statementPrototype, 'run'),
-      vi.spyOn(statementPrototype, 'all'),
-      vi.spyOn(statementPrototype, 'first'),
-    ];
-
-    let result: Awaited<ReturnType<typeof repriceChunk>>;
-    let calls = 0;
-    try {
+    let result: Awaited<ReturnType<typeof repriceChunk>> | undefined;
+    const calls = await countD1Calls(async () => {
       result = await reprice('', 50);
-      calls = spies.reduce((total, spy) => total + spy.mock.calls.length, 0);
-    } finally {
-      for (const spy of spies) {
-        spy.mockRestore();
-      }
-    }
+    });
 
-    expect(result.updated).toBe(80);
+    expect(result?.updated).toBe(80);
     expect(calls).toBe(2);
   });
 });

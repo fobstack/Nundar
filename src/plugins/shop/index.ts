@@ -12,6 +12,7 @@
 import { definePlugin, type PluginContext } from 'mallok/worker';
 import { runScheduledTick } from './lib/scheduled.js';
 import shopSql from './migrations/0001_shop.sql';
+import ordersSql from './migrations/0002_orders.sql';
 import manifest from './plugin.json';
 import { cart } from './routes/cart.js';
 
@@ -26,7 +27,10 @@ async function scheduled(ctx: PluginContext): Promise<void> {
 
 export const shop = definePlugin({
   manifest,
-  migrations: [{ id: 'plugin:shop:0001_shop', sql: shopSql }],
+  migrations: [
+    { id: 'plugin:shop:0001_shop', sql: shopSql },
+    { id: 'plugin:shop:0002_orders', sql: ordersSql },
+  ],
   hooks: { scheduled },
   routes: { cart },
 });
