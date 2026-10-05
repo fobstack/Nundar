@@ -71,10 +71,13 @@ same pull request and explain the new reasoning.
 | Webhooks | Verified against the bytes as received before anything is parsed. 5xx only for what delivering again could change; everything else is answered 200 and written down. |
 | Language | Decided by the URL alone. Never redirect or switch by IP — crawlers would see one language. |
 | References | A `reference` field names the target's slug **in the same language**. `test/content.test.ts` checks the sample content. |
-| Bundle identity | A bundle needs a `mallok.json` only when something outside the content names it: the sample variants attach to the product by its translation group. Where the file exists, `test/content.test.ts` keeps it in step with the bundle. |
+| Links in content | A link in a Markdown body is the path of the page in the same language. Mallok does not rewrite it and does not report a dead one; `test/content.test.ts` does. |
+| Product attributes | Every product in a language names the same `facets`, in the same order: they are the columns of the specification finder. A size is a row in `sizes`, not a page of its own. |
+| Bundle identity | A bundle needs a `mallok.json` only when something outside the content names it: the sample variants attach to a product by its translation group. Where the file exists, `test/content.test.ts` keeps it in step with the bundle, and holds the seeded variants to the SKUs the page lists. |
+| Site copy | Words a visitor reads that belong to this site, not to the theme, are theme options in `site.json`, with a value per language under `$locales`. `test/project.test.ts` fails when a language has none. |
 | Database access | Raw SQL through D1, no ORM. Batch reads and writes: a tick of the cron shares one invocation's CPU budget with every other plugin. |
 | Migrations | Additive only, idempotent, and a comment has a line to itself — Mallok's migrator drops whole-line comments and then splits on semicolons. |
-| Theme | No `<script>`, no inline event handlers. Anything interactive is declared in `theme.json`'s `clientScripts`. |
+| Theme | No `<script>`, no inline event handlers. Anything interactive is declared in `theme.json`'s `clientScripts`. Nothing is loaded from another host: fonts and images are files in `src/theme/assets/`, and a change to any of them comes with a new `version` in `theme.json`. |
 | Secrets | Never in the repository. `.dev.vars` locally, Worker secrets when deployed. |
 | Dependencies | Ask whether the platform or Mallok already provides it. Every dependency is inherited attack surface. |
 
@@ -119,10 +122,15 @@ docs: explain how references resolve per language
 
 ## Adding a language
 
-1. Add the locale to `site.json` (`locales`, and a `nav` entry).
+1. Add the locale to `site.json`: `locales`, a `nav` entry, and the site's
+   copy and links under `themeOptions.$locales`.
 2. Add `src/theme/locales/<locale>.json` and list the locale in
    `src/theme/theme.json`.
 3. Translate content: add `index.<locale>.md` to each bundle, give it its own
-   `slug`. If the bundle has a `mallok.json`, add the language there too.
+   `slug`, name references by that language's slugs and write links as that
+   language's paths. If the bundle has a `mallok.json`, add the language
+   there too.
+
+`npm run test:project` reports whatever is still missing.
 
 No schema change is needed: every language version is its own content item.

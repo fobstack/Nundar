@@ -63,6 +63,7 @@ What replaces each is set out in §3 and §8.
 - The commerce theme is a new theme (§11 decision 4) and declares its own `product` kind.
 - It borrows the catalogue fields of Atelier's `product` kind where they fit: `grade`, `standard`, `form`, `specs`, `category`, `gallery`, `datasheet` (`mallok: src/themes/atelier/theme.json`).
 - MOQ and lead time are not content fields: they live on variants (§4.2) and reach the page through the plugin.
+- **Changed with the sample theme (§15).** The fields are now `facets`, `sizes`, `specs`, `collection`, `gallery` and `datasheet`. `facets` are the attributes a buyer filters the catalogue by, and the columns of the specification finder; `sizes` maps each SKU to what distinguishes it, so that a product is one page with its sizes on it and not a page per size. `material` and `standard` became ordinary rows of `specs`.
 
 **`application`**
 - A Nundar use case that has been promoted to its own landing page.
@@ -71,6 +72,7 @@ What replaces each is set out in §3 and §8.
   - `spec_highlights` (`keyvalue`)
 - Each language is its own row with its own slug, joined by `translation_group`, which replaces Nundar's `group_key`.
 - Publishing an `application` is what gives it a page, which replaces `has_own_page`.
+- The sample catalogue writes one per industry and serves the kind at `/industries` (§15). The kind and its fields are as above; only its address in `site.json` and the words the interface uses for it differ.
 
 **Features, and use cases not promoted to a page**
 - These are sections of the product's Markdown body (§11 decision 3).
@@ -379,7 +381,7 @@ Recorded here rather than edited away, so a later reader can see what the design
 
 **The currency switch moved to phase 1B.** Its script swaps prices that are already in the page, and no prices are in the page until the render-data hook exists. Written now, it would have nothing to act on and could not be tested.
 
-**System fonts.** The theme fetches nothing to draw text. The previous storefront's typeface would mean bundling font files, which is a separate decision.
+**System fonts.** The theme fetches nothing to draw text. The previous storefront's typeface would mean bundling font files, which is a separate decision. *That decision was taken on 2026-10-05: the fonts are bundled (§15).*
 
 **Repricing was restructured, not just ported.** The previous loop read and wrote every price in its own query. On a real catalogue that passes D1's limit of 50 queries per invocation on the Free plan, and it does not fit a cron tick whose CPU budget every plugin shares. It now reads one batch and writes one statement per chunk, and resumes from a cursor across ticks. A test counts the round trips.
 
@@ -462,3 +464,39 @@ The first review also pointed out that Stripe's failure message is free text, th
 12. *The order-number prefix* is `ND-`. A shop may want its own.
 13. *A payment naming an order this database does not have leaves no record*, only the outcome a route will log. That is right for a second shop on the same Stripe account, and wrong for a database restored from an old backup: real payments would be answered 200 and forgotten. Recording them all would fill the table with another shop's payments; whether to is undecided.
 14. *A variant deleted outright* is skipped by the payment write: the order is paid, and nothing is decremented or written to the ledger for that line. Nothing deletes variants today — they are archived — and whatever first does has to deal with this.
+
+## 15. What the sample theme changed or found (2026-10-06)
+
+Phase 1A's theme proved the contracts with one product, one application note and one collection. The owner then supplied a complete design for a titanium fastener supplier, as a React single-page application, to become the theme and the sample catalogue. This section records what that changed in this design. The work itself, and how it was verified, is in `docs/superpowers/plans/2026-10-06-sample-theme-titanium-fasteners.md`. The shop plugin is untouched.
+
+**What was decided, by the owner, before the work (2026-10-05).** The new design replaces the theme and the sample rather than sitting beside them as a second theme. The template's images are copied into the repository rather than linked. The fonts are files in the theme rather than a request to a font service. Interactive pieces are HTML first, with any script a small, declared addition to a page that works without it, built last and separately so that it can be left out.
+
+**A product is one page with its sizes on it.** The template listed nine SKUs as nine products; four of them were one screw in four lengths. Nine pages differing by a number are the near-identical pages §4.1 exists to avoid, so there are six products, and a product's `sizes` field lists its SKUs. The shop plugin already keys variants by the product's translation group, so one variant per SKU attaches to the right page with no change to it; `test/content.test.ts` holds the seed to the SKUs the pages list.
+
+**The model grew by three kinds and two fields.**
+- `case` — a case study: a sector, a `reference` to the product used, and the measured results as `keyvalue`. The product page lists the case studies that name it, exactly as it lists application pages.
+- `faq` — questions and answers. Mallok normalises the pairs and publishes them as `FAQPage` data; the layout prints every pair, and the list page gathers every topic's pairs.
+- `tool` — an engineering reference page. A kind of its own so that such pages have their own address and list, and so that an interactive version of one has a layout to attach to.
+- `facets` and `sizes` on `product`, described in §4.1.
+
+Nothing here is commerce logic, and none of it needs a Mallok change: all of it is `theme.json`, which is where §11 decision 4 put the theme's kinds.
+
+**The site's words left the theme.** Every reader-facing sentence that belongs to this supplier rather than to any shop — the headline, the selling points, the panels, the footer — is a theme option, with a value per language under `themeOptions.$locales` in `site.json` (`mallok: docs/THEME_FORMAT.md §7.7.1`). The theme's language packs hold only its own vocabulary. `test/project.test.ts` fails when a language is left without a value.
+
+**The fonts are bundled, which supersedes §12's "system fonts".** Inter, Space Grotesk and JetBrains Mono, each as two `woff2` subsets (Latin, Latin Extended), 218 kB in all, of which the two files preloaded on every page are 71 kB. They are the files the template asked a font service for, fetched once and served by the site, under the SIL Open Font License 1.1; `src/theme/assets/fonts/` carries the licence texts and each file's source and SHA-256. The theme still asks no other host for anything.
+
+**No script yet.** The template's finder filters and its three calculators are interactive. As built here, the finder is the complete table and the calculators are a reference page of formulas, constants and tables, so every page is whole without JavaScript, as §5.2 requires of the cart. The two scripts the owner approved are a separate change on top of this one. The template's quote list is the cart, and waits with the cart page for §7.
+
+**What it found in Mallok.** Five behaviours, none blocking, each in the task list handed to Mallok and each handled meanwhile inside the documented contracts:
+
+| Found | Meanwhile |
+|---|---|
+| The inquiry form has labels in English and Chinese only | German, French and Spanish contact pages show English labels |
+| The site tagline, and so the home page's description, is one string for all languages | Two theme options, `tagline` and `home_description`, with values per language |
+| A kind with an address and no list layout answers that address with 500 | Every kind with an address has a list layout |
+| A template cannot link to its kind's list page | Breadcrumbs go from the home page to the page; the link from the home page's finder to the full catalogue is a theme option |
+| Locally, toggling a plugin or changing settings leaves cached pages as they were | The plugins are switched on before the first publish; the README says so |
+
+**What review found.** An independent review of the finished theme confirmed twenty-three defects, none of them in what a crawler indexes, most of them in what happens off the path the sample walks: a language whose words are longer, a width between a phone and a laptop, an option left empty, a field left out. The plan lists them. Two rules came out of it that now have tests behind them: a template prints a wrapper only when it has something to put in it, and a layout is not finished until it has been measured in the longest language at every width.
+
+**Left open.** The sample's own contradictions, inherited from the template and listed in the plan; whether the images may be published under this repository's licences; a browser test for what only a browser shows; a pass with a screen reader; measurements on a deployed site.

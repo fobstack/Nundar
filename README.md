@@ -11,7 +11,7 @@
 
 ## The problem
 
-If you manufacture something and want to sell it abroad, a product is usually treated as **one page**. That is the mistake. A buyer searching *"ball valve for offshore platform seawater lines"* is far closer to purchase than one searching *"ball valve"* — and almost nobody is competing for the first phrase.
+If you manufacture something and want to sell it abroad, a product is usually treated as **one page**. That is the mistake. A buyer searching *"titanium screws for semiconductor vacuum chambers"* is far closer to purchase than one searching *"titanium screw"* — and almost nobody is competing for the first phrase.
 
 ## What Nundar does about it
 
@@ -19,22 +19,22 @@ If you manufacture something and want to sell it abroad, a product is usually tr
 
 | Content | Answers | Example search it can win |
 |---|---|---|
-| **Product** | What is it | `316L stainless ball valve DN50` |
-| **Application note** | Where is it used, and why | `ball valve for offshore platform seawater lines` |
-| **Collection** | Which products share this property | `corrosion-resistant valves` |
+| **Product** | What is it | `M5 titanium socket head cap screw` |
+| **Application page** | Where is it used, and why | `titanium screws for semiconductor vacuum chambers` |
+| **Collection** | Which products share this property | `titanium countersunk screws` |
 
-An application note is its own landing page, with its own URL, title and structured data, and **its own slug in each language**:
+An application page is its own landing page, with its own URL, title and structured data, and **its own slug in each language**. The sample catalogue writes one per industry:
 
 ```
-/applications/offshore-seawater-lines
-/de/applications/offshore-seewasserleitungen
-/fr/applications/circuits-eau-de-mer-offshore
-/es/applications/lineas-agua-de-mar-offshore
+/industries/semiconductor-vacuum
+/de/industries/halbleiter-und-ultrahochvakuum
+/fr/industries/semi-conducteurs-et-ultravide
+/es/industries/semiconductores-y-ultra-alto-vacio
 ```
 
-Each links to the product it discusses, the product lists the notes written about it, and every language version points at the others with correct `hreflang`.
+Each links to the product it discusses, the product lists the pages written about it, and every language version points at the others with correct `hreflang`. A case study does the same for a piece of work that was delivered.
 
-**Writing one is a deliberate act.** A product's features, and the applications that do not deserve a page of their own, stay inside the product page. A page per feature would only multiply near-identical pages across products, which drags a whole domain down. Attribute searches are served by collections instead: one page that gathers the products sharing a property, so a buyer can compare them.
+**Writing one is a deliberate act.** A product's features, and the applications that do not deserve a page of their own, stay inside the product page. A page per feature would only multiply near-identical pages across products, which drags a whole domain down. Attribute searches are served by collections instead: one page that gathers the products sharing a property, so a buyer can compare them. For the same reason a product is one page with its sizes listed on it, not a page per size.
 
 ## How it is built
 
@@ -43,8 +43,8 @@ Nundar is not a second application beside Mallok. A shop is a Mallok site with t
 | Part | Where | What it owns |
 |---|---|---|
 | **Shop plugin** | `src/plugins/shop/` | Variants, prices per currency, stock, minimum order quantities, the cart, exchange-rate repricing |
-| **Commerce theme** | `src/theme/` | How product, application, collection and list pages look, in four languages |
-| **Sample content** | `content/`, `seed/` | A product, its application note, a collection and a contact page |
+| **Commerce theme** | `src/theme/` | How the home page, the specification finder and the product, application, collection, case study, question and reference pages look, in four languages |
+| **Sample content** | `content/`, `seed/`, `site.json` | A titanium fastener catalogue in four languages: six products in five collections, five industry pages, four case studies, questions and answers, reference pages, and the site's own copy |
 
 Mallok provides everything else: content and its editor, languages and `hreflang`, the sitemap, the admin and sign-in, media, the edge cache, email. That boundary is deliberate — commerce logic lives only in the plugin, and nothing about pages is reimplemented here.
 
@@ -56,7 +56,7 @@ Nundar builds on `mallok@0.1.0-rc.9`. Some of the shop needs extension points Ma
 
 | | Works today | Waits for Mallok's next plugin API |
 |---|---|---|
-| **Pages** | Home, product, application, collection, list and contact pages in English, German, French and Spanish; `hreflang`, canonicals, sitemap; no client JavaScript | Prices, variants and availability on the page; `Offer` structured data |
+| **Pages** | A home page with a specification finder; product pages with their sizes and SKUs; collection, industry, case study, question, engineering reference and contact pages — all in English, German, French and Spanish, with `hreflang`, canonicals, sitemap and FAQ structured data; self-hosted fonts; no client JavaScript | Prices, variants and availability on the page; `Offer` structured data |
 | **Catalogue data** | Variants, prices as integer minor units, stock, MOQ, lead time, a made-to-order policy | Editing them in the admin (read-only for now; the sample data is loaded from SQL) |
 | **Pricing** | USD base price; EUR and GBP derived from ECB rates with a buffer, rounding to a price point and a drift threshold; manual prices never overwritten | |
 | **Cart** | Add, set and remove through a plain form POST, with MOQ and stock enforced server-side | The cart page; submitting a cart as one inquiry |
@@ -87,7 +87,7 @@ npm run build        # stages the admin and the theme's assets
 npm run smoke:shop   # the whole shop, end to end, on a throwaway local Worker
 ```
 
-`smoke:shop` is the fastest way to see everything working together: it creates an administrator, applies `site.json`, publishes `content/` with the Mallok CLI, loads the sample variants, requests the pages in two languages and adds to the cart.
+`smoke:shop` is the fastest way to see everything working together: it creates an administrator, applies `site.json`, publishes `content/` with the Mallok CLI, loads the sample variants, requests every kind of page, follows the navigation in all four languages and adds to the cart.
 
 ### A local shop you can browse
 
@@ -100,7 +100,7 @@ npm run dev
 ```
 
 1. Open the URL Wrangler prints, at `/_mallok/setup`, and enter the `MALLOK_SETUP_KEY` from `.dev.vars` to create the administrator.
-2. In the admin, switch the **Shop** plugin on, and create an API token with the `content:write` and `settings:write` scopes.
+2. In the admin, switch the **Shop** and **Inquiry** plugins on, and create an API token with the `content:write`, `settings:write` and `media:write` scopes. Do this before the next step: the contact pages ask for the inquiry form, and a page that was rendered while a plugin was off stays in the local cache as it was. `media:write` is for the images the sample bundles carry.
 3. With that token in your environment, apply `site.json`, publish the content and load the sample variants:
 
 ```bash
@@ -110,6 +110,15 @@ npm run seed:local
 ```
 
 The site is at `/` (English), `/de/`, `/fr/` and `/es/`.
+
+### The sample catalogue
+
+The sample is a supplier of titanium fasteners that does not exist. Its products, figures, certifications and case studies are illustrative, and its footer says so. It is there to show what the theme does with real-looking content, and to be replaced:
+
+- **Content** is in `content/`, one directory per page, with a Markdown file per language. Replace it with your own and publish.
+- **The site's own copy** — the name, the navigation, the home page's headline and sections, the footer — is in `site.json`. Each language has its own values there; none of it is fixed in the theme.
+- **Variants and prices** are in `seed/shop-sample.sql`, one variant for each SKU a product page lists.
+- **Fonts** are served from the site itself (`src/theme/assets/fonts/`), under the SIL Open Font License; the licence texts and the source of each file are beside them. The theme loads nothing from a third party.
 
 ## Commands
 

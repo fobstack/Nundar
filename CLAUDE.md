@@ -39,8 +39,8 @@ CI (`.github/workflows/ci.yml`) runs `npm ci` → lint → typecheck → test �
 
 - `src/worker/index.ts` is the whole site: `createMallok({ theme: nundarTheme, plugins: [inquiry, shop] })`. Theme and plugins are build-time choices.
 - `src/plugins/shop/` — commerce logic and nothing about pages. `plugin.json` is the manifest (validated strictly by `definePlugin`: unknown fields are rejected, every declared hook and route needs an implementation and vice versa). `migrations/` holds SQL, `lib/` the logic, `routes/` the HTTP handlers, `index.ts` wires them.
-- `src/theme/` — how pages look and nothing else: `theme.json` (kinds, fields, options), `layouts/`, `partials/`, `locales/<locale>.json`, `assets/`. It has no tables, no routes and no JavaScript.
-- `content/` and `seed/` — the sample catalogue. `site.json` — the site's languages, kinds, navigation and theme options.
+- `src/theme/` — how pages look and nothing else: `theme.json` (kinds, fields, options), `layouts/`, `partials/`, `locales/<locale>.json`, `assets/` (the stylesheet, four images, the fonts and their licences). It has no tables, no routes and no JavaScript.
+- `content/` and `seed/` — the sample catalogue, a fictional titanium fastener supplier: 31 bundles in four languages, and one variant per SKU. `site.json` — the site's languages, kinds, navigation and theme options, which is where this site's own copy lives.
 
 Mallok decides the contracts on both sides. Its documentation is the reference: `PLUGIN_API.md`, `THEME_FORMAT.md` and `CONTENT_FORMAT.md` in the Mallok repository (`node_modules/mallok/types/worker.d.ts` has the types).
 
@@ -59,9 +59,15 @@ Mallok decides the contracts on both sides. Its documentation is the reference: 
 ### The theme and content
 
 - Templates are restricted Liquid. Output is escaped; only `content.html` and `page.head` are emitted verbatim. `page.head` carries hreflang and structured data from Mallok and must stay in `layouts/base.liquid`.
-- Interface strings are in `locales/*.json` (flat maps, the default locale is the fallback). Site-specific copy is a theme option; per-language option values go under `themeOptions.$locales` in `site.json`.
-- **References resolve by slug within the same language.** An `application` names its `product`; the product page lists them through `content.backrefs.application`. A `product` names its `collection`; the collection page lists `content.backrefs.product`. Mallok resolves `reference` only, not `reference[]`.
-- Each language of a bundle is its own content item with its own `slug` (`index.md`, `index.<locale>.md`); Mallok puts them in one `translation_group`. A bundle carries a `mallok.json` only when something outside the content must name it: the product's fixes the `translation_group` that `seed/shop-sample.sql` attaches variants to. `test/content.test.ts` checks the reference rule and keeps any identity file in step with its bundle.
+- Interface strings are in `locales/*.json` (flat maps, the default locale is the fallback). Site-specific copy — the home page's headline and sections, the footer, the links behind the buttons — is a theme option, never a string in a template; per-language option values go under `themeOptions.$locales` in `site.json`, and `test/project.test.ts` fails when a language is left without one.
+- **Kinds**: `product`, `collection`, `application` (the sample's industry pages, at `/industries`), `case`, `faq`, `tool`, `article`, `page`. A kind with a `base` needs a `listLayout`: without one Mallok answers its base path with a 500.
+- **A product is one page with its sizes on it**, not a page per size. `facets` are the attributes a buyer filters by; `sizes` maps each SKU to what distinguishes it; `specs` is the full table. `partials/spec-table.liquid` (the specification finder, the catalogue, a collection's products, a product's neighbours) takes its columns from the first product that has `facets` and fills every row by attribute name, so every product in a language must use the same names. Below 72rem the same table is laid out as cards, two to a row on a tablet: seven columns need about 1100px in German.
+- **References resolve by slug within the same language.** An `application` and a `case` name their `product`; the product page lists them through `content.backrefs.application` and `content.backrefs.case`. A `product` names its `collection`; the collection page lists `content.backrefs.product`. Mallok resolves `reference` only, not `reference[]`.
+- **A link in a Markdown body is plain text to Mallok**: it is not rewritten per language and nothing reports a dead one. Write the path of the page in the same language (`/de/products/<german slug>`); `test/content.test.ts` checks every one.
+- `[[inquiry]]` on a line of its own becomes the inquiry plugin's form when that plugin is enabled. Its labels exist in English and Chinese only (Mallok), so the other languages show English labels.
+- The header puts the site name, the navigation, the language control and one button on a single line from 1280px. The sample's ten links fit in all four languages with little to spare (German is the longest); a longer label in `site.json` overflows that line, and only a look at the page at 1280px shows it.
+- Fonts are files in `assets/fonts/`, declared in `style.css` and preloaded in `layouts/base.liquid`; nothing is loaded from another host. Changing any asset means bumping `version` in `theme.json`: assets are served from a versioned path and cached for good.
+- Each language of a bundle is its own content item with its own `slug` (`index.md`, `index.<locale>.md`); Mallok puts them in one `translation_group`. A bundle carries a `mallok.json` only when something outside the content must name it: each product's fixes the `translation_group` that `seed/shop-sample.sql` attaches its variants to. `test/content.test.ts` checks the reference rule, keeps every identity file in step with its bundle, and holds the seed's variants to the SKUs the product pages list.
 - The default language (English) is unprefixed; others are `/<locale>/…`. English pages default to USD, the rest to EUR (`lib/currency.ts`), never by IP.
 
 ### Known limits of mallok 0.1.0-rc.9 that shape the code
@@ -81,7 +87,8 @@ Each is a task in Mallok's plan for plugin API 2. When Mallok ships one, upgrade
 - A test for a fix must be seen failing without the fix. For new guards, break the guard and confirm the test goes red.
 - A race is tested by running the calls with `Promise.all`, and such a test only counts once breaking the guard turns it red: that is the proof the two calls really interleave.
 - `countD1Calls` in `test/shop/helpers.ts` counts round trips; use it wherever the number is a design constraint. `interceptBatches` runs a hook around each batch: it is how a test changes the data between a function's reading and its writing, or loses the answer to a write that committed.
-- `npm run smoke:shop` is the only place theme, plugin, content and the Mallok CLI run together; run it when touching any of them.
+- `test/theme/pages.test.ts` renders every layout from content it creates itself, with everything set; `test/theme/bare.test.ts` does the same for a site that has filled in almost nothing, and fails on any empty element or `href=""`. Neither reads `content/`. A template that prints a wrapper has to check that there is something to put in it — and `content.html` is not a string, so capture it before comparing it with `blank`. The sample is checked by `test/content.test.ts` and `test/project.test.ts` (files only, no Worker) and by the smoke run.
+- `npm run smoke:shop` is the only place theme, plugin, content and the Mallok CLI run together; run it when touching any of them. It publishes the real sample, requests every kind of page, and follows every header and footer link in all four languages.
 
 ## Commerce invariants (do not "simplify" them away)
 

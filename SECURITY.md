@@ -75,6 +75,11 @@ These are deliberate and should not be "simplified" away:
   reference date.
 - **The theme ships no client JavaScript** and no inline event handlers. A test
   fails if a rendered page contains a script that is not structured data.
+- **The theme loads nothing from another host.** Its fonts and images are
+  files served by the site, so no visitor's address is passed to a third
+  party by opening a page. The inquiry form is Mallok's: with Turnstile
+  configured it loads Cloudflare's challenge script on the pages that carry
+  the form.
 - **A manual price is never overwritten.** The repricing statement re-checks it
   at write time, so a price set by hand between the read and the write still
   stands.
@@ -143,7 +148,10 @@ Stated plainly rather than left for an auditor to find:
   will be purged whenever a price or an availability state changes; until that
   exists, do not show prices by another route.
 - **Sample content and sample variants are public test data.** Do not load
-  `seed/shop-sample.sql` into a production database.
+  `seed/shop-sample.sql` into a production database. The sample catalogue
+  describes a supplier that does not exist: its certifications, test figures
+  and compliance statements are illustrative, and a real site must replace
+  them with its own before it is published.
 - **Nobody is told about a payment that has to be refunded.** An oversold
   order, and a payment for an order that was cancelled while its buyer was
   still on Stripe's page, are both recorded with a row in the outbox — and
