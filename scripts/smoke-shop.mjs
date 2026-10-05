@@ -481,6 +481,7 @@ try {
   const assets = `${base}/theme/${theme.id}/${theme.version}`;
   const types = {
     css: 'text/css',
+    js: 'text/javascript',
     woff2: 'font/woff2',
     webp: 'image/webp',
     txt: 'text/plain',

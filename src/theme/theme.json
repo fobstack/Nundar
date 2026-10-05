@@ -1,8 +1,8 @@
 {
   "id": "nundar",
   "name": "Nundar",
-  "description": "A commerce theme for a technical catalogue: a specification finder, product pages built around a size table, landing pages for the applications a part is used in, collections by type, case studies and reference pages. HTML first: every page is complete without a script.",
-  "version": "0.2.0",
+  "description": "A commerce theme for a technical catalogue: a specification finder, product pages built around a size table, landing pages for the applications a part is used in, collections by type, case studies and reference pages. HTML first: every page is complete without a script, and the one it declares only adds filters to a table that is already whole.",
+  "version": "0.3.0",
   "themeApi": 1,
   "home": "layouts/home.liquid",
   "kinds": {
@@ -299,5 +299,11 @@
   "locales": ["en", "de", "fr", "es"],
   "defaultLocale": "en",
   "imageWidths": [480, 960, 1440],
-  "clientScripts": []
+  "clientScripts": [
+    {
+      "path": "assets/finder.js",
+      "purpose": "Home page and catalogue only: filters and a search box above the specification table. The table is complete without it.",
+      "bytes": 5315
+    }
+  ]
 }

@@ -56,7 +56,7 @@ Nundar builds on `mallok@0.1.0-rc.9`. Some of the shop needs extension points Ma
 
 | | Works today | Waits for Mallok's next plugin API |
 |---|---|---|
-| **Pages** | A home page with a specification finder; product pages with their sizes and SKUs; collection, industry, case study, question, engineering reference and contact pages — all in English, German, French and Spanish, with `hreflang`, canonicals, sitemap and FAQ structured data; self-hosted fonts; no client JavaScript | Prices, variants and availability on the page; `Offer` structured data |
+| **Pages** | A home page with a specification finder; product pages with their sizes and SKUs; collection, industry, case study, question, engineering reference and contact pages — all in English, German, French and Spanish, with `hreflang`, canonicals, sitemap and FAQ structured data; self-hosted fonts; no client JavaScript except one small script that adds filters to the finder, a table that is complete without it | Prices, variants and availability on the page; `Offer` structured data |
 | **Catalogue data** | Variants, prices as integer minor units, stock, MOQ, lead time, a made-to-order policy | Editing them in the admin (read-only for now; the sample data is loaded from SQL) |
 | **Pricing** | USD base price; EUR and GBP derived from ECB rates with a buffer, rounding to a price point and a drift threshold; manual prices never overwritten | |
 | **Cart** | Add, set and remove through a plain form POST, with MOQ and stock enforced server-side | The cart page; submitting a cart as one inquiry |

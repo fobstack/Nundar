@@ -19,10 +19,25 @@
   reader, which otherwise stops announcing rows and columns as soon as
   `display` changes.
 
+  With `filters: true` the table is preceded by a form to narrow it. The
+  form is in the page hidden, and `assets/finder.js` fills its lists from the
+  rows below and shows it: a form that cannot filter is not offered, and a
+  page without the script is the whole table, as it is without `filters`.
+  The layout that asks for filters also loads that script.
+
   Called as {% render "partials/spec-table", items: recent.product %}.
 {%- endcomment -%}
 {% assign lead = nil %}
 {% for item in items %}{% if lead == nil and item.frontmatter.facets != blank %}{% assign lead = item %}{% endif %}{% endfor %}
+{% if filters %}
+<div class="finder" data-finder>
+  <form class="finder-filters" hidden aria-label="{{ t.filter_title }}" data-count="{{ t.filter_count }}">
+    <label class="finder-field finder-search"><span>{{ t.filter_search }}</span><input type="search" name="q" autocomplete="off" spellcheck="false"></label>
+    {% for pair in lead.frontmatter.facets %}<label class="finder-field"><span>{{ pair[0] }}</span><select name="facet-{{ forloop.index }}" data-facet="{{ pair[0] }}"><option value="">{{ t.filter_all }}</option></select></label>{% endfor %}
+    <label class="finder-field"><span>{{ t.col_sizes }}</span><select name="size"><option value="">{{ t.filter_all }}</option></select></label>
+    <button class="btn btn-outline btn-sm" type="reset">{{ t.filter_reset }}</button>
+  </form>
+{% endif %}
 <div class="finder-table-wrap">
   <table class="finder-table" role="table">
     <thead role="rowgroup">
@@ -50,3 +65,7 @@
     </tbody>
   </table>
 </div>
+{% if filters %}
+  <p class="finder-none" hidden>{{ t.filter_none }}{% if theme.options.quote_href != blank %} <a class="text-link" href="{{ theme.options.quote_href }}">{{ t.custom_cta }} {% render "partials/icon", name: "arrow" %}</a>{% endif %}</p>
+</div>
+{% endif %}

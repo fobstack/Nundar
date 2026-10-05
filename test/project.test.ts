@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
@@ -217,6 +217,100 @@ describe('site.json, in every language', () => {
         assert.ok(
           item.label.trim() !== '',
           `site.json has a navigation item without a label in "${locale}"`,
+        );
+      }
+    }
+  });
+});
+
+/**
+ * What the theme runs in a visitor's browser is the list in `theme.json`,
+ * which Mallok shows the site's owner. The list is only worth showing if it
+ * is the whole truth: every script a template loads is on it, at the size it
+ * says, and nothing on it is dead weight.
+ */
+describe('the theme’s client scripts', () => {
+  const THEME = join('src', 'theme');
+
+  interface Declared {
+    path: string;
+    purpose: string;
+    bytes?: number;
+  }
+
+  async function declared(): Promise<Declared[]> {
+    const theme = JSON.parse(
+      await readFile(join(THEME, 'theme.json'), 'utf8'),
+    ) as { clientScripts: Declared[] };
+    return theme.clientScripts;
+  }
+
+  /** Every `<script …>` tag in the theme's templates, with its file. */
+  async function scriptTags(): Promise<{ file: string; tag: string }[]> {
+    const tags: { file: string; tag: string }[] = [];
+    for (const directory of ['layouts', 'partials']) {
+      for (const file of await readdir(join(THEME, directory))) {
+        const text = await readFile(join(THEME, directory, file), 'utf8');
+        for (const match of text.matchAll(/<script\b[^>]*>/gi)) {
+          tags.push({ file: `${directory}/${file}`, tag: match[0] });
+        }
+      }
+    }
+    return tags;
+  }
+
+  it('are files of the size the manifest states', async () => {
+    for (const script of await declared()) {
+      assert.match(script.path, /^assets\/[a-z0-9-]+\.js$/);
+      assert.ok(script.purpose.trim() !== '', `${script.path} has no purpose`);
+      const { size } = await stat(join(THEME, script.path));
+      assert.equal(
+        script.bytes,
+        size,
+        `theme.json says ${script.path} is ${script.bytes} bytes; it is ${size}`,
+      );
+    }
+  });
+
+  it('are the only scripts a template loads, each in the one permitted form', async () => {
+    const paths = new Set((await declared()).map((script) => script.path));
+
+    for (const { file, tag } of await scriptTags()) {
+      const name =
+        /^<script src="\{\{ theme\.asset_base \}\}\/([a-z0-9-]+\.js)" defer>$/.exec(
+          tag,
+        )?.[1];
+      assert.ok(
+        name !== undefined,
+        `${file} has a script tag in a form the theme does not use: ${tag}`,
+      );
+      assert.ok(
+        paths.has(`assets/${name}`),
+        `${file} loads ${name}, which theme.json does not declare`,
+      );
+    }
+  });
+
+  it('are each loaded by a template', async () => {
+    const loaded = (await scriptTags()).map(({ tag }) => tag).join('\n');
+
+    for (const script of await declared()) {
+      const name = script.path.replace(/^assets\//, '');
+      assert.ok(
+        loaded.includes(`/${name}"`),
+        `theme.json declares ${script.path}, and no template loads it`,
+      );
+    }
+  });
+
+  it('are the only JavaScript among the theme’s files', async () => {
+    const paths = new Set((await declared()).map((script) => script.path));
+
+    for (const file of await readdir(join(THEME, 'assets'))) {
+      if (file.endsWith('.js')) {
+        assert.ok(
+          paths.has(`assets/${file}`),
+          `src/theme/assets/${file} is served to visitors and theme.json does not declare it`,
         );
       }
     }

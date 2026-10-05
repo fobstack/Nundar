@@ -73,8 +73,13 @@ These are deliberate and should not be "simplified" away:
 - **The cart route is rate limited** through Mallok's rate-limit binding.
 - **Logs never contain personal data.** The scheduled work logs counts and a
   reference date.
-- **The theme ships no client JavaScript** and no inline event handlers. A test
-  fails if a rendered page contains a script that is not structured data.
+- **The theme runs one script in a visitor's browser, and says so.** It is a
+  file of the site's own, declared in `theme.json` with its size, loaded on
+  the home page and the catalogue to filter a table that is already in the
+  page; it sends nothing anywhere and stores nothing. There is no inline
+  script and no inline event handler. Tests fail if a template loads a
+  script that is not declared, if a declared size is not the file's, or if
+  any other page carries a script that is not structured data.
 - **The theme loads nothing from another host.** Its fonts and images are
   files served by the site, so no visitor's address is passed to a third
   party by opening a page. The inquiry form is Mallok's: with Turnstile

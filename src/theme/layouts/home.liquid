@@ -96,7 +96,7 @@
       <h2>{{ t.finder_title }}</h2>
       <p>{{ t.finder_lede }}</p>
     </div>
-    {% render "partials/spec-table", items: recent.product %}
+    {% render "partials/spec-table", items: recent.product, filters: true %}
     {% if theme.options.catalogue_href != blank %}<p class="finder-more"><a class="text-link" href="{{ theme.options.catalogue_href }}">{{ t.view_catalogue }} {% render "partials/icon", name: "arrow" %}</a></p>{% endif %}
   </div>
 </section>
@@ -203,4 +203,9 @@
 {% endif %}
 
 {% if theme.options.cta_title != blank %}{% render "partials/closing" %}{% endif %}
+{%- comment -%}
+  The one script this page loads, and only when the table it works on is
+  here. It adds the filters above the finder and nothing else.
+{%- endcomment -%}
+{% if recent.product.size > 0 %}<script src="{{ theme.asset_base }}/finder.js" defer></script>{% endif %}
 {% endblock %}

@@ -6,7 +6,7 @@
     <p class="detail-lede">{{ t.catalogue_lede }}</p>
   </header>
   {% if list.items.size > 0 %}
-  {% render "partials/spec-table", items: list.items %}
+  {% render "partials/spec-table", items: list.items, filters: true %}
   {% else %}
   <p class="empty">{{ t.empty }}</p>
   {% endif %}
@@ -18,4 +18,8 @@
   {% endif %}
 </section>
 {% if theme.options.cta_title != blank %}{% render "partials/closing" %}{% endif %}
+{%- comment -%}
+  Filters for the table above, added by a script when there is a table.
+{%- endcomment -%}
+{% if list.items.size > 0 %}<script src="{{ theme.asset_base }}/finder.js" defer></script>{% endif %}
 {% endblock %}

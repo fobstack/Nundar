@@ -77,7 +77,7 @@ same pull request and explain the new reasoning.
 | Site copy | Words a visitor reads that belong to this site, not to the theme, are theme options in `site.json`, with a value per language under `$locales`. `test/project.test.ts` fails when a language has none. |
 | Database access | Raw SQL through D1, no ORM. Batch reads and writes: a tick of the cron shares one invocation's CPU budget with every other plugin. |
 | Migrations | Additive only, idempotent, and a comment has a line to itself — Mallok's migrator drops whole-line comments and then splits on semicolons. |
-| Theme | No `<script>`, no inline event handlers. Anything interactive is declared in `theme.json`'s `clientScripts`. Nothing is loaded from another host: fonts and images are files in `src/theme/assets/`, and a change to any of them comes with a new `version` in `theme.json`. |
+| Theme | No inline script, no inline event handlers, no script from another host. A script is a file in `src/theme/assets/`, declared in `theme.json`'s `clientScripts` with its exact size, loaded with `defer` by the one layout that needs it, and it only adds to a page that is complete without it. `test/project.test.ts` holds the declared list to the templates and the files. Nothing is loaded from another host: fonts and images are files in `src/theme/assets/`, and a change to any of them comes with a new `version` in `theme.json`. |
 | Secrets | Never in the repository. `.dev.vars` locally, Worker secrets when deployed. |
 | Dependencies | Ask whether the platform or Mallok already provides it. Every dependency is inherited attack surface. |
 

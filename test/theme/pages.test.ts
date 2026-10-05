@@ -1,5 +1,6 @@
 import { SELF } from 'cloudflare:test';
 import { beforeAll, describe, expect, it } from 'vitest';
+import manifest from '../../src/theme/theme.json';
 import {
   api,
   createContent,
@@ -44,6 +45,12 @@ function between(html: string, start: string, end: string): string {
 function head(html: string): string {
   return between(html, '<head>', '</head>');
 }
+
+/**
+ * Where this version of the theme's files are served. Read from the
+ * manifest, because the version changes whenever a file does.
+ */
+const ASSETS = `/theme/${manifest.id}/${manifest.version}`;
 
 const CAP_SCREW = '/products/titanium-socket-head-cap-screw-m5';
 const CAP_SCREW_DE = '/de/products/titan-zylinderschraube-m5';
@@ -460,9 +467,9 @@ describe('the commerce theme', () => {
     it('loads the versioned stylesheet and hints the fonts it starts with', async () => {
       const { html } = await page(CAP_SCREW);
 
-      expect(html).toContain('href="/theme/nundar/0.2.0/style.css"');
+      expect(html).toContain(`href="${ASSETS}/style.css"`);
       expect(html).toContain(
-        '<link rel="preload" href="/theme/nundar/0.2.0/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>',
+        `<link rel="preload" href="${ASSETS}/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>`,
       );
     });
 
@@ -1131,9 +1138,9 @@ describe('the commerce theme', () => {
   });
 
   describe('client JavaScript', () => {
+    const FINDER = `<script src="${ASSETS}/finder.js" defer>`;
+
     it.each([
-      '/',
-      '/products',
       CAP_SCREW,
       '/collections/socket-head-cap-screws',
       '/industries/motorsport',
@@ -1142,11 +1149,93 @@ describe('the commerce theme', () => {
       '/faq/tolerances-and-torque',
       '/tools/fastener-calculators',
       '/about',
+      '/news',
     ])('is not sent on %s', async (path) => {
       const { html } = await page(path);
 
       expect(executableScripts(html)).toEqual([]);
       expect(html).not.toMatch(/\son[a-z]+=/i);
+    });
+
+    it.each(['/', '/products', '/de/', '/de/products'])(
+      'is one declared file on %s, where the finder is',
+      async (path) => {
+        const { html } = await page(path);
+
+        expect(executableScripts(html)).toEqual([FINDER]);
+        expect(html).not.toMatch(/\son[a-z]+=/i);
+      },
+    );
+
+    it('is not sent where there is no table for it to work on', async () => {
+      // No product exists in French.
+      const home = await page('/fr/');
+      const catalogue = await page('/fr/products');
+
+      expect(executableScripts(home.html)).toEqual([]);
+      expect(executableScripts(catalogue.html)).toEqual([]);
+    });
+  });
+
+  describe('the finder’s filters', () => {
+    it('are in the page, hidden, with a list for each attribute and one for the sizes', async () => {
+      // Hidden until the script has filled the lists: a form that cannot
+      // filter is not offered.
+      const { html } = await page('/products');
+      const form = between(html, '<form class="finder-filters"', '</form>');
+
+      expect(form).toMatch(/^<form class="finder-filters" hidden /);
+      expect(form).toContain('aria-label="Filter the parts"');
+      expect(form).toContain('data-count="{shown} of {total} parts"');
+      expect(form).toContain(
+        '<span>Search</span><input type="search" name="q"',
+      );
+      expect(form).toContain(
+        '<span>Head type</span><select name="facet-1" data-facet="Head type"><option value="">All</option></select>',
+      );
+      expect(form.match(/<select /g)).toHaveLength(4);
+      expect(form).toContain('<select name="size">');
+      expect(form).toContain(
+        '<button class="btn btn-outline btn-sm" type="reset">Clear filters</button>',
+      );
+    });
+
+    it('leave the whole table in the page, and a way on when nothing matches', async () => {
+      const { html } = await page('/products');
+      const finder = between(
+        html,
+        '<div class="finder" data-finder>',
+        '</section>',
+      );
+
+      expect(finder.match(/<tr role="row">/g)).toHaveLength(4);
+      expect(finder).not.toMatch(/<tr[^>]* hidden/);
+      expect(finder).toMatch(
+        /<p class="finder-none" hidden>No standard part matches this combination\. <a class="text-link" href="\/custom-manufacturing">/,
+      );
+    });
+
+    it('speak the page’s language', async () => {
+      const { html } = await page('/de/products');
+      const form = between(html, '<form class="finder-filters"', '</form>');
+
+      expect(form).toContain('aria-label="Teile filtern"');
+      expect(form).toContain('data-count="{shown} von {total} Teilen"');
+      // The lists are the columns: the attributes of the newest German
+      // product that has any, which is the one named after Liquid's words.
+      expect(form).toContain(
+        '<span>size</span><select name="facet-1" data-facet="size">',
+      );
+    });
+
+    it('are offered above the home page’s finder and the catalogue, and nowhere else', async () => {
+      const home = await page('/');
+      const collection = await page('/collections/socket-head-cap-screws');
+      const product = await page(CAP_SCREW);
+
+      expect(home.html).toContain('<form class="finder-filters" hidden ');
+      expect(collection.html).not.toContain('finder-filters');
+      expect(product.html).not.toContain('finder-filters');
     });
   });
 
@@ -1156,7 +1245,7 @@ describe('the commerce theme', () => {
 
       expect(status).toBe(404);
       expect(html).toContain('Seite nicht gefunden');
-      expect(html).toContain('href="/theme/nundar/0.2.0/style.css"');
+      expect(html).toContain(`href="${ASSETS}/style.css"`);
     });
   });
 });

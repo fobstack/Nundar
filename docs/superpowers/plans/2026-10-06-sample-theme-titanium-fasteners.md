@@ -51,7 +51,7 @@ What a port means here: the design, the content and the structure are the templa
 
 | In the template | Here | Why |
 |---|---|---|
-| Filters above the specification finder | The whole table, unfiltered | Needs a script. Six products can be read without one; the filters are a later, separate change |
+| Filters above the specification finder | The whole table, with filters added by a script (see below) | The table is complete without the script; the filters came after the port, as a separate change |
 | Three interactive calculators | A reference page with the formulas, the constants and tables | Needs a script. The page is complete without one, and every figure can be checked by hand |
 | A quote list in a drawer, with quantities | The request-a-quote buttons lead to the custom manufacturing page and its form | This is the cart, and the cart page waits for Mallok (design §7) |
 | A search box in the header | — | Mallok has no search |
@@ -119,11 +119,32 @@ Three image addresses in the template answered with an error and could not be fe
 - Locally, switching a plugin on or off, or changing the navigation, leaves pages already cached as they were.
 - Publishing a bundle with images needs a token with the `media:write` scope. This repository's own instructions did not say so.
 
+## After the port: the finder's filters
+
+The owner had approved small scripts as additions to pages that work without them, built last and separately. This is the first.
+
+**What it is.** `src/theme/assets/finder.js`, 5.3 kB, no dependency and no build step. On the home page and in the catalogue it fills a list for each attribute and one for the sizes from what the table holds, adds a search box, and hides the rows that do not match; it says how many are left, and when none is, shows the way to a custom part. The form is rendered by the server, hidden, with its labels from the language pack, so the script contains no words and the page never shows a control that does nothing.
+
+**What it is not.** It makes no request and stores nothing. It is not loaded where there is no table, nor on any other page. Without it the page is exactly what it was.
+
+**How it was verified.**
+
+| Check | Result |
+|---|---|
+| The logic, under `node:vm` | 6 tests: an attribute, a size as a whole value, every word typed in any order, case and accents, the order of the lists |
+| The page, inside workerd | 18 tests: no script on nine kinds of page, one declared script on the four pages that have the table and none where a language has no products; the form hidden and in the page's language; the whole table still in the page |
+| The declaration | 4 tests: every script a template loads is declared, in the one permitted form, at its exact size, and nothing declared is unused |
+| Red and green | 24 changes — to the logic, the templates, the manifest — each noticed by the check meant for it |
+| In a browser, by hand | Each list and the search box, alone and together; no match; reset; a phone and a tablet; German and French |
+| `npm run smoke:shop` | The script is served as JavaScript at the address the page names |
+
+**What it found.** A count needs a wording that survives the number one: "1 pièces sur 6" became "1 sur 6 pièces". A row the script hides must leave no trace in the card layout, so each card now draws its own border instead of the grid showing a background through its gaps. And a character class written with the characters themselves instead of their escapes is a line nobody can read or safely edit.
+
 ## What waits
 
 **For a decision by the owner**
 - *The sample's facts.* These come from the template and disagree with each other; none was changed, because which is right is not a question a port can answer: the density of stainless steel (7.93, 7.98 and 8.00 g/cm³ in different places); the weight saved (44% and 45%, where the densities give 43.6% and 44.6%); the iron limit of Grade 5 (0.40% in the material guide, 0.30% for AMS 4928 on the quality page); "Grade 5 ELI" in one case study, where ELI is Grade 23 elsewhere; a UNJ thread form named for metric threads; a shoulder screw of "custom alloy" that a case study calls Grade 5; a stainless steel passivation standard cited for titanium.
-- *The two scripts.* Filters for the finder and the three calculators, as small scripts the theme declares, each working on a page that is complete without it.
+- *The second script.* The three calculators, on the same terms as the finder's filters: a small declared script working on a page that is complete without it.
 - *The images.* They were generated for the template. Whether they are to be published under this repository's licences is the owner's to confirm.
 
 **For Mallok** — the five items above, and everything phase 1B already waits for: prices and availability on the product pages and in the finder, and the cart page that the template's quote list becomes.
