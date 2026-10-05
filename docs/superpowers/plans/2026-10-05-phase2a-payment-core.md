@@ -48,15 +48,15 @@ One change reaches back into phase 1A: the first migration's price, stock, minim
 |---|---|
 | `npm run lint`, `npm run typecheck` | Pass |
 | `npm run test:project` | 10 of 10 |
-| `npm run test:shop` | 273 of 273, inside workerd; 143 of them new |
+| `npm run test:shop` | 280 of 280, inside workerd; 150 of them new |
 | `npm run build` | Pass; 398 KiB gzip, 2 KiB more than before |
 | `npm run smoke`, `npm run smoke:shop` | Pass, on a real local Worker, with the new migration applied by Mallok's migrator |
 
 The tests were written first and seen to fail before any of the code existed.
 
-Then every guard was broken, one at a time, to see whether a test noticed: 96 mutations, 96 caught. Among them the ones that only show when two calls run at the same moment — the status condition on the stock decrement, on a refund's restock and on a status change. Those being caught is what shows the parallel tests really interleave.
+Then every guard was broken, one at a time, to see whether a test noticed: 100 mutations, 100 caught. Among them the ones that only show when two calls run at the same moment — the status condition on the stock decrement, on a refund's restock and on a status change. Those being caught is what shows the parallel tests really interleave.
 
-Then the code went to an independent reviewer, who was given the properties it must hold and not how it holds them. The five defects that came back are in the design's §14, each fixed with a test that fails without the fix.
+Then the code went to an independent reviewer, who was given the properties it must hold and not how it holds them. The five defects that came back are in the design's §14, each fixed with a test that fails without the fix. The reworked code went back for a second pass, which replayed the five, ran randomly interleaved payments, cancellations, shipments and refunds without a violation — 2,500 rounds by its report, and 1,000 run again here against the final code — and found three smaller things; two were fixed and one is recorded.
 
 ## What implementation uncovered
 
@@ -73,6 +73,8 @@ Then the code went to an independent reviewer, who was given the properties it m
 - "Fail loudly" is the wrong reflex for a webhook. Loud, to Stripe, means three days of redelivery; for anything a retry cannot change, the right kind of loud is a record a person will find.
 - A reading is stale by the time it is acted on. The oversold write trusted a reading of the stock that another order's refund could overturn.
 - A check on a product is not a check on its factors: 99.5 × 10 is a whole number.
+- A timestamp is not an order. The outbox sorted by the time each change was made with, which the caller supplies; rows now carry the sequence they were committed in.
+- One failure of a write says little about the next attempt when the data moved in between. A write that throws is tried once more if the next reading still calls for it.
 
 **About D1 and workerd**
 - `UPDATE … RETURNING` and `INSERT … SELECT … WHERE … RETURNING` work inside a batch, and are how a statement reports that it matched: clearer than counting changes.
@@ -94,7 +96,7 @@ Then the code went to an independent reviewer, who was given the properties it m
 - Order handling in the admin: actions with parameters and related rows (API-6).
 - Purging on an availability change: plugin cache tags (API-2).
 
-**For a decision** — listed in the design's §14, none decided here: who drains the outbox and who is told; a payment for a cancelled order; orders never paid; orders that cost nothing; Stripe's Adaptive Pricing; cross-checking the amount; emptying the cart; how a refund is ordered and whether it restocks a shipped order; `oversold → cancelled`; pinning the Stripe API version; email settings; the order-number prefix.
+**For a decision** — listed in the design's §14, none decided here: who drains the outbox and who is told; a payment for a cancelled order; orders never paid; orders that cost nothing; Stripe's Adaptive Pricing; cross-checking the amount; emptying the cart; how a refund is ordered and whether it restocks a shipped order; `oversold → cancelled`; pinning the Stripe API version; email settings; the order-number prefix; whether a payment for an unknown order is recorded; what deleting a variant does to orders that name it.
 
 **For a real account**
 - A Stripe test-mode purchase end to end.
