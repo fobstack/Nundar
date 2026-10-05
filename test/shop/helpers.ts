@@ -372,3 +372,36 @@ export async function countD1Calls(
     }
   }
 }
+
+/**
+ * Signs a webhook body the way Stripe does: HMAC-SHA256 over
+ * `<timestamp>.<body>`, keyed by the endpoint's signing secret, as hex.
+ *
+ * Written out here rather than borrowed from the code under test, so a
+ * mistake in the verifier cannot be mirrored by the signer.
+ *
+ * An empty secret is signed with a single zero byte. HMAC pads a short key
+ * with zero bytes, so that is the same MAC an empty key gives — the one an
+ * attacker would compute against a shop with no secret set — and WebCrypto
+ * refuses to import a key of length zero.
+ */
+export async function signStripePayload(
+  payload: string,
+  timestamp: number,
+  secret: string,
+): Promise<string> {
+  const mac = new Uint8Array(
+    await crypto.subtle.sign(
+      'HMAC',
+      await crypto.subtle.importKey(
+        'raw',
+        new TextEncoder().encode(secret === '' ? '\u0000' : secret),
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign'],
+      ),
+      new TextEncoder().encode(`${timestamp}.${payload}`),
+    ),
+  );
+  return [...mac].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
