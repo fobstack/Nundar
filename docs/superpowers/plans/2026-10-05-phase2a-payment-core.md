@@ -10,6 +10,8 @@ Phase 1B waits for extension points Mallok has not released. This phase builds t
 
 It finishes the port list in the design's §8. **Nothing in the deployed Worker calls this code yet.** The Worker's bundle grows by the migration's text and nothing else.
 
+One change reaches back into phase 1A: the first migration's price, stock, minimum-order and cart-quantity columns now check their storage type. It was edited in place, which is only possible because nothing has been deployed from it.
+
 ## What was built
 
 **The tables (`migrations/0002_orders.sql`)**
@@ -46,13 +48,13 @@ It finishes the port list in the design's §8. **Nothing in the deployed Worker 
 |---|---|
 | `npm run lint`, `npm run typecheck` | Pass |
 | `npm run test:project` | 10 of 10 |
-| `npm run test:shop` | 272 of 272, inside workerd; 142 of them new |
-| `npm run build` | Pass |
+| `npm run test:shop` | 273 of 273, inside workerd; 143 of them new |
+| `npm run build` | Pass; 398 KiB gzip, 2 KiB more than before |
 | `npm run smoke`, `npm run smoke:shop` | Pass, on a real local Worker, with the new migration applied by Mallok's migrator |
 
 The tests were written first and seen to fail before any of the code existed.
 
-Then every guard was broken, one at a time, to see whether a test noticed: 92 mutations, 92 caught. Among them the ones that only show when two calls run at the same moment — the status condition on the stock decrement, on a refund's restock and on a status change. Those being caught is what shows the parallel tests really interleave.
+Then every guard was broken, one at a time, to see whether a test noticed: 96 mutations, 96 caught. Among them the ones that only show when two calls run at the same moment — the status condition on the stock decrement, on a refund's restock and on a status change. Those being caught is what shows the parallel tests really interleave.
 
 Then the code went to an independent reviewer, who was given the properties it must hold and not how it holds them. The five defects that came back are in the design's §14, each fixed with a test that fails without the fix.
 

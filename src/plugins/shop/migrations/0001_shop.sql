@@ -7,6 +7,10 @@
 -- Mallok's migrator drops whole-line comments and then splits on semicolons,
 -- so a comment must have a line to itself and never trail a line of SQL.
 -- Every statement is idempotent.
+--
+-- Prices and quantities check their own storage type. SQLite keeps a value
+-- such as 99.5 in an INTEGER column as a real number rather than refuse it,
+-- and a price here is integer minor units or it is nothing.
 
 CREATE TABLE IF NOT EXISTS p_shop_variant (
   id            TEXT PRIMARY KEY,
@@ -16,14 +20,16 @@ CREATE TABLE IF NOT EXISTS p_shop_variant (
   option_values TEXT NOT NULL DEFAULT '{}',
   -- The minimum order quantity. Enforced on the page, at add-to-cart and at
   -- checkout, never display copy alone
-  moq           INTEGER NOT NULL DEFAULT 1 CHECK (moq >= 1),
+  moq           INTEGER NOT NULL DEFAULT 1
+                CHECK (typeof(moq) = 'integer' AND moq >= 1),
   -- Lead time as a range of business days. Null when it is not stated
   lead_time_min INTEGER,
   lead_time_max INTEGER,
   -- The CHECK is what lets a payment's stock decrement share one D1 batch: a
   -- decrement that would go negative fails its statement and rolls the whole
   -- batch back
-  stock         INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
+  stock         INTEGER NOT NULL DEFAULT 0
+                CHECK (typeof(stock) = 'integer' AND stock >= 0),
   -- track: stock is a hard limit. made_to_order: always orderable, and the
   -- lead time is what the buyer is told
   stock_policy  TEXT NOT NULL DEFAULT 'track'
@@ -43,7 +49,8 @@ CREATE TABLE IF NOT EXISTS p_shop_price (
   variant_id   TEXT NOT NULL,
   currency     TEXT NOT NULL,
   -- Integer minor units, never a float
-  amount_minor INTEGER NOT NULL CHECK (amount_minor >= 0),
+  amount_minor INTEGER NOT NULL
+               CHECK (typeof(amount_minor) = 'integer' AND amount_minor >= 0),
   -- base: entered by hand in the base currency. auto: derived from the base
   -- price at an exchange rate. manual: entered by hand for this currency, and
   -- never recomputed
@@ -81,7 +88,8 @@ CREATE INDEX IF NOT EXISTS p_shop_cart_expiry ON p_shop_cart (expires_at);
 CREATE TABLE IF NOT EXISTS p_shop_cart_line (
   cart_id    TEXT NOT NULL,
   variant_id TEXT NOT NULL,
-  quantity   INTEGER NOT NULL CHECK (quantity > 0),
+  quantity   INTEGER NOT NULL
+             CHECK (typeof(quantity) = 'integer' AND quantity > 0),
   PRIMARY KEY (cart_id, variant_id)
 );
 

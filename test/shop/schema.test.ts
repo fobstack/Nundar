@@ -53,6 +53,54 @@ describe('the shop schema', () => {
     ]);
   });
 
+  it('refuses a fractional price, stock, minimum order or cart quantity', async () => {
+    // SQLite would keep each of these in its INTEGER column as a real number.
+    // The column's own type check is what refuses them.
+    await createVariant({ id: 'v-types', productGroup: 'g' });
+    const now = '2026-10-01T00:00:00.000Z';
+
+    await expect(
+      db()
+        .prepare("UPDATE p_shop_variant SET stock = 5.5 WHERE id = 'v-types'")
+        .run(),
+    ).rejects.toThrow(/CHECK/i);
+    await expect(
+      db()
+        .prepare("UPDATE p_shop_variant SET moq = 1.5 WHERE id = 'v-types'")
+        .run(),
+    ).rejects.toThrow(/CHECK/i);
+    await expect(
+      db()
+        .prepare(
+          `INSERT INTO p_shop_price
+             (variant_id, currency, amount_minor, source, updated_at)
+           VALUES ('v-types', 'USD', 99.5, 'base', ?)`,
+        )
+        .bind(now)
+        .run(),
+    ).rejects.toThrow(/CHECK/i);
+    await expect(
+      db()
+        .prepare(
+          `INSERT INTO p_shop_cart_line (cart_id, variant_id, quantity)
+           VALUES ('c-types', 'v-types', 2.5)`,
+        )
+        .run(),
+    ).rejects.toThrow(/CHECK/i);
+
+    // A whole number written as text, the way a form field arrives, is
+    // converted by the column and accepted.
+    await db()
+      .prepare("UPDATE p_shop_variant SET stock = '7' WHERE id = 'v-types'")
+      .run();
+    const row = await db()
+      .prepare(
+        "SELECT stock, typeof(stock) AS kind FROM p_shop_variant WHERE id = 'v-types'",
+      )
+      .first<{ stock: number; kind: string }>();
+    expect(row).toEqual({ stock: 7, kind: 'integer' });
+  });
+
   it('stores no card data and no price a client could have sent on an order', async () => {
     // What an order may hold is listed here on purpose: a new column has to
     // be added to this list by someone who has thought about what it stores.
