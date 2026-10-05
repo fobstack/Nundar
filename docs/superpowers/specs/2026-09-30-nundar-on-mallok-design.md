@@ -116,7 +116,17 @@ p_shop_stock_adjustment(id, variant_id, delta, reason, ref_id, created_at)
 
 **`stock_policy` was added in phase 1A.** The owner's decision to show availability as a state (§11 decision 6) needs the data to say which state applies: a `track` variant is limited by its stock, and a `made_to_order` variant is always orderable and shows its lead time instead.
 
-The order tables are created in phase 2, with the payment flow that uses them.
+**The order tables exist since 2026-10-05** (`migrations/0002_orders.sql`), created with the payment core (§14). They differ from the sketch above in seven places, each for a reason:
+
+- **A fifth table, `p_shop_outbox`.** What still has to happen because an order changed — the buyer's email, the purge of a product's pages, a person told about a payment to refund — is a row written in the same batch as the change. Sending the email after the batch would lose it whenever the Worker stopped in between, with nothing to say it was owed.
+- **`p_shop_stripe_event` also holds the order, the payment intent and the outcome** (`paid`, `oversold`, `refused`), and is unique on the event's type with the payment intent. Stripe can send two events about one object; one payment is acted on once.
+- **Money columns check their own storage type** (`typeof(x) = 'integer'`). SQLite keeps 99.5 in an `INTEGER` column as a real number rather than refuse it.
+- `p_shop_order.total_minor` carries `CHECK (total_minor = subtotal_minor + shipping_minor + tax_minor)`. An order cannot hold a total that is not the sum of its parts.
+- `p_shop_order.status` has no `CHECK`. The state machine in `lib/order-state.ts` decides which statuses exist; a `CHECK` could only be changed later by rebuilding the table, and migrations here are additive.
+- `p_shop_order_line.id` is `<order id>:<variant id>`, and the pair is also `UNIQUE`. The payment write reads a line's quantity by that pair and relies on finding exactly one.
+- `p_shop_stock_adjustment.id` is `<reason>:<order id>:<variant id>` for a movement an order causes. The same movement cannot be written twice: a second attempt fails and takes its batch with it.
+
+Timestamps are ISO text, as everywhere in the plugin.
 
 ## 5. Request flows
 
@@ -175,21 +185,18 @@ The order tables are created in phase 2, with the payment flow that uses them.
 
 ### 5.4 Stripe webhook
 
-The route is `POST /_mallok/p/shop/stripe/webhook`. It needs the raw request body (§7 API-5).
+The route is `POST /_mallok/p/shop/stripe/webhook`. It needs the raw request body (§7 API-5). The decision it makes is built and tested already (`lib/stripe-webhook.ts`, §14); the route that calls it waits for API-5.
 
-1. Verify the signature over the raw body. This is `src/lib/stripe/webhook.ts`, ported unchanged.
-2. If `p_shop_stripe_event` already has the event, answer 200 without acting.
-3. Run one batch:
-   - insert the event;
-   - decrement each line's stock;
-   - write the stock adjustments;
-   - move the order `pending → paid`.
-4. The batch can fail in two ways:
-   - **On a `CHECK` failure**, a second batch inserts the event and marks the order `oversold`, and the response is 200 so Stripe stops.
-   - **On a primary-key conflict on the event**, a concurrent delivery won the race; answer 200.
-5. After success, queue the confirmation email in `orders.locale` through `ctx.sendEmail`, and purge affected product tags only when their availability state changed.
-
-A genuine failure answers non-2xx so Stripe redelivers (2026-09-03 §8).
+1. **Verify** the signature over the raw body, with a five-minute tolerance on its timestamp (`lib/stripe-signature.ts`). A failure answers 400 and does nothing.
+2. **Sort.** Any event type other than `payment_intent.succeeded` answers 200 and does nothing. So does a payment that carries no order id: the same Stripe account may take payments that did not come through this shop. A payment event that carries no payment answers 400: waving it through would swallow a real payment in silence.
+3. **Read**, in one batch: is this payment on record — the same event, or another event of the same type about the same payment intent; what status is the order in; is the stock its tracked lines need there.
+4. **Act**, in one batch, every statement of which is conditional on the order still being in the status that was read:
+   - *The order may be paid and the stock is there.* Record the event; decrement the stock of the order's stock-tracked lines; write their stock adjustments; put `order.paid` in the outbox; move the order `pending → paid`. A made-to-order line has no stock to take and is left out of the decrement.
+   - *The order may be paid and the stock is not there.* Record the event; put `order.oversold` in the outbox; mark the order `oversold`, keeping the payment intent on it. Every statement is also conditional on the stock still being short.
+   - *The order may not be paid* — it was cancelled, or another payment has settled it. Record the event as `refused` and put `payment.refused`, naming the payment intent, in the outbox. The order and the stock are not touched.
+5. **If the batch failed, or found the order moved**, read again and act on what is true, rather than on the text of an error. That is how a decrement that trips the stock constraint becomes `oversold`, and how losing a race becomes "already on record". The same action failing twice is a real failure.
+6. **Answer by one question: could delivering this again change the result?** A database failure answers 5xx, and Stripe redelivers (2026-09-03 §8). Nothing else does. A payment naming an order this database does not have answers 200: another shop on the same Stripe account sees every payment of the account, and three days of retries would not make the order appear.
+7. **What follows a payment is owed from the outbox**, not from this request's result: the confirmation email in `orders.locale` through `ctx.sendEmail`, and the purge of the product tags whose availability state changed. A route drains the order's outbox after any outcome that names an order.
 
 ### 5.5 Exchange rates
 
@@ -236,11 +243,12 @@ Mallok's roadmap says a storefront needs "exactly the six plugin capabilities 0.
 | API-5 | An opt-in raw-body route (no pre-parsing) | The body is parsed before the handler runs (`mallok: src/worker/plugin-runtime.ts:368-394`). Stripe's signature cannot be checked | 5.4 |
 | API-6 | Editable plugin records: create and edit forms, repeatable rows, actions with parameters, detail views, and a scope check on panel reads | Panels are read-only. Actions get ids only. "A plugin ships no frontend code" (`mallok: docs/PLUGIN_API.md:366`) | 5.6 |
 | API-7 | Call `onContentSave`, and add a content-delete hook | `runOnContentSave` exists but has no call site (`mallok: src/worker/plugin-runtime.ts:123`) | Keeping variants in step with products |
-| API-8 | Per-plugin error isolation in `scheduled`, and a plugin job/enqueue API over the `job` table | One `try/catch` wraps all plugins (`mallok: src/worker/scheduled.ts:56-71`). There is no enqueue (`mallok: docs/PLUGIN_API.md §7.4`) | 5.5, email retries |
+| API-8 | Per-plugin error isolation in `scheduled`, and a plugin job/enqueue API over the `job` table. An enqueue the plugin can put in its own `batch` would let the job commit with the change that causes it; without that, the shop keeps the outbox of §4.2 (found 2026-10-05) | One `try/catch` wraps all plugins (`mallok: src/worker/scheduled.ts:56-71`). There is no enqueue (`mallok: docs/PLUGIN_API.md §7.4`) | 5.5, email retries |
 | API-9 | **Shipped in 0.1.0-rc.9.** Export the helpers official plugins already use (`escapeHtml`, the restricted Liquid text/email renderer) from `mallok/worker` | The inquiry plugin imports them from internals | Order email |
 | API-10 | Third-party starter registration in `createMallok` | Starters are a compiled-in list (`mallok: src/starters/index.ts`) | Starter |
 | API-11 | ~~An "always prefix" locale mode~~ — **not needed**: the unprefixed default language is accepted (§11 decision 1) | | |
 | API-12 | ~~A translation-completeness view and admin roles~~ — **deferred**: one administrator is accepted for now (§11 decision 7) | | |
+| — | A way for `renderData` to add to the page's structured data: the plugin's `offers` merged into the core's own Product node in `page.head` | The core builds the Product JSON-LD itself and emits it inside `page.head` (`mallok: src/core/view.ts`, `contentJsonLd`, `buildHeadTags`). A theme cannot emit a JSON-LD block of its own: the script check rejects any `<script` in a theme's templates, data blocks included (`mallok: src/core/theme-package.ts`, `SCRIPT_TAG`). So API-1 alone puts the price on the page but leaves it out of the structured data. Found 2026-10-05 | 5.1 |
 | — | Close the theme script-validation gap: once a theme declares any `clientScripts`, `assertNoUndeclaredScripts` stops scanning its templates, so undeclared `<script>` and `on*=` pass (`mallok: src/core/theme-package.ts:262-264`) | The commerce theme declares the currency-switch script and would otherwise bypass every script check | 5.1 |
 | — | Resolve `reference[]` fields in `content.refs` and `content.backrefs` | Only `reference` is resolved (`mallok: src/worker/render.ts:386,406`); a `reference[]` reaches a template as bare slugs | A product in more than one collection (§4.1) |
 | — | **Shipped in 0.1.0-rc.9.** Supply `recent.<kind>` on the home page for every kind, as `THEME_FORMAT.md §7.4` documents | The Worker's home page loads articles only (`mallok: src/worker/pages/home.page.ts`); the static build supplies every kind, so the two paths disagree | Products and application notes on the home page |
@@ -259,10 +267,10 @@ These changes raise the plugin contract version (`pluginApi`), and Mallok's own 
 
 | Current module | Fate |
 |---|---|
-| `src/lib/money.ts`, `src/lib/orders/state.ts`, `src/lib/stripe/webhook.ts`, `src/lib/stripe/client.ts` | Port unchanged; they are pure and already use `fetch`, not an SDK |
-| `src/lib/pricing*`, `src/lib/cart/pricing.ts`, `src/lib/orders/orders.ts`, `src/lib/orders/admin.ts` | Port the logic; rewrite data access from Drizzle to raw SQL; move payment writes to one batch (§5.4) |
-| `src/lib/cart/cart.ts`, `cookie.ts` | Rewrite for D1 and the path-scoped cookie |
-| `src/lib/email/templates.ts` | Rewrite as plugin email templates (Liquid) |
+| `src/lib/money.ts`, `src/lib/orders/state.ts`, `src/lib/stripe/webhook.ts`, `src/lib/stripe/client.ts` | Port unchanged; they are pure and already use `fetch`, not an SDK. **Done** (phase 1A and §14); what review changed on the way is listed in §14 |
+| `src/lib/pricing*`, `src/lib/cart/pricing.ts`, `src/lib/orders/orders.ts`, `src/lib/orders/admin.ts` | Port the logic; rewrite data access from Drizzle to raw SQL; move payment writes to one batch (§5.4). **Done** (phase 1A and §14) |
+| `src/lib/cart/cart.ts`, `cookie.ts` | Rewrite for D1 and the path-scoped cookie. **Done** (phase 1A) |
+| `src/lib/email/templates.ts` | Rewrite as plugin email content. **Done** (§14), as code with Mallok's `escapeHtml`, which is how Mallok's own inquiry plugin builds its emails. Operator-editable Liquid overrides come with the settings that would hold them |
 | `src/lib/seo/jsonld.ts` | The Offer part moves into the render-data hook; Product and BreadcrumbList come from Mallok |
 | `src/lib/storefront/i18n.ts` | Becomes the commerce theme's `locales/*.json` |
 | `src/lib/seo*`, sitemap, robots, locales config, `src/lib/markdown.ts`, `src/lib/media/*`, `src/lib/auth/*`, `src/lib/admin/*`, `src/lib/settings/*` | Dropped: Mallok core provides them. The security contact becomes a Mallok core proposal |
@@ -274,7 +282,7 @@ The Next.js application stays in maintenance mode, with security and correctness
 
 ## 9. Phases
 
-The phases follow Mallok's own roadmap (`mallok: docs/PRODUCT_VISION.md §9`: 0.2 inquiry cart, 0.3 payment, 1.0 storefront). Nundar builds on the published `mallok@0.1.0-rc.7` and moves to the Mallok release that carries the P0 extension points once the owner publishes it (§11 decision 8).
+The phases follow Mallok's own roadmap (`mallok: docs/PRODUCT_VISION.md §9`: 0.2 inquiry cart, 0.3 payment, 1.0 storefront). Nundar was started on the published `mallok@0.1.0-rc.7`, is on `0.1.0-rc.9` now (§12), and moves to the Mallok release that carries the P0 extension points once the owner publishes it (§11 decision 8).
 
 **Phase 0: decisions, no code**
 - §11 is answered (2026-10-01).
@@ -296,6 +304,7 @@ The phases follow Mallok's own roadmap (`mallok: docs/PRODUCT_VISION.md §9`: 0.
   - cold product render p50/p95 CPU and D1 round trips are measured on a real Free account.
 
 **Phase 2: payment (Mallok 0.3)**
+- *Built ahead, 2026-10-05 (§14):* everything below that needs no Mallok extension point — the order tables, placing an order, the payment batch, refunds, the webhook's decision, the Stripe calls and the order emails. Not built: every route, page and admin screen.
 - Mallok: API-5, 6 (actions with parameters) and 8.
 - Shop plugin:
   - Stripe Checkout and the webhook;
@@ -402,3 +411,50 @@ Still open in Mallok, and so still shaping this code: the render-data hook, plug
 - **Not verified:**
   - Mallok's CPU figures, which are its own single measurements;
   - the behaviour of any Mallok change proposed in §7, none of which exists yet.
+
+
+## 14. What the payment core changed or found (2026-10-05)
+
+Phase 1B waits for Mallok. In the meantime the part of phase 2 that needs nothing from Mallok was built: `migrations/0002_orders.sql` and, in `lib/`, `orders.ts`, `order-fulfilment.ts`, `outbox.ts`, `order-guard.ts`, `availability.ts`, `stripe-signature.ts`, `stripe-client.ts`, `stripe-webhook.ts` and `order-email.ts`. **Nothing in the deployed Worker calls any of it yet**: there is no checkout route, no webhook route and no admin screen. It is logic and tests, waiting for its routes.
+
+**What review changed while porting.** The previous code was the starting point, not the result.
+
+- *The payment is one batch.* The previous `markOrderPaid` decremented line by line, put stock back by hand when a later line failed, and wrote the order and the event in separate statements. A crash between two of them left stock taken for an order that was not paid. Now the writes commit together or not at all, and the cost is two round trips whatever the number of lines.
+- *Oversold is decided from the data, not from the error.* When the batch fails, the code does not read a reason out of the error message; it reads the payment, the order and the stock again and acts on what is true. The message's wording is not a contract.
+- *Every write is conditional on the order's status.* Two deliveries racing each other both read "pending"; the second one's batch then finds the order already paid and writes nothing. The previous code had no such guard, and two near-simultaneous deliveries could both decrement. Tests deliver in parallel and prove one decrement.
+- *One payment is one payment, whatever the event id.* Stripe documents that two events can be sent for one object, to be told apart by the object's id and the event's type. A second event for a payment already on record is answered and not acted on; the previous code refused it as an illegal transition and answered 5xx, for three days.
+- *Made-to-order lines take no stock.* `stock_policy` did not exist before. Without the distinction, a made-to-order variant's zero stock would fail the constraint and every such order would be marked oversold.
+- *Order numbers are longer.* Six hexadecimal characters are 24 bits: at a thousand orders a day, two would collide about once a month, and a collision is a failed checkout. Eight characters of Crockford's base 32 are 40 bits, and the alphabet has no I, L, O or U.
+- *The signature header is parsed strictly.* The timestamp is digits and nothing else; `123=x`, `1e9` and `0x10` were all read as numbers. Reading only `v1` signatures, as Stripe's documentation asks, is unchanged, and a test now holds it.
+- *A lead time is stated only when every line has one*, and is the slowest of them. The previous template could print one, but nothing supplied it.
+- *A Stripe answer that is not JSON* — an outage page from a proxy — is reported as a failure with its status, instead of surfacing as a parse error.
+- *`createPaymentIntent` was not ported.* The shop uses Stripe's hosted Checkout (2026-09-03 §13), and nothing called it.
+
+**What an independent review then found.** The code was given to a second reviewer with the properties it must hold and no account of how it holds them. The transaction logic stood. Five defects did not, and each was fixed with a test that fails without the fix:
+
+1. *The webhook answered 5xx for things no retry could fix.* A payment naming an order this database does not have — the ordinary case for a second shop, a staging copy or a local listener on the same Stripe account — and a payment for a cancelled order both failed for three days, and the second left no trace in the database of money that had been taken. Now the first answers 200, and the second is recorded as `refused` with an outbox row naming the payment to refund.
+2. *What follows a payment could be lost for good.* The confirmation email was to be sent after the payment's batch, on the strength of its return value. A Worker stopped between the two, or a batch whose answer never came back, left an order paid and its email never sent — and every later delivery of the event saw "already processed". The outbox (§4.2) closes this: the duty is written with the payment.
+3. *An order with a total of zero could never be paid.* Stripe creates no payment intent for a free Checkout session, so the event the shop waits for never arrives. `createCheckoutSession` now refuses a total that is not a positive whole amount; an order that costs nothing has to be confirmed without Stripe, which is left to the checkout route (below).
+4. *Oversold was written on a stale reading.* Stock returned by another order's refund between the reading and the write still left the order marked oversold. The write is now conditional on the stock still being short, and the next reading pays the order.
+5. *A fractional unit price could be stored.* 99.5 × 10 is a whole number, and only the product was checked. Each line is now checked on its own, and the money columns check their storage type.
+
+It also pointed out that Stripe's failure message is free text, that nothing rules out its repeating a value that was sent, and that one value sent is the buyer's email address. Whether it does could not be confirmed from Stripe's documentation, so errors are now built from Stripe's identifiers (type, code, parameter name) and the status, never from its free text.
+
+**What was checked against current documentation** (2026-10-05): Stripe's manual signature verification, its retry schedule, its guidance on duplicate events, the Checkout Session and Refund parameters used here, how idempotency keys behave, no-cost orders, and the shape of its error object; Cloudflare D1's limits. D1's documentation gives 50 queries per invocation on the Free plan and does not say how the statements inside a `batch()` are counted, so nothing here assumes a batch is free: confirming a payment is ten statements in two round trips however many lines the order has, and placing an order is two statements in one.
+
+**How it was verified.** 142 new tests inside workerd, against the site's own Worker and Mallok's migrator. Then 92 guards were broken one at a time — the signature check, the tolerance, each status condition, the made-to-order filter, each outbox row, each escape in the emails, each constraint in the migration — and every one turned a test red, including those that can only be seen when two calls run at the same moment. Two further type checks, on an order's subtotal and its shipping, cannot be told apart by any test — the total has to equal their sum, so either one catches what the other would — and are tested as a pair.
+
+**Left open, for when the routes are built.** None of these is decided here.
+
+1. *Nothing reads the outbox yet.* The rows are written; carrying them out — sending the email, purging, telling a person about a refund that is due — belongs with the routes and the cron step that will drain it, and with the choice of who is told.
+2. *A payment for a cancelled order* is recorded for a refund. Better that it could not happen: cancelling an order should expire its Checkout session.
+3. *Orders that are never paid stay `pending`.* Stripe sends `checkout.session.expired`; acting on it would cancel them.
+4. *Orders that cost nothing.* The checkout route must confirm them without Stripe. There is no function for that yet.
+5. *Stripe's Adaptive Pricing* shows a buyer their local currency at Stripe's own rate. The shop prices each currency itself (§5.5), so the two overlap; whether to switch it off per session is a decision.
+6. *The amount is not cross-checked.* The event's amount and currency are not compared with the order's. With Adaptive Pricing they can legitimately differ, which is why this waits for item 5.
+7. *The cart is not emptied after payment.* An order does not record which cart it came from.
+8. *Refunds.* The action must refund at Stripe first and record it second. Stripe keeps an idempotency key, with the answer it gave — a 5xx included — for at least 24 hours; after that a retry is refused as already refunded, which the action has to treat as done. And a refund returns the stock the payment took even when the order has shipped: right if the goods come back, wrong if they do not.
+9. *`oversold → cancelled`* is a legal move, and it leaves a payment that was taken with no order to refund it from.
+10. *The Stripe API version is not pinned.* The two calls run on whatever version the account defaults to.
+11. *Email settings.* In `mallok@0.1.0-rc.9`, `ctx.sendEmail` uses the calling plugin's own Resend key and sender address. Mallok is adding site-level email settings, which are not in a release yet; with them the shop plugin declares neither, and until then it would need its own.
+12. *The order-number prefix* is `ND-`. A shop may want its own.

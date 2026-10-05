@@ -51,7 +51,10 @@ Mallok decides the contracts on both sides. Its documentation is the reference: 
 - **`lib/scheduled.ts`** does one small piece of work per minute tick: a repricing chunk in progress, else a rate fetch if due, else clearing expired carts. State between ticks is in `p_shop_state`.
 - **Migrations**: additive and idempotent. Mallok's migrator drops whole-line `--` comments, then splits on `;` — a comment must have a line to itself. They run on the Worker's first request, not from a CLI.
 - **The cart route** (`routes/cart.ts`, `POST /_mallok/p/shop/cart`) takes a plain form POST and answers 303. The cart cookie is scoped to `/_mallok/p/shop`: Mallok bypasses its edge cache for any public request that carries a cookie.
-- Pure logic (`money`, `pricing`, `ecb`, `order-state`, `currency`) takes no database; DB functions take a `D1Database` and, where time matters, a `now`.
+- **Orders and payment are built but not reachable** (design §14). `lib/orders.ts` places an order and confirms its payment, `lib/order-fulfilment.ts` ships, cancels and refunds, `lib/outbox.ts` records what each change still owes, `lib/stripe-webhook.ts` decides what a Stripe delivery means and which status to answer, `lib/stripe-signature.ts` and `lib/stripe-client.ts` talk to Stripe over `fetch`, `lib/order-email.ts` builds the buyer's emails. No route, page or admin screen calls them, and nothing drains the outbox: those wait for Mallok. Do not add a route that works around that.
+- **A change to an order is conditional on the status it was read in** (`ORDER_STILL_IN_STATUS` in `lib/order-guard.ts`), and the statement that changes the status comes last in its batch. That is what makes a racing second call write nothing.
+- **A change to an order writes its outbox row in the same batch** (`orderChangedOutbox`). What follows the change — an email, a purge — is owed from that row. Never send from a function's return value: it is lost whenever the Worker stops after the batch.
+- Pure logic (`money`, `pricing`, `ecb`, `order-state`, `currency`, `availability`, `stripe-signature`) takes no database; DB functions take a `D1Database` and, where time matters, a `now`.
 
 ### The theme and content
 
@@ -66,6 +69,7 @@ Mallok decides the contracts on both sides. Its documentation is the reference: 
 - No render-time hook with database access, so prices and variants are not on pages yet.
 - Plugin routes cannot render through the theme, so there is no cart page yet.
 - Plugin admin panels are read-only tables; variants are seeded from `seed/shop-sample.sql`.
+- Plugin routes receive a parsed body, so a Stripe signature cannot be checked in one: there is no webhook route, and so no checkout.
 - `reference[]` fields are not resolved, so a product names one collection.
 
 Each is a task in Mallok's plan for plugin API 2. When Mallok ships one, upgrade, remove the corresponding limitation here, and prove the new behaviour with a test or the smoke run.
@@ -75,6 +79,8 @@ Each is a task in Mallok's plan for plugin API 2. When Mallok ships one, upgrade
 - Tests in `test/shop` and `test/theme` run inside workerd against the site's own Worker. `test/shop/helpers.ts` brings a site up through Mallok's HTTP API (first request → admin → token → settings → plugin enabled); tables are created by Mallok's migrator, never by hand. Create content with `createContent`, not by inserting rows.
 - Mallok caches pages in `caches.default`. In a test, create all content before requesting any page.
 - A test for a fix must be seen failing without the fix. For new guards, break the guard and confirm the test goes red.
+- A race is tested by running the calls with `Promise.all`, and such a test only counts once breaking the guard turns it red: that is the proof the two calls really interleave.
+- `countD1Calls` in `test/shop/helpers.ts` counts round trips; use it wherever the number is a design constraint. `interceptBatches` runs a hook around each batch: it is how a test changes the data between a function's reading and its writing, or loses the answer to a write that committed.
 - `npm run smoke:shop` is the only place theme, plugin, content and the Mallok CLI run together; run it when touching any of them.
 
 ## Commerce invariants (do not "simplify" them away)
@@ -82,7 +88,15 @@ Each is a task in Mallok's plan for plugin API 2. When Mallok ships one, upgrade
 - Money is integer minor units (`lib/money.ts`), never a float.
 - A cart line is a variant and a quantity, never a price; `priceCart` recomputes from the database and reports every problem at once.
 - MOQ and stock are enforced server-side in `quantityIssue`, shared by add-to-cart and cart pricing.
-- `stock` carries `CHECK (stock >= 0)`. `test/shop/schema.test.ts` proves a failing decrement rolls back its whole D1 batch, and that `WHERE stock >= qty` does not — the payment write must rely on the constraint.
+- `stock` carries `CHECK (stock >= 0)`. `test/shop/schema.test.ts` proves a failing decrement rolls back its whole D1 batch, and that `WHERE stock >= qty` does not — the payment write relies on the constraint.
+- Stock comes off when a payment is confirmed, never when an order is placed, and only for stock-tracked variants. `markOrderPaid` is one batch — event, stock, ledger, outbox, status — and must stay one: splitting it brings back the state where stock is taken for an unpaid order, or an order is paid and its email never owed.
+- One payment takes stock once, however it is reported: the same event again, a different event for the same payment intent, or two deliveries at the same moment. The parallel tests in `test/shop/orders.test.ts` hold this; do not weaken them into sequential ones.
+- What to do with a payment is read from the data — is it on record, what status is the order in, is the stock there — and read again after a write that failed. Never from the text of an error.
+- A payment the order cannot take (cancelled, or settled by another payment) is recorded as `refused` with an outbox row naming the payment to refund. The order and the stock are not touched, and the money is never left without a trace.
+- A webhook body is trusted only after `verifyStripeSignature` has passed on the bytes as received. Answer 5xx only for what delivering again could change — a database failure; Stripe redelivers anything that is not a 2xx for three days.
+- Money columns check `typeof(x) = 'integer'`: SQLite stores 99.5 in an `INTEGER` column rather than refuse it.
+- A Stripe failure is described by Stripe's identifiers and the status, never its free-text message: nothing rules out that text repeating a buyer's email address.
+- An order line is a snapshot of SKU, name and unit price. Nothing that later happens to the product may change a past order.
 - A `manual` price is never overwritten; the base price is never rewritten; an `auto` price moves only past the drift threshold.
 - Order status changes only through `lib/order-state.ts`.
 - Every external input passes Zod; every SQL value is bound; redirects go only to same-site paths; logs carry no personal data.

@@ -60,7 +60,7 @@ Nundar builds on `mallok@0.1.0-rc.9`. Some of the shop needs extension points Ma
 | **Catalogue data** | Variants, prices as integer minor units, stock, MOQ, lead time, a made-to-order policy | Editing them in the admin (read-only for now; the sample data is loaded from SQL) |
 | **Pricing** | USD base price; EUR and GBP derived from ECB rates with a buffer, rounding to a price point and a drift threshold; manual prices never overwritten | |
 | **Cart** | Add, set and remove through a plain form POST, with MOQ and stock enforced server-side | The cart page; submitting a cart as one inquiry |
-| **Checkout** | | Payment, orders and order email (the next phase) |
+| **Orders and payment** | The logic, tested and not yet reachable: orders with line snapshots, a payment that takes stock exactly once however often Stripe reports it, oversold orders, refunds that return stock, Stripe signature checks, order emails in four languages | The checkout and order pages, the webhook route, and order handling in the admin |
 
 The reasoning and the plan are in [`docs/superpowers/specs/2026-09-30-nundar-on-mallok-design.md`](docs/superpowers/specs/2026-09-30-nundar-on-mallok-design.md).
 
@@ -70,6 +70,8 @@ The reasoning and the plan are in [`docs/superpowers/specs/2026-09-30-nundar-on-
 - The cart stores variants and quantities only — never a price.
 - MOQ is enforced by the form *and* by the server, because a form can be bypassed.
 - Stock carries a database constraint, so a payment's decrement cannot go negative: a test proves the whole D1 batch rolls back.
+- Stock comes off when a payment is confirmed, never before, and once: tests deliver the same payment twice at the same moment.
+- A payment is believed only with Stripe's signature on the exact bytes received, and only for five minutes.
 - A manually set price is never overwritten by an exchange-rate refresh.
 - Language is decided by the URL alone, never by the visitor's IP.
 

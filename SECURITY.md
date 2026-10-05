@@ -41,7 +41,9 @@ security document describes each. Nundar implements none of them again.
 
 | Data | Where it lives | Notes |
 |---|---|---|
-| Card numbers, CVV | **Nowhere in Nundar** | Payment is not implemented yet. The design sends buyers to Stripe's hosted checkout, so card data will never reach this code. |
+| Card numbers, CVV | **Nowhere in Nundar** | Payment goes through Stripe's hosted checkout, so card data never reaches this code. A test lists the columns an order may have. No checkout route exists yet. |
+| Buyer email and shipping address | D1, on the order | Written when an order is placed, which nothing can do yet: the order logic is built and has no route. Never written to a log. |
+| Stripe keys and the webhook signing secret | Not stored yet | They will be plugin secrets, which Mallok encrypts. No code path reads them today. |
 | Cart contents | D1, keyed by an unguessable 128-bit id | Variant ids and quantities only — **never prices**. A test asserts the table has no price column. |
 | The cart cookie | `HttpOnly`, `SameSite=Lax`, `Secure` on HTTPS, scoped to `/_mallok/p/shop` | It identifies a cart and nothing else. It is not a session and grants nothing in the admin. |
 | Prices, stock, variants | D1 | Changed only through the admin or the plugin's own scheduled repricing. |
@@ -77,6 +79,52 @@ These are deliberate and should not be "simplified" away:
   at write time, so a price set by hand between the read and the write still
   stands.
 
+### Payment, built and not yet reachable
+
+The order and payment logic is in the repository with its tests, and no route
+calls it yet. These controls are in that code now, so that they are not left
+to be remembered when the routes are written:
+
+- **A payment is believed only with Stripe's signature** over the bytes as
+  received, compared in constant time, and only within five minutes of the
+  time Stripe signed it. Only the `v1` scheme is read. With no signing secret
+  configured, everything is refused.
+- **No amount comes from a client.** An order's lines are priced by the
+  server, and the call that opens a Checkout session takes a single amount,
+  the order's total, rather than line items a client could have shaped.
+- **Stock is taken when a payment is confirmed, never before.** Taking it when
+  an order is placed would let scripted, unpaid orders empty the catalogue.
+- **A payment takes stock once**, whether Stripe delivers the event twice,
+  sends two events for one payment, or delivers twice at the same moment.
+  Every write is conditional on the order's status, and tests run the
+  deliveries in parallel.
+- **A payment is all or nothing.** The event, the stock, the ledger, what is
+  owed afterwards and the order's status are one D1 batch. An order whose
+  stock has gone is marked `oversold` with nothing taken, for a person to
+  refund.
+- **Money taken is never left without a trace.** A payment for an order that
+  cannot take it — a cancelled one, or one another payment has settled — is
+  recorded with the payment to refund, and the order and the stock are left
+  alone.
+- **A webhook fails only for what a retry could fix.** Anything else answered
+  with an error would be redelivered for three days. A payment naming an
+  order this shop does not have is answered and not acted on: every shop on a
+  Stripe account sees every payment of that account.
+- **Money is a whole number at the database too.** The order tables check the
+  storage type of every amount, so a fraction of a minor unit cannot be
+  stored even by code that forgot to round.
+- **A Stripe error never carries what was sent.** It is described by Stripe's
+  own identifiers and the HTTP status. The free-text message is dropped:
+  nothing rules out its repeating a value that was sent, such as an email
+  address.
+- **An order's status moves only as the state machine allows**, and only if
+  the order is still where it was read. An oversold order cannot ship.
+- **Order lines are snapshots.** A later change to a product cannot alter what
+  a past order says was bought, or for how much.
+- **Emails escape everything a person typed** — product names, SKUs, tracking
+  numbers — before it becomes markup in a buyer's inbox.
+- **A failure reason never carries personal data.** It names the order by id.
+
 ## Known residual risks
 
 Stated plainly rather than left for an auditor to find:
@@ -96,6 +144,20 @@ Stated plainly rather than left for an auditor to find:
   exists, do not show prices by another route.
 - **Sample content and sample variants are public test data.** Do not load
   `seed/shop-sample.sql` into a production database.
+- **Nobody is told about a payment that has to be refunded.** An oversold
+  order, and a payment for an order that was cancelled while its buyer was
+  still on Stripe's page, are both recorded with a row in the outbox — and
+  nothing reads the outbox yet. Until something does, a person finds them
+  only by looking. Cancelling an order should also expire its Checkout
+  session, so that the second case cannot arise; that is not built either.
+- **The amount Stripe reports is not compared with the order's total.** The
+  session is opened for the order's total by the server, so they agree unless
+  something on the Stripe side changes what the buyer pays. Not yet decided;
+  see the design's §14.
+- **Orders that are never paid stay in the database as `pending`**, with the
+  buyer's email and address, until something removes them. Nothing does yet.
+- **An order that costs nothing cannot be completed.** Stripe is never asked
+  to charge zero, and nothing confirms a free order without it yet.
 
 ## Dependency posture
 

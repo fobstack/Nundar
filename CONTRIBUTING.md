@@ -64,6 +64,11 @@ same pull request and explain the new reasoning.
 | MOQ | Enforced by the form and again by the server. A form can be bypassed. |
 | Stock | Protected by `CHECK (stock >= 0)`. A decrement that would oversell fails, and rolls back the whole D1 batch it is part of — keep it that way rather than relying on `WHERE stock >= qty`, which matches no row without failing. |
 | Manual prices | Never overwritten by an exchange-rate refresh. |
+| Payment | One D1 batch: the event, the stock, the ledger, the outbox row and the order's status commit together or not at all. Every statement in it is conditional on the order's status, so a second delivery racing the first writes nothing. |
+| Order status | Changed only through `lib/order-state.ts`, and written only if the order is still in the status that was checked. |
+| Follow-ups | Whatever must happen after an order changes — an email, a purge — is a row in `p_shop_outbox`, written in the same batch as the change. Never something done afterwards on the strength of a return value. |
+| Order lines | Snapshots. Renaming, repricing or delisting a product never changes a past order. |
+| Webhooks | Verified against the bytes as received before anything is parsed. 5xx only for what delivering again could change; everything else is answered 200 and written down. |
 | Language | Decided by the URL alone. Never redirect or switch by IP — crawlers would see one language. |
 | References | A `reference` field names the target's slug **in the same language**. `test/content.test.ts` checks the sample content. |
 | Bundle identity | A bundle needs a `mallok.json` only when something outside the content names it: the sample variants attach to the product by its translation group. Where the file exists, `test/content.test.ts` keeps it in step with the bundle. |
