@@ -1,0 +1,48 @@
+{% layout "layouts/base" %}
+{% block content %}
+<article class="shell detail">
+  <nav class="crumbs" aria-label="{{ t.breadcrumb }}">
+    <a href="{{ site.home_path }}">{{ t.home }}</a>
+    <span aria-hidden="true">/</span><span aria-current="page">{{ content.title }}</span>
+  </nav>
+
+  <header class="detail-head">
+    <p class="eyebrow">{{ t.faq_eyebrow }}</p>
+    <h1 class="detail-title">{{ content.title }}</h1>
+    {% if content.description != "" %}<p class="detail-lede">{{ content.description }}</p>{% endif %}
+  </header>
+
+  {%- comment -%}
+    Mallok publishes these same pairs as FAQ structured data, so every one of
+    them has to be on the page. A <details> element keeps the answers in the
+    document, where a search engine and a find-in-page both reach them.
+  {%- endcomment -%}
+  {% if content.faq.size > 0 %}
+  <div class="faq-list">
+    {% for pair in content.faq %}
+    <details class="faq-item"{% if forloop.first %} open{% endif %}>
+      <summary>{{ pair.question }}</summary>
+      <p>{{ pair.answer }}</p>
+    </details>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {%- comment -%}
+    `content.html` is not a string, so it cannot be compared with one: the
+    body is captured first, and a page without one gets no empty box.
+  {%- endcomment -%}
+  {% capture body %}{{ content.html }}{% endcapture %}
+  {% if body != blank %}<div class="prose more">{{ content.html }}</div>{% endif %}
+
+  {% if content.siblings.size > 0 %}
+  <section class="more">
+    <div class="section-head"><h2>{{ t.other_faq }}</h2></div>
+    <div class="card-grid">
+      {% for item in content.siblings limit: 3 %}{% render "partials/card", item: item %}{% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</article>
+{% if theme.options.cta_title != blank %}{% render "partials/closing" %}{% endif %}
+{% endblock %}

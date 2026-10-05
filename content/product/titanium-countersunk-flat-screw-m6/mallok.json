@@ -1,0 +1,29 @@
+{
+  "translation_group": "0e3809c6-54b7-5f36-8848-d4fc51080818",
+  "items": {
+    "en": {
+      "id": "146faac6-838a-5616-b911-dd55232166ca",
+      "created_at": "2026-10-05T00:00:00Z",
+      "path": "/products/titanium-countersunk-flat-screw-m6",
+      "slug": "titanium-countersunk-flat-screw-m6"
+    },
+    "de": {
+      "id": "d1754f89-b2e8-5752-b0e8-f5db101cab68",
+      "created_at": "2026-10-05T00:00:00Z",
+      "path": "/de/products/titan-senkschraube-m6",
+      "slug": "titan-senkschraube-m6"
+    },
+    "fr": {
+      "id": "a4e2d091-d20d-50c6-9690-a244d95c59ff",
+      "created_at": "2026-10-05T00:00:00Z",
+      "path": "/fr/products/vis-titane-tete-fraisee-m6",
+      "slug": "vis-titane-tete-fraisee-m6"
+    },
+    "es": {
+      "id": "8338790b-5e94-50a1-b5eb-348a6a9ea108",
+      "created_at": "2026-10-05T00:00:00Z",
+      "path": "/es/products/tornillo-titanio-cabeza-avellanada-m6",
+      "slug": "tornillo-titanio-cabeza-avellanada-m6"
+    }
+  }
+}

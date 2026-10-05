@@ -5,6 +5,14 @@
     <h1 class="detail-title">{{ content.title }}</h1>
     {% if content.description != "" %}<p class="detail-lede">{{ content.description }}</p>{% endif %}
   </header>
-  <div class="prose">{{ content.html }}</div>
+  {% if content.cover != blank %}
+  <div class="detail-cover"><img src="{{ content.cover }}" alt="" width="1440" height="617" decoding="async"></div>
+  {% endif %}
+  {%- comment -%}
+    `content.html` is not a string, so it cannot be compared with one: the
+    body is captured first, and a page without one gets no empty box.
+  {%- endcomment -%}
+  {% capture body %}{{ content.html }}{% endcapture %}
+  {% if body != blank %}<div class="prose prose-wide">{{ content.html }}</div>{% endif %}
 </article>
 {% endblock %}

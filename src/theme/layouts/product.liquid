@@ -7,68 +7,106 @@
     <span aria-hidden="true">/</span><span aria-current="page">{{ content.title }}</span>
   </nav>
 
-  <header class="detail-head">
-    <h1 class="detail-title">{{ content.title }}</h1>
-    {% if content.description != "" %}<p class="detail-lede">{{ content.description }}</p>{% endif %}
-  </header>
+  {% assign shots = content.frontmatter.gallery %}
+  {% assign has_gallery = false %}
+  {% for path in shots %}{% if content.images[path] %}{% assign has_gallery = true %}{% endif %}{% endfor %}
+  <div class="product-top{% unless has_gallery %} product-top-plain{% endunless %}">
+    {% if has_gallery %}
+    <figure class="gallery" role="group" aria-label="{{ t.gallery }}">
+      {%- comment -%}
+        The large picture is the first one that exists, which is not always
+        the first one named: a path that names no file is skipped, and the
+        picture after it must not be loaded as a thumbnail.
+      {%- endcomment -%}
+      {% assign shown = 0 %}
+      {% for path in shots %}
+        {% assign shot = content.images[path] %}
+        {% if shot %}
+        {% assign shown = shown | plus: 1 %}
+        <img src="{{ shot.url }}"{% if shot.srcset != "" %} srcset="{{ shot.srcset }}" sizes="{% if shown == 1 %}(max-width: 64rem) 100vw, 44rem{% else %}(max-width: 64rem) 33vw, 15rem{% endif %}"{% endif %}{% if shot.width %} width="{{ shot.width }}" height="{{ shot.height }}"{% endif %} alt="{% if shot.alt != "" %}{{ shot.alt }}{% else %}{{ content.title }} {{ shown }}{% endif %}" loading="{% if shown == 1 %}eager{% else %}lazy{% endif %}" decoding="async">
+        {% endif %}
+      {% endfor %}
+    </figure>
+    {% endif %}
 
-  <div class="detail-grid">
-    <div class="detail-main">
-      {% assign shots = content.frontmatter.gallery %}
-      {% assign has_gallery = false %}
-      {% for path in shots %}{% if content.images[path] %}{% assign has_gallery = true %}{% endif %}{% endfor %}
-      {% if has_gallery %}
-      <figure class="gallery" role="group" aria-label="{{ t.gallery }}">
-        {% for path in shots %}
-          {% assign shot = content.images[path] %}
-          {% if shot %}
-          <img src="{{ shot.url }}"{% if shot.srcset != "" %} srcset="{{ shot.srcset }}" sizes="(max-width: 60rem) 100vw, 44rem"{% endif %}{% if shot.width %} width="{{ shot.width }}" height="{{ shot.height }}"{% endif %} alt="{% if shot.alt != "" %}{{ shot.alt }}{% else %}{{ content.title }} {{ forloop.index }}{% endif %}" loading="{% if forloop.first %}eager{% else %}lazy{% endif %}" decoding="async">
-          {% endif %}
-        {% endfor %}
-      </figure>
+    <div class="buy-box">
+      {% if content.refs.collection %}<p class="eyebrow">{{ content.refs.collection.title }}</p>{% endif %}
+      <h1 class="detail-title">{{ content.title }}</h1>
+      {% if content.description != "" %}<p class="detail-lede">{{ content.description }}</p>{% endif %}
+
+      {% assign facets = content.frontmatter.facets %}
+      {% if facets != blank %}
+      <dl class="facet-list">
+        {% for pair in facets %}<div><dt>{{ pair[0] }}</dt><dd>{{ pair[1] }}</dd></div>{% endfor %}
+      </dl>
       {% endif %}
 
       {%- comment -%}
-        The body carries the product's features and the applications that have
-        not been given a page of their own. Keeping them here is deliberate:
-        they strengthen this page for attribute searches, where a page per
-        feature would only multiply near-identical pages.
+        The sizes on offer, each with the SKU a buyer quotes. Prices and
+        availability will sit in this table once the shop plugin can supply
+        them to the page.
       {%- endcomment -%}
-      <div class="prose">{{ content.html }}</div>
-
-      {% assign specs = content.frontmatter.specs %}
-      {% if specs != blank %}
-      <section class="specs">
-        <h2>{{ t.specifications }}</h2>
-        <table class="spec-table">
+      {% assign sizes = content.frontmatter.sizes %}
+      {% if sizes != blank %}
+      <section class="size-list">
+        <h2>{{ t.sizes }}</h2>
+        <table class="data-table">
+          <thead><tr><th scope="col">{{ t.sku }}</th><th scope="col">{{ t.size }}</th></tr></thead>
           <tbody>
-            {% for pair in specs %}<tr><th scope="row">{{ pair[0] }}</th><td>{{ pair[1] }}</td></tr>{% endfor %}
+            {% for pair in sizes %}<tr><td>{{ pair[0] }}</td><td>{{ pair[1] }}</td></tr>{% endfor %}
           </tbody>
         </table>
       </section>
       {% endif %}
-    </div>
 
-    <aside class="spec-card">
-      <dl>
-        {% if content.frontmatter.material %}<div><dt>{{ t.material }}</dt><dd>{{ content.frontmatter.material }}</dd></div>{% endif %}
-        {% if content.frontmatter.standard %}<div><dt>{{ t.standard }}</dt><dd class="mono">{{ content.frontmatter.standard }}</dd></div>{% endif %}
-      </dl>
-      <a class="btn btn-solid btn-block" href="{{ theme.options.contact_href }}">{{ t.request_quote }}</a>
       {% assign sheet = content.files[content.frontmatter.datasheet] %}
-      {% if sheet %}<a class="datasheet" href="{{ sheet }}" download>{{ t.datasheet }}</a>{% endif %}
-    </aside>
+      {% if theme.options.quote_href != blank or sheet %}
+      <div class="buy-actions">
+        {% if theme.options.quote_href != blank %}<a class="btn btn-solid" href="{{ theme.options.quote_href }}">{{ t.request_quote }}</a>{% endif %}
+        {% if sheet %}<a class="datasheet" href="{{ sheet }}" download>{{ t.datasheet }}</a>{% endif %}
+      </div>
+      {% endif %}
+    </div>
   </div>
 
   {%- comment -%}
-    The application notes written about this product. Each is its own landing
-    page; Mallok resolves them from the `product` reference they declare, so
-    nothing here has to be kept in step by hand.
+    `content.html` is not a string, so it cannot be compared with one: the
+    body is captured first, and a page without one gets no empty box.
+  {%- endcomment -%}
+  {% capture body %}{{ content.html }}{% endcapture %}
+  {% assign specs = content.frontmatter.specs %}
+  {% if body != blank or specs != blank %}
+  <div class="detail-grid">
+    {%- comment -%}
+      The body carries the product's features and the uses that have not been
+      given a page of their own. Keeping them here is deliberate: they
+      strengthen this page for attribute searches, where a page per feature
+      would only multiply near-identical pages.
+    {%- endcomment -%}
+    {% if body != blank %}<div class="detail-main prose">{{ content.html }}</div>{% endif %}
+
+    {% if specs != blank %}
+    <aside class="spec-card specs">
+      <h2>{{ t.specifications }}</h2>
+      <table class="data-table">
+        <tbody>
+          {% for pair in specs %}<tr><th scope="row">{{ pair[0] }}</th><td>{{ pair[1] }}</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </aside>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {%- comment -%}
+    The industry pages and case studies written about this product. Each is
+    its own landing page; Mallok resolves them from the `product` reference
+    they declare, so nothing here has to be kept in step by hand.
   {%- endcomment -%}
   {% if content.backrefs.application.size > 0 %}
   <section class="more">
     <div class="section-head">
-      <h2>{{ t.application }}</h2>
+      <h2>{{ t.used_in }}</h2>
       <p>{{ t.applications_aside }}</p>
     </div>
     <div class="card-grid">
@@ -77,12 +115,19 @@
   </section>
   {% endif %}
 
+  {% if content.backrefs.case.size > 0 %}
+  <section class="more">
+    <div class="section-head"><h2>{{ t.cases_with }}</h2></div>
+    <div class="card-grid">
+      {% for item in content.backrefs.case %}{% render "partials/card", item: item, eyebrow: item.frontmatter.sector %}{% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
   {% if content.siblings.size > 0 %}
   <section class="more">
     <div class="section-head"><h2>{{ t.related_products }}</h2></div>
-    <div class="card-grid">
-      {% for item in content.siblings limit: 3 %}{% render "partials/card", item: item %}{% endfor %}
-    </div>
+    {% render "partials/spec-table", items: content.siblings %}
   </section>
   {% endif %}
 </article>

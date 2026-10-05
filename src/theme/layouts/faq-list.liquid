@@ -1,0 +1,56 @@
+{% layout "layouts/base" %}
+{% block content %}
+<section class="shell detail">
+  <header class="detail-head">
+    <h1 class="detail-title">{{ page.title }}</h1>
+  </header>
+  {%- comment -%}
+    Every topic's questions on one page: someone with a question does not
+    know which topic it was filed under. A list item carries its front matter
+    as written, not the pairs Mallok normalises for a content page, so every
+    spelling Mallok accepts is read here — a list of `question` and `answer`,
+    the same with `q` and `a`, and the question-to-answer mapping the admin's
+    control produces — and a pair with either half missing is left out, as
+    Mallok leaves it out of the topic's own page.
+  {%- endcomment -%}
+  {% if list.items.size > 0 %}
+  {% for item in list.items %}
+  <section class="faq-topic">
+    <div class="section-head">
+      <h2><a href="{{ item.path }}">{{ item.title }}</a></h2>
+      {% if item.description != "" %}<p>{{ item.description }}</p>{% endif %}
+    </div>
+    {% assign written = 0 %}
+    {% for pair in item.frontmatter.faq %}
+    {% assign question = pair.question %}{% if question == blank %}{% assign question = pair.q %}{% endif %}{% if question == blank %}{% assign question = pair[0] %}{% endif %}
+    {% assign answer = pair.answer %}{% if answer == blank %}{% assign answer = pair.a %}{% endif %}{% if answer == blank %}{% assign answer = pair[1] %}{% endif %}
+    {% if question != blank and answer != blank %}{% assign written = written | plus: 1 %}{% endif %}
+    {% endfor %}
+    {% if written > 0 %}
+    <div class="faq-list">
+      {% for pair in item.frontmatter.faq %}
+      {% assign question = pair.question %}{% if question == blank %}{% assign question = pair.q %}{% endif %}{% if question == blank %}{% assign question = pair[0] %}{% endif %}
+      {% assign answer = pair.answer %}{% if answer == blank %}{% assign answer = pair.a %}{% endif %}{% if answer == blank %}{% assign answer = pair[1] %}{% endif %}
+      {% if question != blank and answer != blank %}
+      <details class="faq-item">
+        <summary>{{ question }}</summary>
+        <p>{{ answer }}</p>
+      </details>
+      {% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+  </section>
+  {% endfor %}
+  {% else %}
+  <p class="empty">{{ t.empty }}</p>
+  {% endif %}
+  {% if list.prev_path != "" or list.has_next %}
+  <nav class="pager" aria-label="{{ t.pagination }}">
+    {% if list.prev_path != "" %}<a class="pager-prev" href="{{ list.prev_path }}">← {{ t.prev }}</a>{% endif %}
+    {% if list.has_next %}<a class="pager-next" href="{{ list.next_path }}">{{ t.next }} →</a>{% endif %}
+  </nav>
+  {% endif %}
+</section>
+{% if theme.options.cta_title != blank %}{% render "partials/closing" %}{% endif %}
+{% endblock %}

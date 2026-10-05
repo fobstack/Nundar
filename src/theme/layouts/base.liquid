@@ -1,20 +1,51 @@
 <!doctype html>
-<html lang="{{ page.locale }}">
+{%- comment -%}
+  The accent colour goes on the root element, not on <body>: the stylesheet
+  derives three tints from it in a `:root` rule, and a custom property is
+  resolved on the element it is declared for.
+{%- endcomment -%}
+<html lang="{{ page.locale }}" style="--accent: {{ theme.options.accent }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% if page.kind == "home" %}{{ site.name }}{% if site.tagline != "" %} — {{ site.tagline }}{% endif %}{% else %}{{ page.title }} — {{ site.name }}{% endif %}</title>
-  {% if page.description != "" %}<meta name="description" content="{{ page.description }}">{% endif %}
+  {%- comment -%}
+    The home page describes itself in the site owner's words, and those have
+    to be in the visitor's language. The site's own tagline is one string for
+    every language, so two theme options stand in front of it: an option can
+    carry a value per language.
+  {%- endcomment -%}
+  {% assign tagline = site.tagline %}
+  {% if theme.options.tagline != blank %}{% assign tagline = theme.options.tagline %}{% endif %}
+  {% assign summary = page.description %}
+  {% if page.kind == "home" %}
+    {% if theme.options.home_description != blank %}{% assign summary = theme.options.home_description %}{% elsif theme.options.tagline != blank %}{% assign summary = theme.options.tagline %}{% endif %}
+  {% endif %}
+  {%- comment -%}
+    The pages of one list would otherwise all carry one title.
+  {%- endcomment -%}
+  <title>{% if page.kind == "home" %}{{ site.name }}{% if tagline != "" %} — {{ tagline }}{% endif %}{% else %}{{ page.title }}{% if page.kind == "list" and list.page > 1 %}, {{ t.page }} {{ list.page }}{% endif %} — {{ site.name }}{% endif %}</title>
+  {% if summary != "" %}<meta name="description" content="{{ summary }}">{% endif %}
   <link rel="canonical" href="{{ page.canonical }}">
+  <meta property="og:site_name" content="{{ site.name }}">
+  <meta property="og:title" content="{% if page.kind == "home" %}{{ site.name }}{% else %}{{ page.title }}{% endif %}">
+  {% if summary != "" %}<meta property="og:description" content="{{ summary }}">{% endif %}
+  <meta property="og:url" content="{{ page.canonical }}">
+  <meta property="og:type" content="website">
   {%- comment -%}
     page.head carries hreflang (with x-default) and the structured data, both
     emitted by Mallok. Leaving it out breaks the site's multilingual indexing,
     which is the one thing a theme must never be able to do by accident.
   {%- endcomment -%}
   {{ page.head }}
+  {%- comment -%}
+    The two fonts every page draws its first screen with. Without the hint the
+    browser finds them only after it has parsed the stylesheet.
+  {%- endcomment -%}
+  <link rel="preload" href="{{ theme.asset_base }}/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{{ theme.asset_base }}/fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{{ theme.asset_base }}/style.css">
 </head>
-<body style="--accent: {{ theme.options.accent }}">
+<body>
   <a class="skip" href="#main">{{ t.skip }}</a>
   {% render "partials/header" %}
   <main id="main">{% block content %}{% endblock %}</main>

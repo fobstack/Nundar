@@ -1,0 +1,18 @@
+{%- comment -%}
+  The band that closes a page: one sentence and the two ways to get in touch.
+{%- endcomment -%}
+<section class="closing">
+  <img class="closing-bg" src="{{ theme.asset_base }}/banner-bg.webp" alt="" width="1200" height="655" loading="lazy" decoding="async">
+  <div class="shell">
+    <div>
+      <h2>{{ theme.options.cta_title }}</h2>
+      {% if theme.options.cta_text != blank %}<p>{{ theme.options.cta_text }}</p>{% endif %}
+    </div>
+    {% if theme.options.quote_href != blank or theme.options.contact_href != blank %}
+    <div class="actions">
+      {% if theme.options.quote_href != blank %}<a class="btn btn-solid btn-sm" href="{{ theme.options.quote_href }}">{{ t.request_quote }}</a>{% endif %}
+      {% if theme.options.contact_href != blank %}<a class="btn btn-ghost btn-sm" href="{{ theme.options.contact_href }}">{{ t.contact_us }} {% render "partials/icon", name: "arrow" %}</a>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+</section>

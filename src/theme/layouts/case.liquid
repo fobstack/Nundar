@@ -1,0 +1,62 @@
+{% layout "layouts/base" %}
+{% block content %}
+<article class="shell detail">
+  <nav class="crumbs" aria-label="{{ t.breadcrumb }}">
+    <a href="{{ site.home_path }}">{{ t.home }}</a>
+    <span aria-hidden="true">/</span><span aria-current="page">{{ content.title }}</span>
+  </nav>
+
+  <header class="detail-head">
+    <p class="eyebrow">{% if content.frontmatter.sector != blank %}{{ content.frontmatter.sector }}{% else %}{{ t.case_eyebrow }}{% endif %}</p>
+    <h1 class="detail-title">{{ content.title }}</h1>
+    {% if content.description != "" %}<p class="detail-lede">{{ content.description }}</p>{% endif %}
+  </header>
+
+  {%- comment -%}
+    The figures come first: they are what a reader is here to find, and what
+    they will quote to a colleague. Each is written name first, as a
+    description list requires and as it should be read aloud; the stylesheet
+    puts the figure on top.
+  {%- endcomment -%}
+  {% assign results = content.frontmatter.results %}
+  {% if results != blank %}
+  <dl class="results" aria-label="{{ t.results }}">
+    {% for pair in results %}<div><dt>{{ pair[0] }}</dt><dd>{{ pair[1] }}</dd></div>{% endfor %}
+  </dl>
+  {% endif %}
+
+  {% if content.cover != blank %}
+  <div class="detail-cover"><img src="{{ content.cover }}" alt="" width="1440" height="617" decoding="async"></div>
+  {% endif %}
+
+  {%- comment -%}
+    `content.html` is not a string, so it cannot be compared with one: the
+    body is captured first, and a page without one gets no empty box.
+  {%- endcomment -%}
+  {% capture body %}{{ content.html }}{% endcapture %}
+  {% if body != blank or content.refs.product %}
+  <div class="detail-grid">
+    {% if body != blank %}<div class="detail-main prose">{{ content.html }}</div>{% endif %}
+
+    {% if content.refs.product %}
+    <aside class="spec-card">
+      <p class="eyebrow">{{ t.the_product_used }}</p>
+      <p class="spec-card-title"><a href="{{ content.refs.product.path }}">{{ content.refs.product.title }}</a></p>
+      {% if content.refs.product.description != blank %}<p>{{ content.refs.product.description }}</p>{% endif %}
+      <a class="btn btn-solid btn-block" href="{{ content.refs.product.path }}">{{ t.view_product }}</a>
+    </aside>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if content.siblings.size > 0 %}
+  <section class="more">
+    <div class="section-head"><h2>{{ t.other_cases }}</h2></div>
+    <div class="card-grid">
+      {% for item in content.siblings limit: 3 %}{% render "partials/card", item: item, eyebrow: item.frontmatter.sector %}{% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</article>
+{% if theme.options.cta_title != blank %}{% render "partials/closing" %}{% endif %}
+{% endblock %}

@@ -1,0 +1,23 @@
+{% layout "layouts/base" %}
+{% block content %}
+<article class="shell detail">
+  <nav class="crumbs" aria-label="{{ t.breadcrumb }}">
+    <a href="{{ site.home_path }}">{{ t.home }}</a>
+    <span aria-hidden="true">/</span><span aria-current="page">{{ content.title }}</span>
+  </nav>
+
+  <header class="detail-head">
+    <p class="eyebrow">{{ t.tool_eyebrow }}</p>
+    <h1 class="detail-title">{{ content.title }}</h1>
+    {% if content.description != "" %}<p class="detail-lede">{{ content.description }}</p>{% endif %}
+  </header>
+
+  {%- comment -%}
+    `content.html` is not a string, so it cannot be compared with one: the
+    body is captured first, and a page without one gets no empty box.
+  {%- endcomment -%}
+  {% capture body %}{{ content.html }}{% endcapture %}
+  {% if body != blank %}<div class="prose prose-wide">{{ content.html }}</div>{% endif %}
+</article>
+{% if theme.options.cta_title != blank %}{% render "partials/closing" %}{% endif %}
+{% endblock %}

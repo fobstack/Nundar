@@ -1,0 +1,29 @@
+{
+  "translation_group": "76826d2f-ea98-53c3-b9fc-d6bc06279e98",
+  "items": {
+    "en": {
+      "id": "52bef6df-0568-57ac-8025-f42970df5038",
+      "created_at": "2026-10-05T00:00:00Z",
+      "path": "/products/titanium-shoulder-screw-m6",
+      "slug": "titanium-shoulder-screw-m6"
+    },
+    "de": {
+      "id": "07dd8b1c-8647-5019-b6cf-9e7cf3eb061b",
+      "created_at": "2026-10-05T00:00:00Z",
+      "path": "/de/products/titan-passschraube-m6",
+      "slug": "titan-passschraube-m6"
+    },
+    "fr": {
+      "id": "f81dbf6e-87b1-59df-a465-8b9193603f12",
+      "created_at": "2026-10-05T00:00:00Z",
+      "path": "/fr/products/vis-titane-a-epaulement-m6",
+      "slug": "vis-titane-a-epaulement-m6"
+    },
+    "es": {
+      "id": "b2cd70b3-ae34-5c93-8a71-5cad71883b62",
+      "created_at": "2026-10-05T00:00:00Z",
+      "path": "/es/products/tornillo-titanio-de-hombro-m6",
+      "slug": "tornillo-titanio-de-hombro-m6"
+    }
+  }
+}

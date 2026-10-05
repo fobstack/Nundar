@@ -1,8 +1,8 @@
 {
   "id": "nundar",
   "name": "Nundar",
-  "description": "A commerce theme: specification-first product pages, application notes that stand as their own landing pages, and collections that gather products by attribute. Script-free.",
-  "version": "0.1.0",
+  "description": "A commerce theme for a technical catalogue: a specification finder, product pages built around a size table, landing pages for the applications a part is used in, collections by type, case studies and reference pages. HTML first: every page is complete without a script.",
+  "version": "0.2.0",
   "themeApi": 1,
   "home": "layouts/home.liquid",
   "kinds": {
@@ -18,33 +18,34 @@
     },
     "product": {
       "layout": "layouts/product.liquid",
-      "listLayout": "layouts/list.liquid",
+      "listLayout": "layouts/products.liquid",
       "label": "Product",
       "base": "products",
       "fields": {
-        "standard": {
-          "type": "string",
-          "label": "Standard",
-          "help": "The standard the product is made to, for example EN 10204 3.1.",
-          "group": "Specification"
+        "facets": {
+          "type": "keyvalue",
+          "label": "Filterable attributes",
+          "group": "Specification",
+          "help": "What a buyer filters the catalogue by, for example Head type, Thread, Material. Use the same names, in the same order, on every product: they become the columns of the specification finder."
         },
-        "material": {
-          "type": "string",
-          "label": "Material",
-          "group": "Specification"
+        "sizes": {
+          "type": "keyvalue",
+          "label": "Sizes",
+          "group": "Specification",
+          "help": "One row per size on offer: the SKU, then what distinguishes it, for example TI-SHC-M5-20 and 20 mm."
         },
         "specs": {
           "type": "keyvalue",
           "label": "Specifications",
-          "help": "Shown as a table under the description.",
-          "group": "Specification"
+          "group": "Specification",
+          "help": "The full specification, shown as a table on the product page."
         },
         "collection": {
           "type": "reference",
           "kind": "collection",
           "label": "Collection",
-          "help": "Slug of the collection this product is listed in.",
-          "group": "Classification"
+          "group": "Classification",
+          "help": "Slug of the collection this product is listed in."
         },
         "gallery": {
           "type": "image[]",
@@ -55,28 +56,8 @@
         "datasheet": {
           "type": "file",
           "label": "Datasheet",
-          "accept": [".pdf"],
+          "accept": ["pdf"],
           "group": "Specification"
-        }
-      }
-    },
-    "application": {
-      "layout": "layouts/application.liquid",
-      "listLayout": "layouts/list.liquid",
-      "label": "Application",
-      "base": "applications",
-      "fields": {
-        "product": {
-          "type": "reference",
-          "kind": "product",
-          "label": "Product",
-          "help": "Slug of the product this application note is about.",
-          "required": true
-        },
-        "spec_highlights": {
-          "type": "keyvalue",
-          "label": "Parameters that matter here",
-          "help": "The few specifications this application depends on."
         }
       }
     },
@@ -85,28 +66,234 @@
       "listLayout": "layouts/list.liquid",
       "label": "Collection",
       "base": "collections"
+    },
+    "application": {
+      "layout": "layouts/application.liquid",
+      "listLayout": "layouts/list.liquid",
+      "label": "Application",
+      "base": "industries",
+      "fields": {
+        "product": {
+          "type": "reference",
+          "kind": "product",
+          "label": "Product",
+          "required": true,
+          "help": "Slug of the product this application note is about."
+        },
+        "spec_highlights": {
+          "type": "keyvalue",
+          "label": "Parameters that matter here",
+          "help": "The few specifications this application depends on."
+        }
+      }
+    },
+    "case": {
+      "layout": "layouts/case.liquid",
+      "listLayout": "layouts/list.liquid",
+      "label": "Case study",
+      "base": "case-studies",
+      "fields": {
+        "sector": {
+          "type": "string",
+          "label": "Sector",
+          "help": "The industry the work was done for, shown above the title."
+        },
+        "product": {
+          "type": "reference",
+          "kind": "product",
+          "label": "Product",
+          "help": "Slug of the product the case study used."
+        },
+        "results": {
+          "type": "keyvalue",
+          "label": "Results",
+          "help": "The measured outcomes, each a short label and a figure."
+        }
+      }
+    },
+    "faq": {
+      "layout": "layouts/faq.liquid",
+      "listLayout": "layouts/faq-list.liquid",
+      "label": "FAQ",
+      "base": "faq",
+      "fields": {
+        "faq": {
+          "type": "keyvalue",
+          "label": "Questions and answers",
+          "help": "Each question with its answer. They are shown on the page and published as FAQ structured data."
+        }
+      }
+    },
+    "tool": {
+      "layout": "layouts/tool.liquid",
+      "listLayout": "layouts/list.liquid",
+      "label": "Engineering tool",
+      "base": "tools"
     }
   },
   "options": {
     "accent": {
       "type": "color",
       "label": "Accent colour",
-      "default": "#0e5a6e"
+      "default": "#b45309"
+    },
+    "tagline": {
+      "type": "string",
+      "label": "Tagline, after the site name in the home page title",
+      "default": "",
+      "help": "Empty uses the site's own tagline. That one has a single value for every language; this option can be given per language."
+    },
+    "home_description": {
+      "type": "text",
+      "label": "Home page description, for search results and link previews",
+      "default": "",
+      "help": "Empty uses the tagline."
     },
     "hero_title": {
       "type": "string",
       "label": "Home page headline",
-      "default": "Specified for the application, not just the catalogue."
+      "default": "Built around your requirements."
     },
     "hero_lede": {
       "type": "text",
       "label": "Home page paragraph",
-      "default": "Browse products by what they are, by where they are used, and by the properties that matter for your project."
+      "default": "Find a part by specification, or discuss a custom one with our team."
+    },
+    "hero_badge": {
+      "type": "string",
+      "label": "Caption on the home page picture",
+      "default": ""
+    },
+    "prop_1_title": {
+      "type": "string",
+      "label": "First strength: title",
+      "default": ""
+    },
+    "prop_1_text": {
+      "type": "string",
+      "label": "First strength: one line",
+      "default": ""
+    },
+    "prop_2_title": {
+      "type": "string",
+      "label": "Second strength: title",
+      "default": ""
+    },
+    "prop_2_text": {
+      "type": "string",
+      "label": "Second strength: one line",
+      "default": ""
+    },
+    "prop_3_title": {
+      "type": "string",
+      "label": "Third strength: title",
+      "default": ""
+    },
+    "prop_3_text": {
+      "type": "string",
+      "label": "Third strength: one line",
+      "default": ""
+    },
+    "custom_title": {
+      "type": "string",
+      "label": "Custom work: headline",
+      "default": ""
+    },
+    "custom_text": {
+      "type": "text",
+      "label": "Custom work: paragraph",
+      "default": ""
+    },
+    "quality_1_title": {
+      "type": "string",
+      "label": "First assurance: title",
+      "default": ""
+    },
+    "quality_1_text": {
+      "type": "text",
+      "label": "First assurance: text",
+      "default": ""
+    },
+    "quality_2_title": {
+      "type": "string",
+      "label": "Second assurance: title",
+      "default": ""
+    },
+    "quality_2_text": {
+      "type": "text",
+      "label": "Second assurance: text",
+      "default": ""
+    },
+    "quality_3_title": {
+      "type": "string",
+      "label": "Third assurance: title",
+      "default": ""
+    },
+    "quality_3_text": {
+      "type": "text",
+      "label": "Third assurance: text",
+      "default": ""
+    },
+    "cta_title": {
+      "type": "string",
+      "label": "Closing banner: headline",
+      "default": ""
+    },
+    "cta_text": {
+      "type": "string",
+      "label": "Closing banner: one line",
+      "default": ""
+    },
+    "footer_blurb": {
+      "type": "text",
+      "label": "Footer: what the company does",
+      "default": ""
+    },
+    "footer_note": {
+      "type": "string",
+      "label": "Footer: a line under it, for example certifications held",
+      "default": ""
+    },
+    "contact_email": {
+      "type": "string",
+      "label": "Footer: email address",
+      "default": ""
+    },
+    "contact_phone": {
+      "type": "string",
+      "label": "Footer: telephone number",
+      "default": ""
+    },
+    "quote_href": {
+      "type": "string",
+      "label": "Link for the request-a-quote buttons",
+      "default": "/contact"
     },
     "contact_href": {
       "type": "string",
-      "label": "Link for the request-a-quote button",
+      "label": "Link for the contact buttons",
       "default": "/contact"
+    },
+    "catalogue_href": {
+      "type": "string",
+      "label": "Link to the full catalogue, under the home page finder",
+      "default": "/products",
+      "help": "The home page shows the ten newest products. Give this per language, for example /de/products; empty shows no link."
+    },
+    "terms_href": {
+      "type": "string",
+      "label": "Footer: link to the terms",
+      "default": ""
+    },
+    "privacy_href": {
+      "type": "string",
+      "label": "Footer: link to the privacy policy",
+      "default": ""
+    },
+    "compliance_href": {
+      "type": "string",
+      "label": "Footer: link to the compliance statement",
+      "default": ""
     }
   },
   "locales": ["en", "de", "fr", "es"],

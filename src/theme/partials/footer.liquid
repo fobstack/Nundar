@@ -1,11 +1,37 @@
 <footer class="footer">
-  <div class="shell footer-in">
-    <div>
-      <p class="footer-name">{{ site.name }}</p>
-      {% if site.tagline != "" %}<p class="footer-tagline">{{ site.tagline }}</p>{% endif %}
+  <div class="shell">
+    <div class="footer-grid">
+      <div>
+        <a class="brand" href="{{ site.home_path }}">{{ site.name }}</a>
+        {% if theme.options.footer_blurb != blank %}<p class="footer-blurb">{{ theme.options.footer_blurb }}</p>{% elsif theme.options.tagline != blank %}<p class="footer-blurb">{{ theme.options.tagline }}</p>{% elsif site.tagline != "" %}<p class="footer-blurb">{{ site.tagline }}</p>{% endif %}
+        {% if theme.options.footer_note != blank %}<p class="footer-note">{{ theme.options.footer_note }}</p>{% endif %}
+      </div>
+      <nav aria-label="{{ t.footer_nav }}">
+        <h2>{{ t.explore }}</h2>
+        <ul class="footer-links">
+          {% for item in site.nav %}<li><a href="{{ item.href }}">{{ item.label }}</a></li>{% endfor %}
+        </ul>
+      </nav>
+      <div class="footer-contact">
+        <h2>{{ t.contact }}</h2>
+        {% if theme.options.contact_email != blank %}<p><a href="mailto:{{ theme.options.contact_email }}">{{ theme.options.contact_email }}</a></p>{% endif %}
+        {% if theme.options.contact_phone != blank %}<p>{{ theme.options.contact_phone }}</p>{% endif %}
+        {% if theme.options.contact_href != blank %}<a class="footer-cta" href="{{ theme.options.contact_href }}">{{ t.contact_us }} →</a>{% endif %}
+      </div>
     </div>
-    <nav aria-label="{{ t.footer_nav }}">
-      {% for item in site.nav %}<a href="{{ item.href }}">{{ item.label }}</a>{% endfor %}
-    </nav>
+    <div class="footer-base">
+      {%- comment -%}
+        No year: Mallok renders the same content to the same bytes every time,
+        and a page that printed the date could not be cached on that promise.
+      {%- endcomment -%}
+      <p>© {{ site.name }}</p>
+      {% if theme.options.terms_href != blank or theme.options.privacy_href != blank or theme.options.compliance_href != blank %}
+      <div class="footer-legal">
+        {% if theme.options.terms_href != blank %}<a href="{{ theme.options.terms_href }}">{{ t.terms }}</a>{% endif %}
+        {% if theme.options.privacy_href != blank %}<a href="{{ theme.options.privacy_href }}">{{ t.privacy }}</a>{% endif %}
+        {% if theme.options.compliance_href != blank %}<a href="{{ theme.options.compliance_href }}">{{ t.compliance }}</a>{% endif %}
+      </div>
+      {% endif %}
+    </div>
   </div>
 </footer>

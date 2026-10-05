@@ -15,10 +15,19 @@
         Each language is named in its own words, because a reader looking for
         their language scans for its own name. A <details> disclosure is a
         real dropdown with no script, and it scales past two languages.
+
+        The closed control carries the current language twice, as its name
+        and as its code: where the bar is short of room the stylesheet shows
+        the code, and the names are still what the open list offers.
+
+        What it is — "Language" — is text inside the control and not an
+        aria-label: a label would replace the visible words in the control's
+        accessible name, and a reader of the screen would then hear the same
+        name on every page, whatever the language.
       {%- endcomment -%}
       {% if page.alternates.size > 1 %}
       <details class="langs">
-        <summary aria-label="{{ t.language }}">{% for alt in page.alternates %}{% if alt.locale == site.locale %}{{ alt.name }}{% endif %}{% endfor %}</summary>
+        <summary><span class="visually-hidden">{{ t.language }}: </span>{% for alt in page.alternates %}{% if alt.locale == site.locale %}<span class="lang-name">{{ alt.name }}</span><span class="lang-code">{{ alt.locale }}</span>{% endif %}{% endfor %}</summary>
         <ul>
           {% for alt in page.alternates %}
           <li><a href="{{ alt.href }}" hreflang="{{ alt.locale }}" lang="{{ alt.locale }}"{% if alt.locale == site.locale %} aria-current="true"{% endif %}>{{ alt.name }}</a></li>
@@ -26,7 +35,11 @@
         </ul>
       </details>
       {% endif %}
-      <a class="btn btn-solid" href="{{ theme.options.contact_href }}">{{ t.request_quote }}</a>
+      {%- comment -%}
+        The short wording: this button shares one line with the whole
+        navigation, in every language.
+      {%- endcomment -%}
+      {% if theme.options.quote_href != blank %}<a class="btn btn-solid" href="{{ theme.options.quote_href }}">{{ t.quote_short }}</a>{% endif %}
     </nav>
   </div>
 </header>

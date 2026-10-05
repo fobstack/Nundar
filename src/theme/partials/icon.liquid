@@ -1,0 +1,16 @@
+{%- comment -%}
+  The theme's icons, inline so that they cost no request and take the colour
+  of the text around them. Called as {% render "partials/icon", name: "arrow" %}.
+  They are decoration: the text beside each one says what it means.
+{%- endcomment -%}
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+{%- case name -%}
+  {%- when "arrow" -%}<path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>
+  {%- when "ruler" -%}<path d="M3.5 16.5 16.5 3.5l4 4-13 13z"/><path d="m7.5 12.5 1.5 1.5"/><path d="m10.5 9.5 1.5 1.5"/><path d="m13.5 6.5 1.5 1.5"/>
+  {%- when "box" -%}<path d="m12 3 8 4.5v9L12 21l-8-4.5v-9z"/><path d="m4 7.5 8 4.5 8-4.5"/><path d="M12 12v9"/>
+  {%- when "cog" -%}<circle cx="12" cy="12" r="3.25"/><path d="M12 2.75v3"/><path d="M12 18.25v3"/><path d="M2.75 12h3"/><path d="M18.25 12h3"/><path d="m5.5 5.5 2.1 2.1"/><path d="m16.4 16.4 2.1 2.1"/><path d="m5.5 18.5 2.1-2.1"/><path d="m16.4 7.6 2.1-2.1"/>
+  {%- when "shield" -%}<path d="M12 3 5 6v5c0 4.4 2.8 7.9 7 10 4.2-2.1 7-5.6 7-10V6z"/><path d="m9 12 2 2 4-4"/>
+  {%- when "file" -%}<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M10 12h5"/><path d="M10 16h5"/>
+  {%- else -%}<circle cx="12" cy="12" r="8.5"/><path d="m8.5 12 2.5 2.5 4.5-5"/>
+{%- endcase -%}
+</svg>

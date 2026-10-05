@@ -6,14 +6,17 @@
   </header>
   {% if list.items.size > 0 %}
   <div class="card-grid">
-    {% for item in list.items %}{% render "partials/card", item: item %}{% endfor %}
+    {% for item in list.items %}{% render "partials/card", item: item, eyebrow: item.frontmatter.sector %}{% endfor %}
   </div>
   {% else %}
   <p class="empty">{{ t.empty }}</p>
   {% endif %}
+  {% if list.prev_path != "" or list.has_next %}
   <nav class="pager" aria-label="{{ t.pagination }}">
-    {% if list.prev_path != "" %}<a href="{{ list.prev_path }}">← {{ t.prev }}</a>{% endif %}
-    {% if list.has_next %}<a href="{{ list.next_path }}">{{ t.next }} →</a>{% endif %}
+    {% if list.prev_path != "" %}<a class="pager-prev" href="{{ list.prev_path }}">← {{ t.prev }}</a>{% endif %}
+    {% if list.has_next %}<a class="pager-next" href="{{ list.next_path }}">{{ t.next }} →</a>{% endif %}
   </nav>
+  {% endif %}
 </section>
+{% if theme.options.cta_title != blank %}{% render "partials/closing" %}{% endif %}
 {% endblock %}

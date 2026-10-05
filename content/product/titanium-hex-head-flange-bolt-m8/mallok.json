@@ -1,0 +1,29 @@
+{
+  "translation_group": "2337ded8-1991-59b3-82eb-abe140dd99ea",
+  "items": {
+    "en": {
+      "id": "053df6a7-1b58-58eb-b760-00ec17966e64",
+      "created_at": "2026-10-05T00:00:00Z",
+      "path": "/products/titanium-hex-head-flange-bolt-m8",
+      "slug": "titanium-hex-head-flange-bolt-m8"
+    },
+    "de": {
+      "id": "d45a60b2-0a38-532c-9f87-587ca6211708",
+      "created_at": "2026-10-05T00:00:00Z",
+      "path": "/de/products/titan-sechskantschraube-mit-flansch-m8",
+      "slug": "titan-sechskantschraube-mit-flansch-m8"
+    },
+    "fr": {
+      "id": "d1bcb38e-3ee6-5d03-9b8a-1cd81d6e88de",
+      "created_at": "2026-10-05T00:00:00Z",
+      "path": "/fr/products/vis-titane-tete-hexagonale-a-embase-m8",
+      "slug": "vis-titane-tete-hexagonale-a-embase-m8"
+    },
+    "es": {
+      "id": "08e77b36-4397-536e-b2a3-de2f2089a287",
+      "created_at": "2026-10-05T00:00:00Z",
+      "path": "/es/products/tornillo-titanio-cabeza-hexagonal-con-brida-m8",
+      "slug": "tornillo-titanio-cabeza-hexagonal-con-brida-m8"
+    }
+  }
+}

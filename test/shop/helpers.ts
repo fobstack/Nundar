@@ -61,7 +61,7 @@ async function bootstrap(): Promise<void> {
     headers: { ...json, cookie, 'x-mallok-csrf': csrf },
     body: JSON.stringify({
       name: 'shop-test',
-      scopes: ['content:write', 'settings:write'],
+      scopes: ['content:write', 'settings:write', 'media:write'],
     }),
   });
   token = ((await minted.json()) as { token: string }).token;
@@ -72,8 +72,11 @@ async function bootstrap(): Promise<void> {
       page: { base: '' },
       article: { base: 'news' },
       product: { base: 'products' },
-      application: { base: 'applications' },
       collection: { base: 'collections' },
+      application: { base: 'industries' },
+      case: { base: 'case-studies' },
+      faq: { base: 'faq' },
+      tool: { base: 'tools' },
     },
     nav: {
       en: [{ label: 'Products', href: '/products' }],
@@ -111,11 +114,59 @@ export interface TestContent {
 
 export type TestProduct = TestContent;
 
+/** A PNG of one pixel: the smallest file Mallok accepts as an image. */
+const PIXEL = Uint8Array.from(
+  atob(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+  ),
+  (character) => character.charCodeAt(0),
+);
+
+/**
+ * Bytes for a test file of the kind its name says, different for every
+ * `seed`: Mallok stores media by content hash, so two files with the same
+ * bytes would be one file.
+ */
+export function testFile(name: string, seed: number): Uint8Array {
+  if (name.endsWith('.pdf')) {
+    return new TextEncoder().encode(`%PDF-1.4\n% test file ${seed}\n%%EOF\n`);
+  }
+  // Bytes after the image's end marker are ignored by every reader.
+  return Uint8Array.from([...PIXEL, seed]);
+}
+
+/**
+ * Uploads a file the way `mallok publish` does, and returns the hash a
+ * content item then names it by in `assets`.
+ */
+export async function uploadMedia(
+  bytes: Uint8Array,
+  filename: string,
+): Promise<string> {
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+  const sha256 = [...digest]
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+  const stored = await SELF.fetch(`${ORIGIN}/_mallok/api/media/${sha256}`, {
+    method: 'PUT',
+    headers: {
+      authorization: `Bearer ${token}`,
+      'x-mallok-filename': encodeURIComponent(filename),
+    },
+    body: bytes,
+  });
+  if (!stored.ok) {
+    throw new Error(`Media was refused: ${await stored.text()}`);
+  }
+  return sha256;
+}
+
 /**
  * Creates a content item through the management API.
  *
  * `frontmatter` is YAML, written as it would be in an `index.md`, without the
- * `title` line or the `---` fences.
+ * `title` line or the `---` fences. `assets` maps the relative paths the
+ * front matter and the body use (`images/cover.png`) to uploaded files.
  */
 export async function createContent(input: {
   readonly kind: string;
@@ -126,6 +177,7 @@ export async function createContent(input: {
   readonly status?: 'draft' | 'published';
   readonly frontmatter?: string;
   readonly body?: string;
+  readonly assets?: Readonly<Record<string, string>>;
 }): Promise<TestContent> {
   const frontmatter = [
     `title: ${input.title}`,
@@ -139,6 +191,7 @@ export async function createContent(input: {
     ...(input.translationGroup === undefined
       ? {}
       : { translationGroup: input.translationGroup }),
+    ...(input.assets === undefined ? {} : { assets: input.assets }),
     markdown: `---\n${frontmatter}\n---\n\n${input.body ?? 'Body.'}\n`,
   });
   if (created.status !== 201) {

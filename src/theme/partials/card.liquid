@@ -1,21 +1,21 @@
 {%- comment -%}
-  One item in a grid: a product, an application note, a collection, an article.
+  One item in a grid: an industry, a case study, an article, a product.
   Called as {% render "partials/card", item: item, eyebrow: "…" %}.
 {%- endcomment -%}
 <a class="card" href="{{ item.path }}">
   {%- comment -%}
-    No cover, no picture frame: an application note or a collection usually
-    has none, and an empty grey block above its title reads as a broken image.
+    No cover, no picture frame: an empty grey block above a title reads as a
+    broken image.
   {%- endcomment -%}
   {% if item.cover != blank %}
   <div class="card-art">
-    <img src="{{ item.cover }}" alt="" width="960" height="720" loading="lazy" decoding="async">
+    <img src="{{ item.cover }}" alt="" width="960" height="540" loading="lazy" decoding="async">
   </div>
   {% endif %}
   <div class="card-body">
     {% if eyebrow != blank %}<p class="eyebrow">{{ eyebrow }}</p>{% endif %}
     <h3>{{ item.title }}</h3>
     {% if item.description != blank %}<p>{{ item.description }}</p>{% endif %}
-    {% if item.frontmatter.standard %}<p class="card-meta mono">{{ item.frontmatter.standard }}</p>{% endif %}
+    <span class="card-more">{{ t.read_more }} →</span>
   </div>
 </a>

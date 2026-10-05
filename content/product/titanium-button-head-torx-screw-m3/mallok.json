@@ -1,0 +1,29 @@
+{
+  "translation_group": "7002b568-4d58-5536-9c0a-7ee63e1f745d",
+  "items": {
+    "en": {
+      "id": "72900b93-5380-5d91-8a19-9d31324d727c",
+      "created_at": "2026-10-05T00:00:00Z",
+      "path": "/products/titanium-button-head-torx-screw-m3",
+      "slug": "titanium-button-head-torx-screw-m3"
+    },
+    "de": {
+      "id": "b7d4d086-83a8-5abe-8a4d-fac4c9800eb6",
+      "created_at": "2026-10-05T00:00:00Z",
+      "path": "/de/products/titan-linsenkopfschraube-torx-m3",
+      "slug": "titan-linsenkopfschraube-torx-m3"
+    },
+    "fr": {
+      "id": "29f2d03d-2baa-554c-9830-96c36ad0e3bc",
+      "created_at": "2026-10-05T00:00:00Z",
+      "path": "/fr/products/vis-titane-tete-bombee-torx-m3",
+      "slug": "vis-titane-tete-bombee-torx-m3"
+    },
+    "es": {
+      "id": "048a02cb-4637-5a33-b859-b9e4f41ee112",
+      "created_at": "2026-10-05T00:00:00Z",
+      "path": "/es/products/tornillo-titanio-cabeza-abombada-torx-m3",
+      "slug": "tornillo-titanio-cabeza-abombada-torx-m3"
+    }
+  }
+}

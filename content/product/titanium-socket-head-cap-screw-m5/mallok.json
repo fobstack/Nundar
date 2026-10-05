@@ -1,0 +1,29 @@
+{
+  "translation_group": "50b0633f-18e5-5dd3-8079-19659453e7c6",
+  "items": {
+    "en": {
+      "id": "df9eafb2-fc92-5522-860d-bdc41efd70b7",
+      "created_at": "2026-10-05T00:00:00Z",
+      "path": "/products/titanium-socket-head-cap-screw-m5",
+      "slug": "titanium-socket-head-cap-screw-m5"
+    },
+    "de": {
+      "id": "a0252fc0-c023-5b56-9082-3722b5048f6c",
+      "created_at": "2026-10-05T00:00:00Z",
+      "path": "/de/products/titan-zylinderschraube-innensechskant-m5",
+      "slug": "titan-zylinderschraube-innensechskant-m5"
+    },
+    "fr": {
+      "id": "f8b29a9f-8064-5bb9-ab3d-67ca1b615adb",
+      "created_at": "2026-10-05T00:00:00Z",
+      "path": "/fr/products/vis-titane-tete-cylindrique-six-pans-creux-m5",
+      "slug": "vis-titane-tete-cylindrique-six-pans-creux-m5"
+    },
+    "es": {
+      "id": "ea070311-2bb2-55a9-98dd-730f44f40a5f",
+      "created_at": "2026-10-05T00:00:00Z",
+      "path": "/es/products/tornillo-titanio-cabeza-cilindrica-allen-m5",
+      "slug": "tornillo-titanio-cabeza-cilindrica-allen-m5"
+    }
+  }
+}

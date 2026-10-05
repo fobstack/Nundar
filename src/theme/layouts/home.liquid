@@ -1,54 +1,206 @@
 {% layout "layouts/base" %}
 {% block content %}
 <section class="hero">
+  {%- comment -%}
+    Decoration behind the headline, so it carries no alternative text and is
+    hidden from assistive technology.
+  {%- endcomment -%}
+  <img class="hero-bg" src="{{ theme.asset_base }}/hero-bg.webp" alt="" width="1408" height="768" fetchpriority="high" decoding="async">
   <div class="shell">
-    <h1 class="hero-title">{{ theme.options.hero_title }}</h1>
-    <p class="hero-lede">{{ theme.options.hero_lede }}</p>
-    <a class="btn btn-solid" href="{{ theme.options.contact_href }}">{{ t.request_quote }}</a>
+    <div class="hero-grid">
+      <div>
+        {%- comment -%}
+          A page has one main heading whatever the site owner left empty.
+        {%- endcomment -%}
+        <h1 class="hero-title">{% if theme.options.hero_title != blank %}{{ theme.options.hero_title }}{% else %}{{ site.name }}{% endif %}</h1>
+        {% if theme.options.hero_lede != blank %}<p class="hero-lede">{{ theme.options.hero_lede }}</p>{% endif %}
+        {%- comment -%}
+          The first button jumps to the finder, which is on the page only
+          when this language has products.
+        {%- endcomment -%}
+        {% if recent.product.size > 0 or theme.options.quote_href != blank %}
+        <div class="hero-actions">
+          {% if recent.product.size > 0 %}<a class="btn btn-solid" href="#specification-finder">{{ t.find_spec }} {% render "partials/icon", name: "arrow" %}</a>{% endif %}
+          {% if theme.options.quote_href != blank %}<a class="btn btn-ghost" href="{{ theme.options.quote_href }}">{{ t.request_quote }}</a>{% endif %}
+        </div>
+        {% endif %}
+      </div>
+      <div class="hero-visual">
+        <img src="{{ theme.asset_base }}/hero.webp" alt="" width="1000" height="545" decoding="async">
+        {% if theme.options.hero_badge != blank %}<p class="hero-badge">{{ theme.options.hero_badge }}</p>{% endif %}
+      </div>
+    </div>
+
+    {%- comment -%}
+      Each selling point stands on its own: any of the three may be the only
+      one written.
+    {%- endcomment -%}
+    {% if theme.options.prop_1_title != blank or theme.options.prop_2_title != blank or theme.options.prop_3_title != blank %}
+    <div class="props">
+      {% if theme.options.prop_1_title != blank %}
+      <div class="prop">
+        <span class="prop-icon">{% render "partials/icon", name: "ruler" %}</span>
+        <div><h2>{{ theme.options.prop_1_title }}</h2>{% if theme.options.prop_1_text != blank %}<p>{{ theme.options.prop_1_text }}</p>{% endif %}</div>
+      </div>
+      {% endif %}
+      {% if theme.options.prop_2_title != blank %}
+      <div class="prop">
+        <span class="prop-icon">{% render "partials/icon", name: "box" %}</span>
+        <div><h2>{{ theme.options.prop_2_title }}</h2>{% if theme.options.prop_2_text != blank %}<p>{{ theme.options.prop_2_text }}</p>{% endif %}</div>
+      </div>
+      {% endif %}
+      {% if theme.options.prop_3_title != blank %}
+      <div class="prop">
+        <span class="prop-icon">{% render "partials/icon", name: "cog" %}</span>
+        <div><h2>{{ theme.options.prop_3_title }}</h2>{% if theme.options.prop_3_text != blank %}<p>{{ theme.options.prop_3_text }}</p>{% endif %}</div>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
   </div>
 </section>
 
-{% if recent.product.size > 0 %}
-<section class="shell band">
-  <div class="section-head"><h2>{{ t.product }}</h2></div>
-  <div class="card-grid">
-    {% for item in recent.product limit: 6 %}{% render "partials/card", item: item %}{% endfor %}
+{% if recent.collection.size > 0 %}
+<section class="band band-paper">
+  <div class="shell">
+    <div class="section-head">
+      <h2>{{ t.browse_by_type }}</h2>
+      {% if recent.product.size > 0 %}<a class="text-link" href="#specification-finder">{{ t.view_all_specs }} {% render "partials/icon", name: "arrow" %}</a>{% endif %}
+    </div>
+    <div class="type-grid">
+      {% for item in recent.collection %}
+      <a class="type-card" href="{{ item.path }}">
+        {% if item.cover != blank %}<span class="type-card-art"><img src="{{ item.cover }}" alt="" width="480" height="360" loading="lazy" decoding="async"></span>{% endif %}
+        <h3>{{ item.title }}</h3>
+      </a>
+      {% endfor %}
+    </div>
   </div>
 </section>
 {% endif %}
 
 {%- comment -%}
-  Application notes are the shop's long-tail pages: each answers one buying
-  question, so the home page links to them directly rather than leaving them
-  to be found through a product.
+  The finder is a table the server has already filled in: products, with the
+  attributes they are specified by. A buyer can read all of it, and so can a
+  search engine, before any script has run.
+
+  Mallok gives a home page the ten newest items of a kind. A catalogue larger
+  than that is whole only on its list page, so the section ends with a link
+  there — to an address the site owner sets, because a template has no way
+  to ask where a kind's list page is.
 {%- endcomment -%}
-{% if recent.application.size > 0 %}
-<section class="shell band">
-  <div class="section-head">
-    <h2>{{ t.application }}</h2>
-    <p>{{ t.applications_aside }}</p>
-  </div>
-  <div class="card-grid">
-    {% for item in recent.application limit: 6 %}{% render "partials/card", item: item, eyebrow: t.application_note %}{% endfor %}
+{% if recent.product.size > 0 %}
+<section class="band" id="specification-finder">
+  <div class="shell">
+    <div class="section-head">
+      <h2>{{ t.finder_title }}</h2>
+      <p>{{ t.finder_lede }}</p>
+    </div>
+    {% render "partials/spec-table", items: recent.product %}
+    {% if theme.options.catalogue_href != blank %}<p class="finder-more"><a class="text-link" href="{{ theme.options.catalogue_href }}">{{ t.view_catalogue }} {% render "partials/icon", name: "arrow" %}</a></p>{% endif %}
   </div>
 </section>
 {% endif %}
 
-{% if recent.collection.size > 0 %}
-<section class="shell band">
-  <div class="section-head"><h2>{{ t.collection }}</h2></div>
-  <div class="card-grid">
-    {% for item in recent.collection limit: 6 %}{% render "partials/card", item: item %}{% endfor %}
+{% if theme.options.custom_title != blank %}
+<section class="band band-paper">
+  <div class="shell">
+    <div class="panel split">
+      <div>
+        <h2>{{ theme.options.custom_title }}</h2>
+        {% if theme.options.custom_text != blank %}<p>{{ theme.options.custom_text }}</p>{% endif %}
+        {% if theme.options.quote_href != blank or theme.options.contact_href != blank %}
+        <div class="actions">
+          {% if theme.options.quote_href != blank %}<a class="btn btn-solid btn-sm" href="{{ theme.options.quote_href }}">{{ t.custom_cta }} {% render "partials/icon", name: "arrow" %}</a>{% endif %}
+          {% if theme.options.contact_href != blank %}<a class="btn btn-outline btn-sm" href="{{ theme.options.contact_href }}">{{ t.contact_us }}</a>{% endif %}
+        </div>
+        {% endif %}
+      </div>
+      <div class="split-art">
+        <img src="{{ theme.asset_base }}/custom-diagram.webp" alt="{{ t.custom_diagram_alt }}" width="1200" height="655" loading="lazy" decoding="async">
+      </div>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{%- comment -%}
+  Case studies beside the quality panel. Either can be missing: the one that
+  is there then has the row to itself, and neither leaves a column empty.
+{%- endcomment -%}
+{% assign has_cases = false %}
+{% if recent.case.size > 0 %}{% assign has_cases = true %}{% endif %}
+{% assign has_quality = false %}
+{% if theme.options.quality_1_title != blank or theme.options.quality_2_title != blank or theme.options.quality_3_title != blank %}{% assign has_quality = true %}{% endif %}
+{% if has_cases or has_quality %}
+<section class="band">
+  <div class="shell{% if has_cases and has_quality %} proof{% endif %}">
+    {% if has_cases %}
+    <div>
+      <div class="section-head">
+        <h2>{{ t.case }}</h2>
+      </div>
+      <div class="card-grid">
+        {% for item in recent.case limit: 4 %}{% render "partials/card", item: item, eyebrow: item.frontmatter.sector %}{% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    {% if has_quality %}
+    <aside class="assure">
+      <h2>{{ t.quality_title }}</h2>
+      {% if theme.options.quality_1_title != blank %}
+      <div class="assure-item">
+        <span class="assure-icon">{% render "partials/icon", name: "shield" %}</span>
+        <div><h3>{{ theme.options.quality_1_title }}</h3>{% if theme.options.quality_1_text != blank %}<p>{{ theme.options.quality_1_text }}</p>{% endif %}</div>
+      </div>
+      {% endif %}
+      {% if theme.options.quality_2_title != blank %}
+      <div class="assure-item">
+        <span class="assure-icon">{% render "partials/icon", name: "ruler" %}</span>
+        <div><h3>{{ theme.options.quality_2_title }}</h3>{% if theme.options.quality_2_text != blank %}<p>{{ theme.options.quality_2_text }}</p>{% endif %}</div>
+      </div>
+      {% endif %}
+      {% if theme.options.quality_3_title != blank %}
+      <div class="assure-item">
+        <span class="assure-icon">{% render "partials/icon", name: "file" %}</span>
+        <div><h3>{{ theme.options.quality_3_title }}</h3>{% if theme.options.quality_3_text != blank %}<p>{{ theme.options.quality_3_text }}</p>{% endif %}</div>
+      </div>
+      {% endif %}
+    </aside>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+
+{%- comment -%}
+  Industry pages are the shop's long-tail pages: each answers one buying
+  question, so the home page links to them directly rather than leaving them
+  to be found through a product.
+{%- endcomment -%}
+{% if recent.application.size > 0 %}
+<section class="band band-paper">
+  <div class="shell">
+    <div class="section-head">
+      <h2>{{ t.application }}</h2>
+      <p>{{ t.applications_aside }}</p>
+    </div>
+    <div class="card-grid">
+      {% for item in recent.application limit: 6 %}{% render "partials/card", item: item %}{% endfor %}
+    </div>
   </div>
 </section>
 {% endif %}
 
 {% if recent.article.size > 0 %}
-<section class="shell band">
-  <div class="section-head"><h2>{{ t.article }}</h2></div>
-  <div class="card-grid">
-    {% for item in recent.article limit: 3 %}{% render "partials/card", item: item %}{% endfor %}
+<section class="band">
+  <div class="shell">
+    <div class="section-head"><h2>{{ t.article }}</h2></div>
+    <div class="card-grid">
+      {% for item in recent.article limit: 3 %}{% render "partials/card", item: item %}{% endfor %}
+    </div>
   </div>
 </section>
 {% endif %}
+
+{% if theme.options.cta_title != blank %}{% render "partials/closing" %}{% endif %}
 {% endblock %}

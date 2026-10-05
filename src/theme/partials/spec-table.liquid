@@ -1,0 +1,52 @@
+{%- comment -%}
+  The specification finder: every product in `items` as a row, one column per
+  filterable attribute.
+
+  The columns are the attribute names of the first product that has any.
+  Every row is then filled by name, not by position, so a product that lacks
+  an attribute leaves that cell empty instead of pushing its other values
+  under the wrong headings (see `facets` in theme.json).
+
+  A product's value is found by walking its own attributes rather than by
+  `facets[name]`: Liquid answers `size`, `first` and `last` on any map with a
+  count or an entry of its own, so an attribute called "size" would put a
+  number in the cell of every product that does not have one.
+
+  On a narrow screen the stylesheet lays each row out as a card, which takes
+  the table's own display values away. Two things in the markup exist for
+  that: `data-label` lets a cell name its column once the header row is out
+  of sight, and the explicit roles keep the table a table for a screen
+  reader, which otherwise stops announcing rows and columns as soon as
+  `display` changes.
+
+  Called as {% render "partials/spec-table", items: recent.product %}.
+{%- endcomment -%}
+{% assign lead = nil %}
+{% for item in items %}{% if lead == nil and item.frontmatter.facets != blank %}{% assign lead = item %}{% endif %}{% endfor %}
+<div class="finder-table-wrap">
+  <table class="finder-table" role="table">
+    <thead role="rowgroup">
+      <tr role="row">
+        <th scope="col" role="columnheader">{{ t.col_product }}</th>
+        {% for pair in lead.frontmatter.facets %}<th scope="col" role="columnheader">{{ pair[0] }}</th>{% endfor %}
+        <th scope="col" role="columnheader">{{ t.col_sizes }}</th>
+        <th scope="col" role="columnheader"><span class="visually-hidden">{{ t.view_specs }}</span></th>
+      </tr>
+    </thead>
+    <tbody role="rowgroup">
+      {% for item in items %}
+      <tr role="row">
+        <td role="cell">
+          <div class="finder-product">
+            {% if item.cover != blank %}<span class="finder-thumb"><img src="{{ item.cover }}" alt="" width="104" height="80" loading="lazy" decoding="async"></span>{% endif %}
+            <a href="{{ item.path }}">{{ item.title }}</a>
+          </div>
+        </td>
+        {% for pair in lead.frontmatter.facets %}{% assign name = pair[0] %}{% assign value = "" %}{% for own in item.frontmatter.facets %}{% if own[0] == name %}{% assign value = own[1] %}{% endif %}{% endfor %}<td class="facet" role="cell" data-label="{{ name }}">{{ value }}</td>{% endfor %}
+        <td class="sizes" role="cell" data-label="{{ t.col_sizes }}">{% if item.frontmatter.sizes != blank %}<div class="chips">{% for pair in item.frontmatter.sizes %}<span class="chip" title="{{ pair[0] }}">{{ pair[1] }}</span>{% endfor %}</div>{% endif %}</td>
+        <td class="action" role="cell"><a class="text-link" href="{{ item.path }}">{{ t.view_specs }} {% render "partials/icon", name: "arrow" %}</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

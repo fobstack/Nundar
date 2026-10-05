@@ -1,6 +1,6 @@
 {
-  "name": "Nundar",
-  "tagline": "Industrial parts, specified for the application",
+  "name": "Tungsten & Amber Aero",
+  "tagline": "Titanium fasteners and custom parts",
   "defaultLocale": "en",
   "locales": ["en", "de", "fr", "es"],
   "kinds": {
@@ -13,11 +13,20 @@
     "product": {
       "base": "products"
     },
-    "application": {
-      "base": "applications"
-    },
     "collection": {
       "base": "collections"
+    },
+    "application": {
+      "base": "industries"
+    },
+    "case": {
+      "base": "case-studies"
+    },
+    "faq": {
+      "base": "faq"
+    },
+    "tool": {
+      "base": "tools"
     }
   },
   "nav": {
@@ -27,12 +36,40 @@
         "href": "/products"
       },
       {
-        "label": "Applications",
-        "href": "/applications"
+        "label": "Custom parts",
+        "href": "/custom-manufacturing"
       },
       {
-        "label": "Collections",
-        "href": "/collections"
+        "label": "Industries",
+        "href": "/industries"
+      },
+      {
+        "label": "Material guide",
+        "href": "/material-guide"
+      },
+      {
+        "label": "Calculators",
+        "href": "/tools/fastener-calculators"
+      },
+      {
+        "label": "Case studies",
+        "href": "/case-studies"
+      },
+      {
+        "label": "Quality",
+        "href": "/quality-assurance"
+      },
+      {
+        "label": "FAQ",
+        "href": "/faq"
+      },
+      {
+        "label": "About",
+        "href": "/about"
+      },
+      {
+        "label": "Contact",
+        "href": "/contact"
       }
     ],
     "de": [
@@ -41,12 +78,40 @@
         "href": "/de/products"
       },
       {
-        "label": "Anwendungen",
-        "href": "/de/applications"
+        "label": "Sonderteile",
+        "href": "/de/sonderanfertigung"
       },
       {
-        "label": "Kollektionen",
-        "href": "/de/collections"
+        "label": "Branchen",
+        "href": "/de/industries"
+      },
+      {
+        "label": "Werkstoffe",
+        "href": "/de/werkstoffleitfaden"
+      },
+      {
+        "label": "Rechner",
+        "href": "/de/tools/schraubenrechner"
+      },
+      {
+        "label": "Fallstudien",
+        "href": "/de/case-studies"
+      },
+      {
+        "label": "Qualität",
+        "href": "/de/qualitaetssicherung"
+      },
+      {
+        "label": "FAQ",
+        "href": "/de/faq"
+      },
+      {
+        "label": "Über uns",
+        "href": "/de/ueber-uns"
+      },
+      {
+        "label": "Kontakt",
+        "href": "/de/kontakt"
       }
     ],
     "fr": [
@@ -55,12 +120,40 @@
         "href": "/fr/products"
       },
       {
-        "label": "Applications",
-        "href": "/fr/applications"
+        "label": "Sur mesure",
+        "href": "/fr/fabrication-sur-mesure"
       },
       {
-        "label": "Collections",
-        "href": "/fr/collections"
+        "label": "Secteurs",
+        "href": "/fr/industries"
+      },
+      {
+        "label": "Matériaux",
+        "href": "/fr/guide-des-materiaux"
+      },
+      {
+        "label": "Calculateurs",
+        "href": "/fr/tools/calculateurs-de-fixations"
+      },
+      {
+        "label": "Études de cas",
+        "href": "/fr/case-studies"
+      },
+      {
+        "label": "Qualité",
+        "href": "/fr/assurance-qualite"
+      },
+      {
+        "label": "FAQ",
+        "href": "/fr/faq"
+      },
+      {
+        "label": "Entreprise",
+        "href": "/fr/a-propos"
+      },
+      {
+        "label": "Contact",
+        "href": "/fr/contact"
       }
     ],
     "es": [
@@ -69,26 +162,165 @@
         "href": "/es/products"
       },
       {
-        "label": "Aplicaciones",
-        "href": "/es/applications"
+        "label": "A medida",
+        "href": "/es/fabricacion-a-medida"
       },
       {
-        "label": "Colecciones",
-        "href": "/es/collections"
+        "label": "Sectores",
+        "href": "/es/industries"
+      },
+      {
+        "label": "Materiales",
+        "href": "/es/guia-de-materiales"
+      },
+      {
+        "label": "Calculadoras",
+        "href": "/es/tools/calculadoras-de-fijaciones"
+      },
+      {
+        "label": "Casos de éxito",
+        "href": "/es/case-studies"
+      },
+      {
+        "label": "Calidad",
+        "href": "/es/aseguramiento-de-calidad"
+      },
+      {
+        "label": "FAQ",
+        "href": "/es/faq"
+      },
+      {
+        "label": "Empresa",
+        "href": "/es/acerca-de"
+      },
+      {
+        "label": "Contacto",
+        "href": "/es/contacto"
       }
     ]
   },
   "themeOptions": {
+    "accent": "#b45309",
+    "home_description": "Find Grade 5 and Grade 2 titanium fasteners by specification. CNC custom manufacturing with aerospace traceability certificates.",
+    "hero_title": "Titanium fasteners. Built around your requirements.",
+    "hero_lede": "Find titanium fasteners by specification, source standard packs, or discuss a custom part with our team.",
+    "hero_badge": "Grade 5 Ti-6Al-4V",
+    "prop_1_title": "Exact specifications",
+    "prop_1_text": "Clear dimensions and complete product details",
+    "prop_2_title": "Standard pack supply",
+    "prop_2_text": "Ready for aerospace and assembly needs",
+    "prop_3_title": "Custom manufacturing",
+    "prop_3_text": "Custom parts made from your drawing or CAD file",
+    "custom_title": "Custom manufacturing capabilities",
+    "custom_text": "Need a different length, a custom head profile, a special shoulder or a custom thread pitch? We can discuss your requirements from a CAD file or a hand-drawn sketch.",
+    "quality_1_title": "Material traceability",
+    "quality_1_text": "Mill test reports to EN 10204 3.1, stating chemical composition and heat number, are available on request.",
+    "quality_2_title": "Class 6g thread inspection",
+    "quality_2_text": "Dimensional inspection and go/no-go thread gauge verification are standard.",
+    "quality_3_title": "Certification support",
+    "quality_3_text": "We assist with first article inspection reports and test specifications where they are required.",
+    "cta_title": "Discuss your titanium component requirements.",
+    "cta_text": "Get an engineering assessment, a target price, or specify a custom alloy.",
+    "footer_blurb": "Titanium fasteners and custom parts. Precision CNC-turned and cold-forged fasteners built to tight tolerances.",
+    "footer_note": "Sample catalogue. The products, certifications and case studies shown are illustrative.",
+    "contact_email": "sales@example.com",
+    "contact_phone": "",
+    "quote_href": "/custom-manufacturing",
     "contact_href": "/contact",
+    "catalogue_href": "/products",
+    "terms_href": "/terms",
+    "privacy_href": "/privacy",
+    "compliance_href": "/compliance",
     "$locales": {
       "de": {
-        "contact_href": "/de/kontakt"
+        "tagline": "Verbindungselemente und Sonderteile aus Titan",
+        "home_description": "Titan-Verbindungselemente aus Grade 5 und Grade 2 nach Spezifikation finden. CNC-Sonderanfertigung mit rückverfolgbaren Zeugnissen für die Luft- und Raumfahrt.",
+        "hero_title": "Titan-Verbindungselemente. Auf Ihre Anforderungen ausgelegt.",
+        "hero_lede": "Finden Sie Titan-Verbindungselemente nach Spezifikation, beziehen Sie Standardpackungen oder besprechen Sie ein Sonderteil mit unserem Team.",
+        "prop_1_title": "Exakte Spezifikationen",
+        "prop_1_text": "Klare Maße und vollständige Produktangaben",
+        "prop_2_title": "Lieferung in Standardpackungen",
+        "prop_2_text": "Für die Luft- und Raumfahrt und den Montagebedarf",
+        "prop_3_title": "Sonderanfertigung",
+        "prop_3_text": "Sonderteile nach Ihrer Zeichnung oder CAD-Datei",
+        "custom_title": "Möglichkeiten der Sonderanfertigung",
+        "custom_text": "Sie benötigen eine andere Länge, ein besonderes Kopfprofil, einen speziellen Passschaft oder eine andere Gewindesteigung? Wir besprechen Ihre Anforderungen anhand einer CAD-Datei oder einer Handskizze.",
+        "quality_1_title": "Werkstoffrückverfolgbarkeit",
+        "quality_1_text": "Abnahmeprüfzeugnisse nach EN 10204 3.1 mit chemischer Zusammensetzung und Schmelzennummer sind auf Anfrage erhältlich.",
+        "quality_2_title": "Gewindeprüfung Klasse 6g",
+        "quality_2_text": "Maßprüfung und Gewindeprüfung mit Gut- und Ausschusslehren sind Standard.",
+        "quality_3_title": "Unterstützung bei der Zertifizierung",
+        "quality_3_text": "Wir unterstützen bei Erstmusterprüfberichten und Prüfspezifikationen, wo sie gefordert sind.",
+        "cta_title": "Besprechen Sie Ihre Anforderungen an Titanbauteile.",
+        "cta_text": "Erhalten Sie eine technische Bewertung, einen Richtpreis oder legen Sie eine Sonderlegierung fest.",
+        "footer_blurb": "Verbindungselemente und Sonderteile aus Titan. CNC-gedrehte und kaltgeformte Verbindungselemente mit engen Toleranzen.",
+        "footer_note": "Musterkatalog. Die gezeigten Produkte, Zertifizierungen und Fallstudien dienen der Veranschaulichung.",
+        "quote_href": "/de/sonderanfertigung",
+        "contact_href": "/de/kontakt",
+        "catalogue_href": "/de/products",
+        "terms_href": "/de/agb",
+        "privacy_href": "/de/datenschutz",
+        "compliance_href": "/de/konformitaet"
       },
       "fr": {
-        "contact_href": "/fr/contact"
+        "tagline": "Fixations et pièces sur mesure en titane",
+        "home_description": "Trouvez des fixations en titane grade 5 et grade 2 par spécification. Fabrication CNC sur mesure avec certificats de traçabilité aéronautique.",
+        "hero_title": "Fixations en titane. Conçues selon vos exigences.",
+        "hero_lede": "Trouvez des fixations en titane par spécification, approvisionnez-vous en conditionnements standard ou étudiez une pièce sur mesure avec notre équipe.",
+        "prop_1_title": "Spécifications exactes",
+        "prop_1_text": "Des cotes claires et des données produit complètes",
+        "prop_2_title": "Conditionnements standard",
+        "prop_2_text": "Prêts pour l’aéronautique et les besoins d’assemblage",
+        "prop_3_title": "Fabrication sur mesure",
+        "prop_3_text": "Des pièces réalisées d’après votre plan ou votre fichier CAO",
+        "custom_title": "Nos capacités de fabrication sur mesure",
+        "custom_text": "Besoin d’une autre longueur, d’un profil de tête particulier, d’un épaulement spécial ou d’un pas de filetage différent ? Nous étudions votre besoin à partir d’un fichier CAO ou d’un croquis à main levée.",
+        "quality_1_title": "Traçabilité de la matière",
+        "quality_1_text": "Les certificats matière selon EN 10204 3.1, indiquant la composition chimique et le numéro de coulée, sont fournis sur demande.",
+        "quality_2_title": "Contrôle des filetages classe 6g",
+        "quality_2_text": "Le contrôle dimensionnel et la vérification des filetages au calibre entre / n’entre pas sont systématiques.",
+        "quality_3_title": "Accompagnement à la certification",
+        "quality_3_text": "Nous vous assistons pour les rapports de contrôle premier article et les spécifications d’essai lorsqu’ils sont exigés.",
+        "cta_title": "Parlons de vos composants en titane.",
+        "cta_text": "Obtenez une évaluation technique, un prix cible, ou spécifiez un alliage particulier.",
+        "footer_blurb": "Fixations et pièces sur mesure en titane. Fixations usinées CNC et forgées à froid, aux tolérances serrées.",
+        "footer_note": "Catalogue de démonstration. Les produits, certifications et études de cas présentés le sont à titre d’illustration.",
+        "quote_href": "/fr/fabrication-sur-mesure",
+        "contact_href": "/fr/contact",
+        "catalogue_href": "/fr/products",
+        "terms_href": "/fr/conditions-generales",
+        "privacy_href": "/fr/confidentialite",
+        "compliance_href": "/fr/conformite"
       },
       "es": {
-        "contact_href": "/es/contacto"
+        "tagline": "Fijaciones y piezas a medida de titanio",
+        "home_description": "Encuentre fijaciones de titanio grado 5 y grado 2 por especificación. Fabricación CNC a medida con certificados de trazabilidad aeroespacial.",
+        "hero_title": "Fijaciones de titanio. Diseñadas según sus requisitos.",
+        "hero_lede": "Encuentre fijaciones de titanio por especificación, adquiera paquetes estándar o estudie una pieza a medida con nuestro equipo.",
+        "prop_1_title": "Especificaciones exactas",
+        "prop_1_text": "Cotas claras y datos de producto completos",
+        "prop_2_title": "Suministro en paquetes estándar",
+        "prop_2_text": "Listos para el sector aeroespacial y las necesidades de montaje",
+        "prop_3_title": "Fabricación a medida",
+        "prop_3_text": "Piezas a medida a partir de su plano o archivo CAD",
+        "custom_title": "Capacidades de fabricación a medida",
+        "custom_text": "¿Necesita otra longitud, un perfil de cabeza especial, un hombro particular o un paso de rosca distinto? Estudiamos sus requisitos a partir de un archivo CAD o de un croquis a mano.",
+        "quality_1_title": "Trazabilidad del material",
+        "quality_1_text": "Los certificados de material según EN 10204 3.1, con la composición química y el número de colada, están disponibles a petición.",
+        "quality_2_title": "Inspección de roscas clase 6g",
+        "quality_2_text": "La inspección dimensional y la verificación de roscas con calibres pasa/no pasa son estándar.",
+        "quality_3_title": "Apoyo a la certificación",
+        "quality_3_text": "Le ayudamos con los informes de inspección de primer artículo y las especificaciones de ensayo cuando se requieren.",
+        "cta_title": "Hablemos de sus componentes de titanio.",
+        "cta_text": "Obtenga una evaluación técnica, un precio objetivo o especifique una aleación a medida.",
+        "footer_blurb": "Fijaciones y piezas a medida de titanio. Fijaciones torneadas por CNC y forjadas en frío con tolerancias estrictas.",
+        "footer_note": "Catálogo de muestra. Los productos, certificaciones y casos de éxito mostrados son ilustrativos.",
+        "quote_href": "/es/fabricacion-a-medida",
+        "contact_href": "/es/contacto",
+        "catalogue_href": "/es/products",
+        "terms_href": "/es/terminos-y-condiciones",
+        "privacy_href": "/es/privacidad",
+        "compliance_href": "/es/cumplimiento"
       }
     }
   }

@@ -3,7 +3,6 @@
 <article class="shell detail">
   <nav class="crumbs" aria-label="{{ t.breadcrumb }}">
     <a href="{{ site.home_path }}">{{ t.home }}</a>
-    {% if content.refs.product %}<span aria-hidden="true">/</span><a href="{{ content.refs.product.path }}">{{ content.refs.product.title }}</a>{% endif %}
     <span aria-hidden="true">/</span><span aria-current="page">{{ content.title }}</span>
   </nav>
 
@@ -13,32 +12,46 @@
     {% if content.description != "" %}<p class="detail-lede">{{ content.description }}</p>{% endif %}
   </header>
 
+  {% if content.cover != blank %}
+  <div class="detail-cover"><img src="{{ content.cover }}" alt="" width="1440" height="617" decoding="async"></div>
+  {% endif %}
+
+  {%- comment -%}
+    `content.html` is not a string, so it cannot be compared with one: the
+    body is captured first, and a page without one gets no empty box.
+  {%- endcomment -%}
+  {% capture body %}{{ content.html }}{% endcapture %}
+  {%- comment -%}
+    Nothing to put beside the text — no figures, and a product reference
+    that names nothing in this language — means no card, not an empty one.
+  {%- endcomment -%}
+  {% assign highlights = content.frontmatter.spec_highlights %}
+  {% assign has_card = false %}
+  {% if highlights != blank or content.refs.product %}{% assign has_card = true %}{% endif %}
+  {% if body != blank or has_card %}
   <div class="detail-grid">
-    <div class="detail-main">
-      <div class="prose">{{ content.html }}</div>
+    {% if body != blank %}<div class="detail-main prose">{{ content.html }}</div>{% endif %}
 
-      {% assign highlights = content.frontmatter.spec_highlights %}
-      {% if highlights != blank %}
-      <section class="specs">
-        <h2>{{ t.spec_highlights }}</h2>
-        <table class="spec-table">
-          <tbody>
-            {% for pair in highlights %}<tr><th scope="row">{{ pair[0] }}</th><td>{{ pair[1] }}</td></tr>{% endfor %}
-          </tbody>
-        </table>
-      </section>
-      {% endif %}
-    </div>
-
-    {% if content.refs.product %}
+    {% if has_card %}
     <aside class="spec-card">
+      {% if highlights != blank %}
+      <h2>{{ t.spec_highlights }}</h2>
+      <table class="data-table">
+        <tbody>
+          {% for pair in highlights %}<tr><th scope="row">{{ pair[0] }}</th><td>{{ pair[1] }}</td></tr>{% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+      {% if content.refs.product %}
       <p class="eyebrow">{{ t.the_part }}</p>
       <p class="spec-card-title"><a href="{{ content.refs.product.path }}">{{ content.refs.product.title }}</a></p>
       {% if content.refs.product.description != blank %}<p>{{ content.refs.product.description }}</p>{% endif %}
       <a class="btn btn-solid btn-block" href="{{ content.refs.product.path }}">{{ t.view_product }}</a>
+      {% endif %}
     </aside>
     {% endif %}
   </div>
+  {% endif %}
 
   {% if content.siblings.size > 0 %}
   <section class="more">
@@ -49,4 +62,5 @@
   </section>
   {% endif %}
 </article>
+{% if theme.options.cta_title != blank %}{% render "partials/closing" %}{% endif %}
 {% endblock %}
