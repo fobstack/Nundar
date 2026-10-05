@@ -841,7 +841,8 @@ describe('markOrderPaid', () => {
     let writes = 0;
     const database = interceptBatches({
       before: (index) => {
-        if (index === 1) {
+        // Even batches are readings, odd ones are writes.
+        if (index % 2 === 1) {
           writes += 1;
           throw new Error('D1 is unavailable');
         }
@@ -852,11 +853,68 @@ describe('markOrderPaid', () => {
       'D1 is unavailable',
     );
 
-    // Tried once, looked again, and gave up rather than hammer the database.
-    expect(writes).toBe(1);
+    // Tried, tried once more, and gave up rather than hammer the database.
+    expect(writes).toBe(2);
     expect((await orderRow(order.id)).status).toBe('pending');
     expect(await stockOf('dn50')).toBe(100);
     expect(await count('p_shop_stripe_event')).toBe(0);
+  });
+
+  it('pays when the stock is gone at the write and back by the next reading', async () => {
+    // Another order takes the stock just before this one's batch, and its
+    // refund returns it just after. The batch fails on the constraint; the
+    // next reading finds the stock there and calls for paying again. The
+    // first failure says nothing about that second attempt.
+    const order = await pendingOrder();
+    const database = interceptBatches({
+      before: async (index) => {
+        if (index === 1) {
+          await setStock('dn50', 2);
+        }
+        if (index === 2) {
+          await setStock('dn50', 100);
+        }
+      },
+    });
+
+    const result = await pay(order.id, 'evt_1', 'pi_1', database);
+
+    expect(result.outcome).toBe('paid');
+    expect(await stockOf('dn50')).toBe(90);
+    expect(await count('p_shop_stock_adjustment')).toBe(1);
+  });
+
+  it('gives up after four passes that all lose, having written nothing', async () => {
+    // Stock that is gone at every write and back at every reading. Four
+    // passes is where it stops; whoever delivered the event delivers it
+    // again, and by then the dust has settled.
+    const order = await pendingOrder();
+    let batches = 0;
+    const database = interceptBatches({
+      before: async (index) => {
+        batches += 1;
+        // Before each write the stock is the opposite of what was just read.
+        if (index === 1 || index === 5) {
+          await setStock('dn50', 2);
+        }
+        if (index === 3 || index === 7) {
+          await setStock('dn50', 100);
+        }
+      },
+    });
+
+    await expect(pay(order.id, 'evt_1', 'pi_1', database)).rejects.toThrow(
+      /could not be settled/,
+    );
+
+    expect(batches).toBe(8);
+    expect((await orderRow(order.id)).status).toBe('pending');
+    expect(await stockOf('dn50')).toBe(100);
+    expect(await count('p_shop_stripe_event')).toBe(0);
+    expect(await outboxRows()).toEqual([]);
+
+    // The next delivery finds a quiet database and pays the order.
+    expect((await pay(order.id)).outcome).toBe('paid');
   });
 
   it('still owes the follow-up when the payment commits and its answer is lost', async () => {
@@ -888,6 +946,52 @@ describe('markOrderPaid', () => {
         handled_at: null,
       },
     ]);
+  });
+
+  it('still owes the follow-up when an oversold order is recorded and its answer is lost', async () => {
+    const order = await pendingOrder();
+    await setStock('dn50', 2);
+    const database = interceptBatches({
+      after: (index) => {
+        if (index === 1) {
+          throw new Error('The connection was lost');
+        }
+      },
+    });
+
+    const result = await pay(order.id, 'evt_1', 'pi_1', database);
+
+    expect(result.outcome).toBe('duplicate');
+    expect(result.status).toBe('oversold');
+    expect((await orderRow(order.id)).stripe_payment_intent_id).toBe('pi_1');
+    expect((await outboxRows()).map((row) => row.topic)).toEqual([
+      'order.oversold',
+    ]);
+  });
+
+  it('still owes the refund when a refused payment is recorded and its answer is lost', async () => {
+    const order = await pendingOrder();
+    await cancelOrder(db(), { orderId: order.id, now: NOW });
+    const database = interceptBatches({
+      after: (index) => {
+        if (index === 1) {
+          throw new Error('The connection was lost');
+        }
+      },
+    });
+
+    const result = await pay(order.id, 'evt_late', 'pi_3', database);
+
+    expect(result.outcome).toBe('duplicate');
+    expect(result.status).toBe('cancelled');
+    expect((await events()).map((event) => event.outcome)).toEqual(['refused']);
+    expect(await outboxRows()).toContainEqual({
+      id: 'payment.refused:evt_late',
+      topic: 'payment.refused',
+      order_id: order.id,
+      ref: 'pi_3',
+      handled_at: null,
+    });
   });
 
   it('reports the product whose availability the payment changed', async () => {

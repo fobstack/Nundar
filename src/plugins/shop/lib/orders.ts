@@ -664,6 +664,12 @@ type PaymentAction = 'pay' | 'oversold' | 'refuse';
  * is how a line that would oversell becomes `oversold`, and how losing a race
  * becomes `duplicate`, without either depending on the wording of an error.
  *
+ * A write that throws is tried once more if the next reading still calls for
+ * it. Stock can go and come back between a reading and a write — one order
+ * takes it, another's refund returns it — and the first failure then says
+ * nothing about the second attempt. The same write throwing twice running is
+ * a real failure.
+ *
  * Throws `OrderNotFoundError` for an order that does not exist, and rethrows
  * a database failure. A caller answering a webhook turns the second into a
  * non-2xx response, so that Stripe delivers the event again.
@@ -672,7 +678,9 @@ export async function markOrderPaid(
   db: D1Database,
   input: PaymentInput,
 ): Promise<PaymentResult> {
-  let failed: { action: PaymentAction; error: unknown } | undefined;
+  let failed:
+    | { action: PaymentAction; error: unknown; times: number }
+    | undefined;
 
   // Paying can fail into oversold, and oversold can find the stock back and
   // return to paying. A third change of mind is not worth waiting for.
@@ -691,9 +699,9 @@ export async function markOrderPaid(
       : state.shortOfStock
         ? 'oversold'
         : 'pay';
-    // The same thing, attempted again after it threw, would throw again:
-    // that is a real failure, to be retried by whoever delivered the event.
-    if (failed?.action === action) {
+    // Thrown twice running by the same write: a real failure, to be retried
+    // by whoever delivered the event.
+    if (failed?.action === action && failed.times >= 2) {
       throw failed.error;
     }
 
@@ -716,7 +724,11 @@ export async function markOrderPaid(
       }
       failed = undefined;
     } catch (error) {
-      failed = { action, error };
+      failed = {
+        action,
+        error,
+        times: failed?.action === action ? failed.times + 1 : 1,
+      };
     }
   }
 

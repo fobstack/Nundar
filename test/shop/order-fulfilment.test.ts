@@ -20,6 +20,7 @@ import {
   createVariant,
   db,
   ensureSite,
+  interceptBatches,
   outboxRows,
   setPrice,
   setStock,
@@ -165,6 +166,29 @@ describe('shipOrder', () => {
     );
 
     expect(calls).toBe(2);
+  });
+
+  it('has shipped the order, and owes the notice, even when the answer is lost', async () => {
+    // To the caller this looks like a failure. The order has shipped all the
+    // same, the notice is owed, and pressing the button again is refused
+    // rather than repeated.
+    const order = await paidOrder();
+    const database = interceptBatches({
+      after: () => {
+        throw new Error('The connection was lost');
+      },
+    });
+
+    await expect(
+      shipOrder(database, { orderId: order.id, trackingNo: 'T-1', now: LATER }),
+    ).rejects.toThrow('The connection was lost');
+
+    expect(await statusOf(order.id)).toBe('shipped');
+    expect(await owed(order.id)).toEqual(['order.paid', 'order.shipped']);
+    await expect(
+      shipOrder(db(), { orderId: order.id, trackingNo: 'T-1', now: LATER }),
+    ).rejects.toThrow(/transition/i);
+    expect(await owed(order.id)).toEqual(['order.paid', 'order.shipped']);
   });
 
   it('refuses to ship without a tracking number', async () => {
@@ -362,6 +386,29 @@ describe('refundOrder', () => {
       expect(await reasons(order.id)).toEqual(['order_paid']);
       expect(await owed(order.id)).toEqual(['order.paid', 'order.shipped']);
     }
+  });
+
+  it('has refunded the order once, and owes the follow-up, even when the answer is lost', async () => {
+    const order = await paidOrder();
+    const database = interceptBatches({
+      after: () => {
+        throw new Error('The connection was lost');
+      },
+    });
+
+    await expect(
+      refundOrder(database, { orderId: order.id, now: LATER }),
+    ).rejects.toThrow('The connection was lost');
+
+    expect(await statusOf(order.id)).toBe('refunded');
+    expect(await stockOf('dn50')).toBe(100);
+    expect(await owed(order.id)).toEqual(['order.paid', 'order.refunded']);
+    // Trying again cannot return the stock a second time.
+    await expect(
+      refundOrder(db(), { orderId: order.id, now: LATER }),
+    ).rejects.toThrow(/transition/i);
+    expect(await stockOf('dn50')).toBe(100);
+    expect(await reasons(order.id)).toEqual(['order_paid', 'refund']);
   });
 
   it('refunds a shipped order too', async () => {
