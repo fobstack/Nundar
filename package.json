@@ -28,7 +28,7 @@
     "settings:apply": "node scripts/apply-settings.mjs"
   },
   "dependencies": {
-    "mallok": "0.1.0-rc.7",
+    "mallok": "0.1.0-rc.9",
     "zod": "4.4.3"
   },
   "devDependencies": {
