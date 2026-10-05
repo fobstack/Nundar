@@ -280,8 +280,25 @@ describe('the commerce theme', () => {
       kind: 'tool',
       title: 'Fastener calculators',
       slug: 'fastener-calculators',
-      frontmatter: 'description: Formulas and reference tables.',
+      frontmatter: [
+        'description: Formulas and reference tables.',
+        'calculators: fasteners',
+      ].join('\n'),
       body: '## Torque\n\n| Thread | Torque |\n| --- | ---: |\n| M5 | 4.5 N·m |\n',
+    });
+    await createContent({
+      kind: 'tool',
+      title: 'Schraubenrechner',
+      slug: 'schraubenrechner',
+      locale: 'de',
+      frontmatter: 'calculators: fasteners',
+    });
+    // A reference page that is only a reference.
+    await createContent({
+      kind: 'tool',
+      title: 'Thread tables',
+      slug: 'thread-tables',
+      body: 'Coarse and fine pitches.',
     });
 
     await createContent({
@@ -1147,7 +1164,8 @@ describe('the commerce theme', () => {
       '/case-studies/stage-separation-fasteners',
       '/faq',
       '/faq/tolerances-and-torque',
-      '/tools/fastener-calculators',
+      '/tools',
+      '/tools/thread-tables',
       '/about',
       '/news',
     ])('is not sent on %s', async (path) => {
@@ -1163,6 +1181,18 @@ describe('the commerce theme', () => {
         const { html } = await page(path);
 
         expect(executableScripts(html)).toEqual([FINDER]);
+        expect(html).not.toMatch(/\son[a-z]+=/i);
+      },
+    );
+
+    it.each(['/tools/fastener-calculators', '/de/tools/schraubenrechner'])(
+      'is one declared file on %s, which asks for the calculators',
+      async (path) => {
+        const { html } = await page(path);
+
+        expect(executableScripts(html)).toEqual([
+          `<script src="${ASSETS}/calculators.js" defer>`,
+        ]);
         expect(html).not.toMatch(/\son[a-z]+=/i);
       },
     );
@@ -1236,6 +1266,79 @@ describe('the commerce theme', () => {
       expect(home.html).toContain('<form class="finder-filters" hidden ');
       expect(collection.html).not.toContain('finder-filters');
       expect(product.html).not.toContain('finder-filters');
+    });
+  });
+
+  describe('the calculators', () => {
+    const CALCULATORS = '/tools/fastener-calculators';
+
+    it('are in the page, hidden, as three forms above the text', async () => {
+      // Hidden until the script has computed a first result: a form that
+      // cannot answer is not offered.
+      const { html } = await page(CALCULATORS);
+      const section = between(html, '<section class="calcs"', '</section>');
+
+      expect(section).toMatch(
+        /^<section class="calcs" data-calculators hidden /,
+      );
+      expect(
+        section.match(/<form class="calc" data-calculator="/g),
+      ).toHaveLength(3);
+      expect(section).toContain('data-calculator="mass"');
+      expect(section).toContain('data-calculator="torque"');
+      expect(section).toContain('data-calculator="engagement"');
+      expect(html.indexOf('<section class="calcs"')).toBeLessThan(
+        html.indexOf('<div class="prose prose-wide">'),
+      );
+    });
+
+    it('leave the page’s own tables where they were', async () => {
+      const { html } = await page(CALCULATORS);
+
+      expect(html).toMatch(/<td[^>]*>4\.5 N·m<\/td>/);
+    });
+
+    it('carry every number in a value, and every word from the language pack', async () => {
+      const english = await page(CALCULATORS);
+      const german = await page('/de/tools/schraubenrechner');
+
+      expect(english.html).toContain(
+        '<option value="steel">Carbon steel 10.9 (7.85 g/cm³)</option>',
+      );
+      expect(english.html).toContain(
+        '<option value="moly">Molybdenum disulfide (MoS2) anti-seize paste, K = 0.11 (recommended)</option>',
+      );
+      expect(english.html).toContain('data-percent="{value}%"');
+      expect(english.html).toMatch(/data-money="\$\{value\}"/);
+      // The same values, other words, and the language's own separators.
+      expect(german.html).toContain(
+        '<option value="steel">Kohlenstoffstahl 10.9 (7,85 g/cm³)</option>',
+      );
+      expect(german.html).toContain('data-percent="{value} %"');
+      expect(german.html).toContain('data-money="{value} $"');
+      expect(german.html).toContain(
+        '<h2>Anzugsdrehmoment und Vorspannkraft</h2>',
+      );
+    });
+
+    it('keep the warning about dry threads, and the rule of thumb for each housing, ready', async () => {
+      const { html } = await page(CALCULATORS);
+
+      expect(html).toMatch(
+        /<p class="calc-warning" data-dry-warning hidden>Dry assembly of titanium threads/,
+      );
+      expect(html).toContain('<p class="calc-note" data-housing="aluminum">');
+      expect(
+        html.match(/<p class="calc-note" data-housing="[a-z]+" hidden>/g),
+      ).toHaveLength(3);
+    });
+
+    it('are on a reference page only when it asks for them', async () => {
+      const { status, html } = await page('/tools/thread-tables');
+
+      expect(status).toBe(200);
+      expect(html).toContain('Coarse and fine pitches.');
+      expect(html).not.toContain('class="calcs"');
     });
   });
 

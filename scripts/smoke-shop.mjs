@@ -432,11 +432,28 @@ try {
     'a questions topic carries no FAQ structured data',
   );
 
-  const tool = await page('/tools/fastener-calculators');
-  expect(
-    tool.status === 200 && tool.html.includes('<table>'),
-    'the calculators page does not show its reference tables',
-  );
+  // The reference page asks for the calculators in its front matter, in every
+  // language: the forms are in the page, hidden, above tables that are there
+  // with or without them.
+  for (const path of [
+    '/tools/fastener-calculators',
+    '/de/tools/schraubenrechner',
+    '/fr/tools/calculateurs-de-fixations',
+    '/es/tools/calculadoras-de-fijaciones',
+  ]) {
+    const tool = await page(path);
+    expect(
+      tool.status === 200 && tool.html.includes('<table>'),
+      `${path} does not show its reference tables`,
+    );
+    expect(
+      tool.html.includes('<section class="calcs" data-calculators hidden ') &&
+        /<script src="\/theme\/[^"]+\/calculators\.js" defer><\/script>/.test(
+          tool.html,
+        ),
+      `${path} does not carry the calculators it asks for`,
+    );
+  }
 
   // The form is the inquiry plugin's, put where the page wrote `[[inquiry]]`.
   for (const path of ['/contact', '/fr/contact']) {

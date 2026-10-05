@@ -17,7 +17,16 @@
     body is captured first, and a page without one gets no empty box.
   {%- endcomment -%}
   {% capture body %}{{ content.html }}{% endcapture %}
+  {%- comment -%}
+    A reference page may ask for the calculators that go with it. They sit
+    above the text, which gives the same formulas and constants and tables
+    of results: the page is whole without them, and they are in it hidden
+    until their script has run.
+  {%- endcomment -%}
+  {% if content.frontmatter.calculators == "fasteners" %}{% render "partials/calculators" %}{% endif %}
+
   {% if body != blank %}<div class="prose prose-wide">{{ content.html }}</div>{% endif %}
 </article>
 {% if theme.options.cta_title != blank %}{% render "partials/closing" %}{% endif %}
+{% if content.frontmatter.calculators == "fasteners" %}<script src="{{ theme.asset_base }}/calculators.js" defer></script>{% endif %}
 {% endblock %}

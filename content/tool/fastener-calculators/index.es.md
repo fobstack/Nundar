@@ -2,6 +2,7 @@
 title: Calculadoras de ingeniería para fijaciones de titanio
 description: "Fórmulas, constantes y tablas de referencia para fijaciones de titanio: reducción de masa, par de apriete y precarga, y profundidad de rosca acoplada."
 slug: calculadoras-de-fijaciones
+calculators: fasteners
 ---
 
 Casi toda fijación de titanio viene acompañada de tres preguntas: cuánta masa elimina el cambio desde el acero, qué par de apriete proporciona la precarga prevista y qué profundidad debe acoplar la rosca en la carcasa. Para cada una, esta página ofrece la fórmula, todas las constantes en que se basa y una tabla de resultados para las medidas métricas estándar, de modo que cualquier valor pueda comprobarse a mano.

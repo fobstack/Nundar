@@ -2019,6 +2019,181 @@ p {
   color: var(--accent-strong);
 }
 
+/* ------------------------------------------------------------ calculators */
+
+/* In the page hidden: the script that computes them shows them. */
+.calcs[hidden] {
+  display: none;
+}
+
+.calcs {
+  display: grid;
+  gap: 1.25rem;
+  margin-bottom: clamp(2rem, 4vw, 3rem);
+}
+
+.calc {
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-xl);
+  background: var(--white);
+  box-shadow: var(--shadow-sm);
+}
+
+.calc > h2 {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.calc-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+
+@media (min-width: 56rem) {
+  .calc-grid {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    align-items: start;
+  }
+}
+
+.calc-inputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: 0.75rem 1rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* The group is named for a screen reader; sighted, the heading above says it. */
+.calc-inputs legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.calc-inputs label {
+  display: grid;
+  gap: 0.375rem;
+  min-width: 0;
+  align-content: start;
+}
+
+.calc-inputs label span {
+  color: var(--slate-700);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.calc-inputs input,
+.calc-inputs select {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--slate-500);
+  border-radius: var(--radius);
+  background: var(--white);
+  color: var(--slate-900);
+  font: inherit;
+  font-size: 0.8125rem;
+}
+
+.calc-warning {
+  grid-column: 1 / -1;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--accent-wash);
+  color: var(--accent-strong);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.calc-warning[hidden],
+.calc-note[hidden] {
+  display: none;
+}
+
+.calc-note {
+  grid-column: 1 / -1;
+  color: var(--slate-600);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+
+.calc-results {
+  min-width: 0;
+  padding: 1rem;
+  border-radius: var(--radius-lg);
+  background: var(--ink-850);
+  color: var(--slate-300);
+}
+
+.calc-lead {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.calc-lead span,
+.calc-results dt,
+.calc-results h3 {
+  color: var(--slate-400);
+  font-family: var(--font-body);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.calc-lead output {
+  color: var(--accent-bright);
+  font-family: var(--font-mono);
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.calc-results dl {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.875rem 0 0;
+  padding-top: 0.875rem;
+  border-top: 1px solid var(--line-dark-2);
+}
+
+.calc-results dl div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+}
+
+.calc-results dd {
+  margin: 0;
+  color: var(--white);
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.calc-results h3 {
+  margin-top: 1rem;
+}
+
+.calc-results :focus-visible {
+  outline-color: var(--accent-bright);
+}
+
 /* ------------------------------------------------------------------ prose */
 
 .prose {

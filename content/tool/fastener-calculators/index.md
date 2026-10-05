@@ -1,6 +1,7 @@
 ---
 title: Titanium Fastener Engineering Calculators
 description: Formulas, constants and reference tables for titanium fastener mass reduction, tightening torque and preload, and thread engagement depth.
+calculators: fasteners
 ---
 
 Three questions come with almost every titanium fastener: how much mass the change from steel removes, what tightening torque gives the intended preload, and how deep the thread must engage in the housing. For each one, this page gives the formula, every constant behind it and a table of results for standard metric sizes, so that any figure can be checked by hand.

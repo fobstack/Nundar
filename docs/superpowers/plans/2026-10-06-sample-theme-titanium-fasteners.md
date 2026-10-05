@@ -52,7 +52,7 @@ What a port means here: the design, the content and the structure are the templa
 | In the template | Here | Why |
 |---|---|---|
 | Filters above the specification finder | The whole table, with filters added by a script (see below) | The table is complete without the script; the filters came after the port, as a separate change |
-| Three interactive calculators | A reference page with the formulas, the constants and tables | Needs a script. The page is complete without one, and every figure can be checked by hand |
+| Three interactive calculators | A reference page with the formulas, the constants and tables, with the calculators added above it by a script (see below) | The page is complete without the script, and every figure can be checked by hand |
 | A quote list in a drawer, with quantities | The request-a-quote buttons lead to the custom manufacturing page and its form | This is the cart, and the cart page waits for Mallok (design §7) |
 | A search box in the header | — | Mallok has no search |
 | Forms with file upload, a wizard, a heat-lot lookup | Mallok's inquiry form, text only | The template's forms sent nothing anywhere; the inquiry form is real, and it takes text |
@@ -140,11 +140,29 @@ The owner had approved small scripts as additions to pages that work without the
 
 **What it found.** A count needs a wording that survives the number one: "1 pièces sur 6" became "1 sur 6 pièces". A row the script hides must leave no trace in the card layout, so each card now draws its own border instead of the grid showing a background through its gaps. And a character class written with the characters themselves instead of their escapes is a line nobody can read or safely edit.
 
+## After the port: the calculators
+
+The second of the two scripts the owner approved.
+
+**What it is.** `src/theme/assets/calculators.js`, 9.4 kB, no dependency and no build step, and `partials/calculators.liquid`, the three forms. A `tool` page asks for them with `calculators: fasteners` in its front matter; the sample's reference page does, in all four languages. Mass saved against steel for a size and a quantity; tightening torque, stress area and preload for a thread, a grade, a share of the yield strength and a lubricant; engagement length and thread count for a housing material. The arithmetic and every constant are the template's.
+
+**What keeps it honest.** The forms sit above a page that prints the same formulas, the same constants and tables of results. A test reads that page and compares it with the script: the threads, the densities, the yield strengths, the nut factors, the ratios, the limits of each field, and every cell of every table — the mass of eight sizes in five metals, the saving for a hundred of each against two steels, the four head geometries, the torque of eight threads under four lubricants in three units for two grades, the engagement length and the thread count for four housings. If the script and the page ever disagree, that test fails.
+
+**How it was verified.**
+
+| Check | Result |
+|---|---|
+| The arithmetic, under `node:vm` | 12 tests, as above, and three that hold the forms and the script to each other: every field asked for exists, every result written has a place |
+| The page, inside workerd | 8 tests: the forms hidden, above the text, in the page's language with the language's separators; the script on the pages that ask for the calculators and on no other |
+| Red and green | 26 changes — a constant, a formula, a rounding, a field's limit, a renamed field, the conditions in the layout — each noticed by the check meant for it |
+| In a browser, by hand | The default of each calculator and a dozen other inputs, each compared with the page's own tables; a value past a field's limit; an empty field; the dry-thread warning; German separators; a phone |
+
+**What it found.** The first run in a browser computed nothing: the length field was named `length`, and a form's list of fields answers that name with how many fields it has. No test could have shown it, because no test runs the script against a page. The fields are now found by a query, three tests hold the names in the forms and in the script together, and the lesson is in the project's notes.
+
 ## What waits
 
 **For a decision by the owner**
 - *The sample's facts.* These come from the template and disagree with each other; none was changed, because which is right is not a question a port can answer: the density of stainless steel (7.93, 7.98 and 8.00 g/cm³ in different places); the weight saved (44% and 45%, where the densities give 43.6% and 44.6%); the iron limit of Grade 5 (0.40% in the material guide, 0.30% for AMS 4928 on the quality page); "Grade 5 ELI" in one case study, where ELI is Grade 23 elsewhere; a UNJ thread form named for metric threads; a shoulder screw of "custom alloy" that a case study calls Grade 5; a stainless steel passivation standard cited for titanium.
-- *The second script.* The three calculators, on the same terms as the finder's filters: a small declared script working on a page that is complete without it.
 - *The images.* They were generated for the template. Whether they are to be published under this repository's licences is the owner's to confirm.
 
 **For Mallok** — the five items above, and everything phase 1B already waits for: prices and availability on the product pages and in the finder, and the cart page that the template's quote list becomes.

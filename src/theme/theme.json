@@ -1,8 +1,8 @@
 {
   "id": "nundar",
   "name": "Nundar",
-  "description": "A commerce theme for a technical catalogue: a specification finder, product pages built around a size table, landing pages for the applications a part is used in, collections by type, case studies and reference pages. HTML first: every page is complete without a script, and the one it declares only adds filters to a table that is already whole.",
-  "version": "0.3.0",
+  "description": "A commerce theme for a technical catalogue: a specification finder, product pages built around a size table, landing pages for the applications a part is used in, collections by type, case studies and reference pages. HTML first: every page is complete without a script, and the two it declares only add to what is already there — filters for a table, calculators beside the tables of an engineering reference.",
+  "version": "0.4.0",
   "themeApi": 1,
   "home": "layouts/home.liquid",
   "kinds": {
@@ -128,7 +128,16 @@
       "layout": "layouts/tool.liquid",
       "listLayout": "layouts/list.liquid",
       "label": "Engineering tool",
-      "base": "tools"
+      "base": "tools",
+      "fields": {
+        "calculators": {
+          "type": "select",
+          "label": "Calculators",
+          "choices": ["none", "fasteners"],
+          "default": "none",
+          "help": "Shows interactive calculators above the text. \"fasteners\" is mass reduction, tightening torque and thread engagement; the text should give the same formulas, constants and tables, because that is what a visitor without the script sees."
+        }
+      }
     }
   },
   "options": {
@@ -304,6 +313,11 @@
       "path": "assets/finder.js",
       "purpose": "Home page and catalogue only: filters and a search box above the specification table. The table is complete without it.",
       "bytes": 5315
+    },
+    {
+      "path": "assets/calculators.js",
+      "purpose": "Engineering reference pages that ask for it only: three fastener calculators above a page that prints the same formulas, constants and tables of results.",
+      "bytes": 9426
     }
   ]
 }

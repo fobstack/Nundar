@@ -1,0 +1,135 @@
+{%- comment -%}
+  The three fastener calculators.
+
+  Hidden until the script that computes them has run: a form that cannot
+  answer is worse than no form, and the page below gives the formulas, the
+  constants and tables of results without any script.
+
+  Every label is in the language pack. An option that stands for a number
+  carries it, or a name the script knows, in its value and never in its
+  text, so the script reads no language. The first figure of each calculator
+  is an <output>, which a screen reader announces when it changes; the
+  figures under it are not, or every keystroke would be read out nine times.
+{%- endcomment -%}
+<section class="calcs" data-calculators hidden data-percent="{{ t.calc_percent }}" data-money="{{ t.calc_money }}" aria-label="{{ t.calc_title }}">
+  <form class="calc" data-calculator="mass">
+    <h2>{{ t.calc_mass_title }}</h2>
+    <div class="calc-grid">
+      <fieldset class="calc-inputs">
+        <legend>{{ t.calc_inputs }}</legend>
+        <label><span>{{ t.calc_thread }}</span>
+          <select name="thread">
+            <option value="M3">M3</option><option value="M4">M4</option><option value="M5">M5</option><option value="M6" selected>M6</option><option value="M8">M8</option><option value="M10">M10</option><option value="M12">M12</option><option value="M16">M16</option>
+          </select>
+        </label>
+        <label><span>{{ t.calc_length }}</span><input type="number" name="length" value="30" min="6" max="150" step="1" inputmode="numeric"></label>
+        <label><span>{{ t.calc_quantity }}</span><input type="number" name="quantity" value="100" min="1" max="50000" step="1" inputmode="numeric"></label>
+        <label><span>{{ t.calc_baseline }}</span>
+          <select name="baseline">
+            <option value="steel">{{ t.calc_steel }}</option>
+            <option value="stainless">{{ t.calc_stainless }}</option>
+          </select>
+        </label>
+        <label><span>{{ t.calc_head }}</span>
+          <select name="head">
+            <option value="1.25">{{ t.calc_head_socket }}</option>
+            <option value="1.15">{{ t.calc_head_button }}</option>
+            <option value="1.10">{{ t.calc_head_countersunk }}</option>
+            <option value="1.35">{{ t.calc_head_flange }}</option>
+          </select>
+        </label>
+      </fieldset>
+      <div class="calc-results">
+        <p class="calc-lead"><span>{{ t.calc_reduction }}</span><output data-out="percent"></output></p>
+        <dl>
+          <div><dt>{{ t.calc_baseline_total }}</dt><dd><span data-out="baseline_total"></span></dd></div>
+          <div><dt>{{ t.calc_titanium_total }}</dt><dd><span data-out="titanium_total"></span></dd></div>
+          <div><dt>{{ t.calc_saved }}</dt><dd><span data-out="saved"></span></dd></div>
+          <div><dt>{{ t.calc_launch_cost }}</dt><dd><span data-out="launch_cost"></span></dd></div>
+        </dl>
+        <h3>{{ t.calc_each }}</h3>
+        <dl>
+          <div><dt>{{ t.calc_each_baseline }}</dt><dd><span data-out="each_baseline"></span></dd></div>
+          <div><dt>{{ t.calc_each_grade5 }}</dt><dd><span data-out="each_grade5"></span></dd></div>
+          <div><dt>{{ t.calc_each_grade2 }}</dt><dd><span data-out="each_grade2"></span></dd></div>
+          <div><dt>{{ t.calc_each_aluminum }}</dt><dd><span data-out="each_aluminum"></span></dd></div>
+        </dl>
+      </div>
+    </div>
+  </form>
+
+  <form class="calc" data-calculator="torque">
+    <h2>{{ t.calc_torque_title }}</h2>
+    <div class="calc-grid">
+      <fieldset class="calc-inputs">
+        <legend>{{ t.calc_inputs }}</legend>
+        <label><span>{{ t.calc_thread }}</span>
+          <select name="thread">
+            <option value="M3">M3</option><option value="M4">M4</option><option value="M5">M5</option><option value="M6" selected>M6</option><option value="M8">M8</option><option value="M10">M10</option><option value="M12">M12</option><option value="M16">M16</option>
+          </select>
+        </label>
+        <label><span>{{ t.calc_pitch }}</span><input type="number" name="pitch" value="1" min="0.2" max="4" step="0.05" inputmode="decimal"></label>
+        <label><span>{{ t.calc_grade }}</span>
+          <select name="grade">
+            <option value="grade5">{{ t.calc_grade5 }}</option>
+            <option value="grade2">{{ t.calc_grade2 }}</option>
+          </select>
+        </label>
+        <label><span>{{ t.calc_preload_percent }}</span><input type="number" name="percent" value="70" min="50" max="85" step="1" inputmode="numeric"></label>
+        <label><span>{{ t.calc_lubricant }}</span>
+          <select name="lubricant">
+            <option value="moly">{{ t.calc_lubricant_moly }}</option>
+            <option value="copper">{{ t.calc_lubricant_copper }}</option>
+            <option value="oil">{{ t.calc_lubricant_oil }}</option>
+            <option value="dry">{{ t.calc_lubricant_dry }}</option>
+          </select>
+        </label>
+        <p class="calc-warning" data-dry-warning hidden>{{ t.calc_dry_warning }}</p>
+      </fieldset>
+      <div class="calc-results">
+        <p class="calc-lead"><span>{{ t.calc_torque }}</span><output data-out="torque"></output></p>
+        <dl>
+          <div><dt>{{ t.calc_torque_imperial }}</dt><dd><span data-out="torque_lbf_in"></span> · <span data-out="torque_lbf_ft"></span></dd></div>
+          <div><dt>{{ t.calc_stress_area }}</dt><dd><span data-out="stress_area"></span></dd></div>
+          <div><dt>{{ t.calc_preload }}</dt><dd><span data-out="preload"></span></dd></div>
+        </dl>
+      </div>
+    </div>
+  </form>
+
+  <form class="calc" data-calculator="engagement">
+    <h2>{{ t.calc_engagement_title }}</h2>
+    <div class="calc-grid">
+      <fieldset class="calc-inputs">
+        <legend>{{ t.calc_inputs }}</legend>
+        <label><span>{{ t.calc_housing }}</span>
+          <select name="housing">
+            <option value="aluminum">{{ t.calc_housing_aluminum }}</option>
+            <option value="magnesium">{{ t.calc_housing_magnesium }}</option>
+            <option value="titanium">{{ t.calc_housing_titanium }}</option>
+            <option value="steel">{{ t.calc_housing_steel }}</option>
+          </select>
+        </label>
+        <label><span>{{ t.calc_thread }}</span>
+          <select name="thread">
+            <option value="M3">M3</option><option value="M4">M4</option><option value="M5">M5</option><option value="M6" selected>M6</option><option value="M8">M8</option><option value="M10">M10</option><option value="M12">M12</option><option value="M16">M16</option>
+          </select>
+        </label>
+        {%- comment -%}
+          The rule of thumb behind each ratio. All four are in the page; the
+          script shows the one for the material chosen.
+        {%- endcomment -%}
+        <p class="calc-note" data-housing="aluminum">{{ t.calc_note_aluminum }}</p>
+        <p class="calc-note" data-housing="magnesium" hidden>{{ t.calc_note_magnesium }}</p>
+        <p class="calc-note" data-housing="titanium" hidden>{{ t.calc_note_titanium }}</p>
+        <p class="calc-note" data-housing="steel" hidden>{{ t.calc_note_steel }}</p>
+      </fieldset>
+      <div class="calc-results">
+        <p class="calc-lead"><span>{{ t.calc_depth }}</span><output data-out="depth"></output></p>
+        <dl>
+          <div><dt>{{ t.calc_threads }}</dt><dd><span data-out="threads"></span></dd></div>
+        </dl>
+      </div>
+    </div>
+  </form>
+</section>

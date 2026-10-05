@@ -489,6 +489,8 @@ Nothing here is commerce logic, and none of it needs a Mallok change: all of it 
 
 **One script, added on top (2026-10-06).** `assets/finder.js` puts a list for each attribute, one for the sizes and a search box above the table on the home page and in the catalogue, and hides the rows that do not match. It is the first exception to the rule that visitor pages carry no client JavaScript (`mallok: docs/PRODUCT_CONTRACT.md §5`), made on these terms: the script is declared in `theme.json` with its size, so the admin can show the site's owner what runs; it is loaded only by the two layouts that have the table; the form it fills is rendered by the server, hidden, in the page's language, so the script holds no words and the page never offers a control that does nothing; and it changes only what is shown — no request, no storage, no price. The same terms hold for any later script. It is its own commit, so that it can be left out.
 
+**A second script, on the same terms (2026-10-06).** `assets/calculators.js` runs the template's three calculators — mass saved against steel, tightening torque for a preload, thread engagement in a housing — on a `tool` page whose front matter asks for them with `calculators: fasteners`. The page under them is the reference it always was, and it is what makes the script checkable: every constant the script holds and every figure it computes is compared, by a test, with the constants and the tables the page prints. A reader who works a result out by hand from the page gets the calculator's number. It too is its own commit.
+
 **What it found in Mallok.** Five behaviours, none blocking, each in the task list handed to Mallok and each handled meanwhile inside the documented contracts:
 
 | Found | Meanwhile |

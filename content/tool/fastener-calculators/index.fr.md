@@ -2,6 +2,7 @@
 title: Calculateurs techniques pour fixations en titane
 description: Formules, constantes et tableaux de référence pour le gain de masse, le couple de serrage, la précharge et la profondeur en prise des fixations en titane.
 slug: calculateurs-de-fixations
+calculators: fasteners
 ---
 
 Trois questions accompagnent presque toute fixation en titane : quelle masse le remplacement de l'acier fait gagner, quel couple de serrage donne la précharge voulue, et sur quelle profondeur le filetage doit être en prise dans le carter. Pour chacune, cette page donne la formule, toutes les constantes sur lesquelles elle repose et un tableau de résultats pour les dimensions métriques standard, afin que chaque valeur puisse être vérifiée à la main.

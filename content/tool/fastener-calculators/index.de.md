@@ -2,6 +2,7 @@
 title: Schraubenrechner für Titan-Verbindungselemente
 description: Formeln, Konstanten und Referenztabellen für Titan-Verbindungselemente zu Massenreduktion, Anzugsdrehmoment, Vorspannkraft und Einschraubtiefe.
 slug: schraubenrechner
+calculators: fasteners
 ---
 
 Drei Fragen stellen sich bei fast jedem Titan-Verbindungselement: wie viel Masse der Wechsel von Stahl einspart, welches Anzugsdrehmoment die beabsichtigte Vorspannkraft ergibt und wie tief das Gewinde im Gehäuse eingeschraubt sein muss. Zu jeder Frage nennt diese Seite die Formel, jede Konstante dahinter und eine Ergebnistabelle für metrische Standardgrößen, sodass sich jeder Wert von Hand nachrechnen lässt.
