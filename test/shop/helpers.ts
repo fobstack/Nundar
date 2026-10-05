@@ -332,12 +332,12 @@ export interface OutboxEntry {
   handled_at: string | null;
 }
 
-/** Every outbox row, in the order it was written. */
+/** Every outbox row, in the order it was committed. */
 export async function outboxRows(): Promise<OutboxEntry[]> {
   const { results } = await db()
     .prepare(
       `SELECT id, topic, order_id, ref, handled_at FROM p_shop_outbox
-       ORDER BY created_at, id`,
+       ORDER BY seq`,
     )
     .all<OutboxEntry>();
   return results;

@@ -126,7 +126,10 @@ describe('the outbox', () => {
     ]);
   });
 
-  it('returns what is owed oldest first, bounded, for all orders or for one', async () => {
+  it('returns what is owed in the order it was committed, bounded, for all orders or for one', async () => {
+    // The times are deliberately out of step with the order of writing: a
+    // time is whatever the change was made with, and proves nothing about
+    // which change came first.
     await orderIn('o1', 'pending');
     await orderIn('o2', 'pending');
     await orderIn('o3', 'pending');
@@ -145,15 +148,39 @@ describe('the outbox', () => {
 
     expect(
       (await pendingOutbox(db(), { limit: 10 })).map((row) => row.orderId),
-    ).toEqual(['o1', 'o3', 'o2']);
+    ).toEqual(['o2', 'o1', 'o3']);
     expect(
       (await pendingOutbox(db(), { limit: 2 })).map((row) => row.orderId),
-    ).toEqual(['o1', 'o3']);
+    ).toEqual(['o2', 'o1']);
     expect(
       (await pendingOutbox(db(), { limit: 10, orderId: 'o3' })).map(
         (row) => row.id,
       ),
     ).toEqual(['order.paid:o3']);
+  });
+
+  it('keeps an order’s changes in sequence even when they carry the same time', async () => {
+    // "Delivered" sorts before "paid" and "shipped" by name. A buyer told in
+    // that order would hear that the parcel arrived before it left.
+    await orderIn('o1', 'pending');
+    for (const [from, to] of [
+      ['pending', 'paid'],
+      ['paid', 'shipped'],
+      ['shipped', 'delivered'],
+    ] as const) {
+      await db().batch([
+        orderChangedOutbox(db(), { orderId: 'o1', from, to, now: T0 }),
+        db()
+          .prepare("UPDATE p_shop_order SET status = ? WHERE id = 'o1'")
+          .bind(to),
+      ]);
+    }
+
+    expect(
+      (await pendingOutbox(db(), { limit: 10, orderId: 'o1' })).map(
+        (row) => row.topic,
+      ),
+    ).toEqual(['order.paid', 'order.shipped', 'order.delivered']);
   });
 
   it('stops returning a row once it is marked handled, and keeps the first time', async () => {

@@ -13,6 +13,11 @@
  * and whoever carries the follow-up out marks the row handled afterwards. A
  * row may be handled twice if the marking is what fails; it cannot be lost.
  *
+ * A row says that something changed, not everything about the change. Which
+ * products' availability a payment altered is known only to the call that
+ * made it; a consumer working from the row alone purges every product on the
+ * order, which is always safe and only sometimes more than was needed.
+ *
  * This module writes the rows and reads them back. Nothing consumes them yet:
  * that arrives with the routes.
  */
@@ -127,7 +132,12 @@ export interface OutboxRow {
 }
 
 /**
- * The rows still owed, oldest first — all of them, or one order's.
+ * The rows still owed, in the order they were committed — all of them, or
+ * one order's.
+ *
+ * That order is what a consumer must keep: an order's "shipped" is handed
+ * over before its "delivered". It comes from the table's own sequence, not
+ * from `createdAt`, which is whatever time the change was made with.
  *
  * Bounded, because the place this will be drained from is the site's shared
  * once-a-minute cron.
@@ -142,14 +152,14 @@ export async function pendingOutbox(
           .prepare(
             `SELECT id, topic, order_id, ref, created_at FROM p_shop_outbox
              WHERE handled_at IS NULL
-             ORDER BY created_at, id LIMIT ?`,
+             ORDER BY seq LIMIT ?`,
           )
           .bind(input.limit)
       : db
           .prepare(
             `SELECT id, topic, order_id, ref, created_at FROM p_shop_outbox
              WHERE handled_at IS NULL AND order_id = ?
-             ORDER BY created_at, id LIMIT ?`,
+             ORDER BY seq LIMIT ?`,
           )
           .bind(input.orderId, input.limit);
 

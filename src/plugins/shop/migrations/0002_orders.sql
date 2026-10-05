@@ -117,10 +117,15 @@ CREATE INDEX IF NOT EXISTS p_shop_stock_adjustment_variant
 -- after the batch instead would lose it whenever the Worker stopped in
 -- between, and nothing would know it was owed
 CREATE TABLE IF NOT EXISTS p_shop_outbox (
+  -- The order the rows were committed in, which is the order to carry them
+  -- out in: "shipped" before "delivered". A timestamp cannot say this. It is
+  -- supplied by whoever makes the change, and two changes can carry the same
+  -- one
+  seq        INTEGER PRIMARY KEY AUTOINCREMENT,
   -- '<topic>:<order id>' for a change of status, which an order goes through
   -- at most once. '<topic>:<event id>' for a refused payment. Built from what
   -- the row records, so the same duty cannot be written twice
-  id         TEXT PRIMARY KEY,
+  id         TEXT NOT NULL UNIQUE,
   -- order.paid | order.oversold | order.shipped | order.delivered |
   -- order.cancelled | order.refunded | payment.refused
   topic      TEXT NOT NULL,
@@ -135,4 +140,4 @@ CREATE TABLE IF NOT EXISTS p_shop_outbox (
 -- Only the rows still owed, so finding them stays cheap however long the
 -- shop has been running
 CREATE INDEX IF NOT EXISTS p_shop_outbox_pending
-  ON p_shop_outbox (created_at) WHERE handled_at IS NULL;
+  ON p_shop_outbox (seq) WHERE handled_at IS NULL;
