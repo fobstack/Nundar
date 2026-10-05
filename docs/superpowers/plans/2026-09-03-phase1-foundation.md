@@ -91,10 +91,10 @@ drizzle.config.ts           drizzle-kit configuration
 
 - [ ] **Step 1: generate the skeleton**
 
-Run this in `/Users/jasonyu/workspace/company/nundar`. Note that the directory already holds `docs/` and `.git/`, so scaffold into a temporary directory and merge, rather than overwriting what is there.
+Run this in the repository root. Note that the directory already holds `docs/` and `.git/`, so scaffold into a temporary directory and merge, rather than overwriting what is there.
 
 ```bash
-cd /Users/jasonyu/workspace/company/nundar
+cd path/to/nundar
 npm create cloudflare@latest -- .nundar-scaffold --framework=next --platform=workers
 ```
 
@@ -103,7 +103,7 @@ Answer the prompts: TypeScript, ESLint, Tailwind CSS, App Router, a `src/` direc
 - [ ] **Step 2: merge the scaffold into the repository root**
 
 ```bash
-cd /Users/jasonyu/workspace/company/nundar
+cd path/to/nundar
 rsync -a --exclude='.git' .nundar-scaffold/ ./
 rm -rf .nundar-scaffold
 git status --short
