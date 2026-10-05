@@ -4,8 +4,8 @@
  * `npm run smoke` proves the Worker boots. This goes on to do what an operator
  * and then a buyer would do, in a throwaway local environment:
  *
- *   1. create the administrator and apply `site.json`;
- *   2. publish `content/` with the Mallok CLI;
+ *   1. create the administrator;
+ *   2. apply `site.json` and publish `content/` with the Mallok CLI;
  *   3. load the sample variants from `seed/shop-sample.sql`;
  *   4. request the product, application and collection pages in two languages;
  *   5. add to the cart through the same form POST a product page sends.
@@ -179,7 +179,7 @@ async function query(sql) {
 try {
   await waitForWorker();
 
-  // 1. The administrator, a token, the site's settings, the plugin.
+  // 1. The administrator, a token, the plugin.
   const email = 'owner@example.test';
   const password = randomBytes(18).toString('base64');
   const json = { 'content-type': 'application/json' };
@@ -215,14 +215,8 @@ try {
   const { token } = await minted.json();
   const authorised = { ...json, authorization: `Bearer ${token}` };
 
-  // The same script the README gives an operator. The token travels in the
-  // environment, as it would for them.
+  // The token travels in the environment, as it would for an operator.
   const operator = { env: { ...process.env, MALLOK_TOKEN: token } };
-  await run(
-    process.execPath,
-    [join(process.cwd(), 'scripts/apply-settings.mjs'), base],
-    operator,
-  );
 
   const enabled = await fetch(`${base}/_mallok/api/plugins/shop/enabled`, {
     method: 'POST',
@@ -232,8 +226,15 @@ try {
   });
   expect(enabled.ok, `enabling the shop plugin returned ${enabled.status}`);
 
-  // 2. The sample content, through the same CLI an operator uses.
-  await run(mallok, ['publish', './content', '--url', base], operator);
+  // 2. The site's settings and the sample content, with the one command the
+  //    README gives an operator. `site.json` and `content/` in this directory
+  //    are Mallok's export layout, so it applies the first and publishes the
+  //    second.
+  await run(
+    mallok,
+    ['publish', '.', '--with-settings', '--url', base],
+    operator,
+  );
 
   // 3. The sample variants. The plugin's tables exist by now: Mallok created
   //    them on the first request.

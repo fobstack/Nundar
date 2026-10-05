@@ -257,11 +257,6 @@ describe('the commerce theme', () => {
   });
 
   describe('the home and list pages', () => {
-    // Mallok 0.1.0-rc.7 supplies the home page with recent articles only,
-    // although its theme format documents `recent.<kind>` for every kind. The
-    // template's product and application sections are written to that
-    // contract and appear once Mallok fills them in; until then the home page
-    // leads with the headline and the navigation.
     it('leads with the headline and links to the catalogue', async () => {
       const { status, html } = await page('/');
 
@@ -272,13 +267,30 @@ describe('the commerce theme', () => {
       expect(html).toContain('Request a quote');
     });
 
-    it('serves the German home page under /de/', async () => {
+    it('shows recent products, application notes and collections on the home page', async () => {
+      // The application notes are the long-tail landing pages, so the home
+      // page links to them directly instead of leaving them to be found
+      // through a product.
+      const { html } = await page('/');
+
+      expect(html).toContain('href="/products/stainless-ball-valve-dn50"');
+      expect(html).toContain('href="/applications/offshore-seawater-lines"');
+      expect(html).toContain('href="/collections/high-temperature-valves"');
+    });
+
+    it('serves the German home page under /de/, with the German items', async () => {
       const { status, html } = await page('/de/');
 
       expect(status).toBe(200);
       expect(html).toContain('<html lang="de">');
       expect(html).toContain('<a href="/de/products">Produkte</a>');
       expect(html).toContain('Angebot anfordern');
+      expect(html).toContain('href="/de/products/edelstahl-kugelhahn-dn50"');
+      expect(html).toContain(
+        'href="/de/applications/offshore-seewasserleitungen"',
+      );
+      // Never another language's page in this language's home.
+      expect(html).not.toContain('href="/products/stainless-ball-valve-dn50"');
     });
 
     it('lists products', async () => {

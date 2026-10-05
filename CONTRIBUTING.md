@@ -66,7 +66,7 @@ same pull request and explain the new reasoning.
 | Manual prices | Never overwritten by an exchange-rate refresh. |
 | Language | Decided by the URL alone. Never redirect or switch by IP — crawlers would see one language. |
 | References | A `reference` field names the target's slug **in the same language**. `test/content.test.ts` checks the sample content. |
-| Multilingual bundles | Every bundle with more than one language carries a `mallok.json`. Without it the Mallok CLI publishes each language as a separate translation group. |
+| Bundle identity | A bundle needs a `mallok.json` only when something outside the content names it: the sample variants attach to the product by its translation group. Where the file exists, `test/content.test.ts` keeps it in step with the bundle. |
 | Database access | Raw SQL through D1, no ORM. Batch reads and writes: a tick of the cron shares one invocation's CPU budget with every other plugin. |
 | Migrations | Additive only, idempotent, and a comment has a line to itself — Mallok's migrator drops whole-line comments and then splits on semicolons. |
 | Theme | No `<script>`, no inline event handlers. Anything interactive is declared in `theme.json`'s `clientScripts`. |
@@ -118,6 +118,6 @@ docs: explain how references resolve per language
 2. Add `src/theme/locales/<locale>.json` and list the locale in
    `src/theme/theme.json`.
 3. Translate content: add `index.<locale>.md` to each bundle, give it its own
-   `slug`, and add the language to the bundle's `mallok.json`.
+   `slug`. If the bundle has a `mallok.json`, add the language there too.
 
 No schema change is needed: every language version is its own content item.

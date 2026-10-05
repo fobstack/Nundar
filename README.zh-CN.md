@@ -51,11 +51,11 @@ Nundar 不是 Mallok 旁边的第二个应用。一个商城就是一个加了�
 
 ## 现在能用什么
 
-Nundar 基于 `mallok@0.1.0-rc.7`。商城的一部分功能需要 Mallok 目前还没有的扩展点，这些部分会等扩展点就绪，不做绕路实现。
+Nundar 基于 `mallok@0.1.0-rc.9`。商城的一部分功能需要 Mallok 目前还没有的扩展点，这些部分会等扩展点就绪，不做绕路实现。
 
 | | 现在可用 | 等 Mallok 的下一版插件接口 |
 |---|---|---|
-| **页面** | 英、德、法、西四种语言的商品页、应用场景页、聚合页、列表页和联系页；`hreflang`、canonical、sitemap；没有客户端 JavaScript | 页面上的价格、规格和库存状态；`Offer` 结构化数据；首页的最新商品 |
+| **页面** | 英、德、法、西四种语言的首页、商品页、应用场景页、聚合页、列表页和联系页；`hreflang`、canonical、sitemap；没有客户端 JavaScript | 页面上的价格、规格和库存状态；`Offer` 结构化数据 |
 | **目录数据** | 规格、以整数最小单位存储的价格、库存、起订量、交期、按单生产策略 | 在后台编辑这些数据（目前只读，示例数据由 SQL 载入） |
 | **定价** | 美元基准价；欧元和英镑按 ECB 汇率换算，带缓冲、价位取整和漂移阈值；手动价格永不被覆盖 | |
 | **购物车** | 通过普通表单提交加入、修改、移除，服务端校验起订量和库存 | 购物车页；把购物车作为一次询盘提交 |
@@ -98,12 +98,11 @@ npm run dev
 
 1. 打开 Wrangler 打印的地址，进入 `/_mallok/setup`，输入 `.dev.vars` 里的 `MALLOK_SETUP_KEY` 创建管理员。
 2. 在后台打开 **Shop** 插件的开关，并创建一个带 `content:write` 和 `settings:write` 权限的 API 令牌。
-3. 把令牌放进环境变量，然后应用设置、发布内容、载入示例规格：
+3. 把令牌放进环境变量，然后应用 `site.json`、发布内容、载入示例规格：
 
 ```bash
 export MALLOK_TOKEN=<令牌>
-npm run settings:apply -- http://localhost:8787
-npx mallok publish ./content --url http://localhost:8787
+npx mallok publish . --with-settings --url http://localhost:8787
 npm run seed:local
 ```
 
@@ -119,7 +118,6 @@ npm run seed:local
 | `npm run lint` / `npm run typecheck` | 代码检查和类型检查 |
 | `npm run smoke` | 向真实的本地 Worker 发一次真实请求 |
 | `npm run smoke:shop` | 在真实的本地 Worker 上走完整个商城 |
-| `npm run settings:apply -- <站点地址>` | 把 `site.json` 应用到运行中的站点（令牌放在环境变量 `MALLOK_TOKEN`） |
 | `npm run seed:local` | 把示例规格载入本地数据库 |
 
 ## 部署

@@ -237,15 +237,15 @@ Mallok's roadmap says a storefront needs "exactly the six plugin capabilities 0.
 | API-6 | Editable plugin records: create and edit forms, repeatable rows, actions with parameters, detail views, and a scope check on panel reads | Panels are read-only. Actions get ids only. "A plugin ships no frontend code" (`mallok: docs/PLUGIN_API.md:366`) | 5.6 |
 | API-7 | Call `onContentSave`, and add a content-delete hook | `runOnContentSave` exists but has no call site (`mallok: src/worker/plugin-runtime.ts:123`) | Keeping variants in step with products |
 | API-8 | Per-plugin error isolation in `scheduled`, and a plugin job/enqueue API over the `job` table | One `try/catch` wraps all plugins (`mallok: src/worker/scheduled.ts:56-71`). There is no enqueue (`mallok: docs/PLUGIN_API.md §7.4`) | 5.5, email retries |
-| API-9 | Export the helpers official plugins already use (`escapeHtml`, the restricted Liquid text/email renderer) from `mallok/worker` | The inquiry plugin imports them from internals | Order email |
+| API-9 | **Shipped in 0.1.0-rc.9.** Export the helpers official plugins already use (`escapeHtml`, the restricted Liquid text/email renderer) from `mallok/worker` | The inquiry plugin imports them from internals | Order email |
 | API-10 | Third-party starter registration in `createMallok` | Starters are a compiled-in list (`mallok: src/starters/index.ts`) | Starter |
 | API-11 | ~~An "always prefix" locale mode~~ — **not needed**: the unprefixed default language is accepted (§11 decision 1) | | |
 | API-12 | ~~A translation-completeness view and admin roles~~ — **deferred**: one administrator is accepted for now (§11 decision 7) | | |
 | — | Close the theme script-validation gap: once a theme declares any `clientScripts`, `assertNoUndeclaredScripts` stops scanning its templates, so undeclared `<script>` and `on*=` pass (`mallok: src/core/theme-package.ts:262-264`) | The commerce theme declares the currency-switch script and would otherwise bypass every script check | 5.1 |
 | — | Resolve `reference[]` fields in `content.refs` and `content.backrefs` | Only `reference` is resolved (`mallok: src/worker/render.ts:386,406`); a `reference[]` reaches a template as bare slugs | A product in more than one collection (§4.1) |
-| — | Supply `recent.<kind>` on the home page for every kind, as `THEME_FORMAT.md §7.4` documents | The Worker's home page loads articles only (`mallok: src/worker/pages/home.page.ts`); the static build supplies every kind, so the two paths disagree | Products and application notes on the home page |
-| — | Publish every language of one bundle into one translation group | The CLI posts each language without a group when the bundle has no `mallok.json`, and the server assigns a new group each time (`mallok: src/cli/publish.ts`) — against `CONTENT_FORMAT.md §2` rule 1 | Hand-written multilingual content; worked around with a `mallok.json` per bundle |
-| — | Site template gaps: no type declarations for text-module imports; no `MALLOK_SETUP_KEY` in `.dev.vars.example`; `mallok publish . --with-settings` scans `node_modules` and resolves kinds before applying the settings | Found while building this site from the template | Developer experience |
+| — | **Shipped in 0.1.0-rc.9.** Supply `recent.<kind>` on the home page for every kind, as `THEME_FORMAT.md §7.4` documents | The Worker's home page loads articles only (`mallok: src/worker/pages/home.page.ts`); the static build supplies every kind, so the two paths disagree | Products and application notes on the home page |
+| — | **Shipped in 0.1.0-rc.9.** Publish every language of one bundle into one translation group | The CLI posts each language without a group when the bundle has no `mallok.json`, and the server assigns a new group each time (`mallok: src/cli/publish.ts`) — against `CONTENT_FORMAT.md §2` rule 1 | Hand-written multilingual content. The `mallok.json` files added as a workaround were removed again after the upgrade |
+| — | **Shipped in 0.1.0-rc.9.** Site template gaps: no type declarations for text-module imports; no `MALLOK_SETUP_KEY` in `.dev.vars.example`; `mallok publish . --with-settings` scans `node_modules` and resolves kinds before applying the settings | Found while building this site from the template | Developer experience |
 
 Client JavaScript: add-to-cart, cart and checkout need none (§5.2). The only script is the currency switch (§5.1), which the theme declares through the existing `clientScripts` mechanism. A third-party theme may declare scripts as long as the admin shows them (`mallok: docs/THEME_FORMAT.md §9`), so Mallok's contract needs no new exception, only the validation fix in the last row.
 
@@ -375,6 +375,15 @@ Recorded here rather than edited away, so a later reader can see what the design
 **Repricing was restructured, not just ported.** The previous loop read and wrote every price in its own query. On a real catalogue that passes D1's limit of 50 queries per invocation on the Free plan, and it does not fit a cron tick whose CPU budget every plugin shares. It now reads one batch and writes one statement per chunk, and resumes from a cursor across ticks. A test counts the round trips.
 
 **Three Mallok behaviours differ from its documentation**, each listed in §7: `reference[]` is not resolved, the home page receives articles only, and the CLI splits a bundle's languages across translation groups.
+
+**After the upgrade to `mallok@0.1.0-rc.9`** (2026-10-05). Mallok fixed the home page, the translation groups and the site template, and exported the plugin helpers. Each workaround here was removed and the fix proven in this repository rather than assumed:
+
+- The local text-module declarations are gone, and the type check passes on the package's own.
+- `scripts/apply-settings.mjs` is gone. The end-to-end smoke run applies `site.json` and publishes with `mallok publish . --with-settings`, from the repository root.
+- The identity files added to the application, collection and contact bundles are gone. The smoke run still asserts that the application note's four languages share one translation group.
+- The home page tests assert that products, application notes and collections appear, in each language's own home page.
+
+Still open in Mallok, and so still shaping this code: the render-data hook, plugin pages through the theme, editable admin panels, the content save and delete hooks, raw-body routes, and `reference[]`.
 
 ## 13. How this design was checked
 

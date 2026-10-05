@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repository is
 
-Nundar is a **shop plugin and a commerce theme for Mallok**, packaged as a Mallok site. It is not a standalone application: Mallok (the `mallok` npm package, pinned to an exact version) provides routing, rendering, content, languages, hreflang, the sitemap, the admin, sign-in, media, email and the edge cache. Nundar adds only commerce.
+Nundar is a **shop plugin and a commerce theme for Mallok**, packaged as a Mallok site. It is not a standalone application: Mallok (the `mallok` npm package, pinned to an exact version, currently `0.1.0-rc.9`) provides routing, rendering, content, languages, hreflang, the sitemap, the admin, sign-in, media, email and the edge cache. Nundar adds only commerce.
 
 `docs/superpowers/specs/2026-09-30-nundar-on-mallok-design.md` is the source of truth for the architecture, with the owner's decisions in its §11. The commerce rules in `docs/superpowers/specs/2026-09-03-nundar-design.md` (§4–§7) still hold; its stack and architecture are superseded. The previous standalone Next.js implementation is at the tag `nextjs-final` — read it for reference, never restore it.
 
@@ -58,16 +58,17 @@ Mallok decides the contracts on both sides. Its documentation is the reference: 
 - Templates are restricted Liquid. Output is escaped; only `content.html` and `page.head` are emitted verbatim. `page.head` carries hreflang and structured data from Mallok and must stay in `layouts/base.liquid`.
 - Interface strings are in `locales/*.json` (flat maps, the default locale is the fallback). Site-specific copy is a theme option; per-language option values go under `themeOptions.$locales` in `site.json`.
 - **References resolve by slug within the same language.** An `application` names its `product`; the product page lists them through `content.backrefs.application`. A `product` names its `collection`; the collection page lists `content.backrefs.product`. Mallok resolves `reference` only, not `reference[]`.
-- Each language of a bundle is its own content item with its own `slug` (`index.md`, `index.<locale>.md`). **Every multilingual bundle needs a `mallok.json`** fixing its `translation_group`: without one the Mallok CLI publishes each language as a separate group and hreflang breaks. `test/content.test.ts` enforces this and the reference rule.
+- Each language of a bundle is its own content item with its own `slug` (`index.md`, `index.<locale>.md`); Mallok puts them in one `translation_group`. A bundle carries a `mallok.json` only when something outside the content must name it: the product's fixes the `translation_group` that `seed/shop-sample.sql` attaches variants to. `test/content.test.ts` checks the reference rule and keeps any identity file in step with its bundle.
 - The default language (English) is unprefixed; others are `/<locale>/…`. English pages default to USD, the rest to EUR (`lib/currency.ts`), never by IP.
 
-### Known limits of mallok 0.1.0-rc.7 that shape the code
+### Known limits of mallok 0.1.0-rc.9 that shape the code
 
 - No render-time hook with database access, so prices and variants are not on pages yet.
 - Plugin routes cannot render through the theme, so there is no cart page yet.
 - Plugin admin panels are read-only tables; variants are seeded from `seed/shop-sample.sql`.
-- The home page receives recent articles only, although `THEME_FORMAT.md` documents `recent.<kind>`; the home template is written to the documented contract.
-- `mallok publish . --with-settings` is unusable from the repository root (it scans `node_modules`); use `npm run settings:apply` then `mallok publish ./content`.
+- `reference[]` fields are not resolved, so a product names one collection.
+
+Each is a task in Mallok's plan for plugin API 2. When Mallok ships one, upgrade, remove the corresponding limitation here, and prove the new behaviour with a test or the smoke run.
 
 ## Testing
 

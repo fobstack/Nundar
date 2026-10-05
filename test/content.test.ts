@@ -197,12 +197,12 @@ describe('seed/shop-sample.sql', () => {
 });
 
 /**
- * `mallok.json` pins a bundle's translation group.
+ * `mallok.json` pins a bundle's identity.
  *
- * It is not optional here. Published with the Mallok CLI, a bundle that has no
- * identity file gets a **separate** translation group for each language
- * (mallok 0.1.0-rc.7), which leaves every language version an orphan: no
- * hreflang, no language switcher. The file is what keeps them together.
+ * It is optional: Mallok puts every language of a bundle into one translation
+ * group on its own. A bundle carries one here only when something outside the
+ * content has to name it — the sample variants attach to the product by its
+ * translation group. Where the file exists, it has to agree with the bundle.
  */
 describe('bundle identity', () => {
   interface Identity {
@@ -222,37 +222,6 @@ describe('bundle identity', () => {
       return null;
     }
   }
-
-  it('pins the translation group of every bundle with more than one language', async () => {
-    const site = await readSite();
-    const items = await loadItems(site.defaultLocale);
-    const bundles = new Map<string, Item[]>();
-    for (const item of items) {
-      const key = `${item.kind}/${item.bundle}`;
-      bundles.set(key, [...(bundles.get(key) ?? []), item]);
-    }
-
-    let checked = 0;
-    for (const [key, members] of bundles) {
-      if (members.length < 2) {
-        continue;
-      }
-      const first = members[0];
-      assert.ok(first !== undefined);
-      const identity = await readIdentity(first);
-      assert.ok(
-        identity !== null,
-        `content/${key} has ${members.length} languages and no mallok.json, so the CLI would publish each as its own translation group`,
-      );
-      assert.match(
-        identity.translation_group ?? '',
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
-        `content/${key}/mallok.json needs a UUID translation_group`,
-      );
-      checked += 1;
-    }
-    assert.ok(checked > 0);
-  });
 
   it('keeps each identity file in step with its bundle’s languages and slugs', async () => {
     const site = await readSite();

@@ -52,11 +52,11 @@ Everything runs on Cloudflare Workers with D1 and R2. Local development needs no
 
 ## What works today
 
-Nundar builds on `mallok@0.1.0-rc.7`. Some of the shop needs extension points Mallok does not have yet; those parts wait for them rather than being worked around.
+Nundar builds on `mallok@0.1.0-rc.9`. Some of the shop needs extension points Mallok does not have yet; those parts wait for them rather than being worked around.
 
 | | Works today | Waits for Mallok's next plugin API |
 |---|---|---|
-| **Pages** | Product, application, collection, list and contact pages in English, German, French and Spanish; `hreflang`, canonicals, sitemap; no client JavaScript | Prices, variants and availability on the page; `Offer` structured data; recent products on the home page |
+| **Pages** | Home, product, application, collection, list and contact pages in English, German, French and Spanish; `hreflang`, canonicals, sitemap; no client JavaScript | Prices, variants and availability on the page; `Offer` structured data |
 | **Catalogue data** | Variants, prices as integer minor units, stock, MOQ, lead time, a made-to-order policy | Editing them in the admin (read-only for now; the sample data is loaded from SQL) |
 | **Pricing** | USD base price; EUR and GBP derived from ECB rates with a buffer, rounding to a price point and a drift threshold; manual prices never overwritten | |
 | **Cart** | Add, set and remove through a plain form POST, with MOQ and stock enforced server-side | The cart page; submitting a cart as one inquiry |
@@ -99,12 +99,11 @@ npm run dev
 
 1. Open the URL Wrangler prints, at `/_mallok/setup`, and enter the `MALLOK_SETUP_KEY` from `.dev.vars` to create the administrator.
 2. In the admin, switch the **Shop** plugin on, and create an API token with the `content:write` and `settings:write` scopes.
-3. With that token in your environment, apply the settings, publish the content and load the sample variants:
+3. With that token in your environment, apply `site.json`, publish the content and load the sample variants:
 
 ```bash
 export MALLOK_TOKEN=<the token>
-npm run settings:apply -- http://localhost:8787
-npx mallok publish ./content --url http://localhost:8787
+npx mallok publish . --with-settings --url http://localhost:8787
 npm run seed:local
 ```
 
@@ -120,7 +119,6 @@ The site is at `/` (English), `/de/`, `/fr/` and `/es/`.
 | `npm run lint` / `npm run typecheck` | Lint and type checks |
 | `npm run smoke` | A real request to a real local Worker |
 | `npm run smoke:shop` | The whole shop on a real local Worker |
-| `npm run settings:apply -- <origin>` | Apply `site.json` to a running site (`MALLOK_TOKEN` in the environment) |
 | `npm run seed:local` | Load the sample variants into the local database |
 
 ## Deploying

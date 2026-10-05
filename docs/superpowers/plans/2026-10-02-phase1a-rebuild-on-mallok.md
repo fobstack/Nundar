@@ -67,6 +67,12 @@ Guards were checked by breaking them and watching the test fail: the server-side
 - Its repricing loop read and wrote each price in its own query, which would have passed D1's per-invocation query limit on a real catalogue.
 - Its state machine returned "not allowed" for an unknown status. The first port threw instead; the test ported with it caught that.
 
+## After `mallok@0.1.0-rc.9` (2026-10-05)
+
+Mallok fixed three of the behaviours listed above — translation groups on publish, `recent.<kind>` on the home page, and the site template's gaps — and exported `escapeHtml` and `renderTextTemplate`. Nundar was upgraded with `mallok upgrade --to 0.1.0-rc.9`, and each workaround was removed with the fix proven here: the local text-module declarations, `scripts/apply-settings.mjs`, and the identity files on the application, collection and contact bundles. The home page now lists products, application notes and collections.
+
+Nothing in phase 1B is unblocked by rc.9: the extension points it needs are still planned in Mallok.
+
 ## What waits for phase 1B
 
 Each item needs an extension point listed in the design's §7.
