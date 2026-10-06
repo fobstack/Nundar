@@ -83,13 +83,18 @@ Requires Node.js 22 and npm. **No Cloudflare account needed.**
 git clone https://github.com/fobstack/Nundar.git
 cd Nundar
 npm ci
-npm run build        # stages the admin and the theme's assets
-npm run smoke:shop   # the whole shop, end to end, on a throwaway local Worker
+npm run preview
 ```
 
-`smoke:shop` is the fastest way to see everything working together: it creates an administrator, applies `site.json`, publishes `content/` with the Mallok CLI, loads the sample variants, requests every kind of page, follows the navigation in all four languages and adds to the cart.
+In about a minute `preview` prints the address of a local shop with the sample catalogue in four languages, the address of its admin, and a login for it. Everything is set up for you: an administrator, the two plugins, the settings, the content with its images, the variants.
 
-### A local shop you can browse
+It is a throwaway. The database lives in a temporary directory and goes when you stop the command with Ctrl+C; the next run starts clean, with a new login. Use `npm run preview -- --port 8800` if port 8799 is taken.
+
+To see the same shop checked rather than shown — every kind of page, every navigation link in every language, the cart — run `npm run smoke:shop`.
+
+### A local site that keeps its data
+
+`npm run dev` starts an empty site whose database stays in `.wrangler/` between runs. Filling it takes the steps `preview` does for you, and their order matters:
 
 ```bash
 # First time only: local secrets. Never commit .dev.vars.
@@ -99,17 +104,19 @@ npm run smoke:shop   # the whole shop, end to end, on a throwaway local Worker
 npm run dev
 ```
 
-1. Open the URL Wrangler prints, at `/_mallok/setup`, and enter the `MALLOK_SETUP_KEY` from `.dev.vars` to create the administrator.
-2. In the admin, switch the **Shop** and **Inquiry** plugins on, and create an API token with the `content:write`, `settings:write` and `media:write` scopes. Do this before the next step: the contact pages ask for the inquiry form, and a page that was rendered while a plugin was off stays in the local cache as it was. `media:write` is for the images the sample bundles carry.
+1. Open the URL Wrangler prints **at `/_mallok/setup`**, not at `/`, and enter the `MALLOK_SETUP_KEY` from `.dev.vars` to create the administrator. If the page says the site has no setup key, `.dev.vars` is missing that line.
+2. In the admin, at `/_mallok/app`, switch the **Shop** and **Inquiry** plugins on, and create an API token with the `content:write`, `settings:write` and `media:write` scopes. `media:write` is for the images the sample bundles carry.
 3. With that token in your environment, apply `site.json`, publish the content and load the sample variants:
 
 ```bash
-export MALLOK_TOKEN=<the token>
+read -s "MALLOK_TOKEN?Paste the token: " && export MALLOK_TOKEN   # zsh; in bash: read -s -p "Paste the token: " MALLOK_TOKEN && export MALLOK_TOKEN
 npx mallok publish . --with-settings --url http://localhost:8787
 npm run seed:local
 ```
 
 The site is at `/` (English), `/de/`, `/fr/` and `/es/`.
+
+**Only now open the site.** Locally nothing clears the page cache: a page opened while the site was empty, or while a plugin was off, is served as it was for an hour, and restarting does not change that. If it happens, stop the server, delete `.wrangler/state/v3/cache`, and start it again; the database and the uploaded files are in the directories beside it and are not touched.
 
 ### The sample catalogue
 
@@ -124,7 +131,8 @@ The sample is a supplier of titanium fasteners that does not exist. Its products
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | Local development server, with local D1 and R2 |
+| `npm run preview` | A local shop with the sample catalogue and an admin login, on a throwaway database |
+| `npm run dev` | Local development server, with local D1 and R2 that keep their data; starts empty |
 | `npm run build` | Stage assets, then a production build (a deploy dry run) |
 | `npm test` | Project checks, then the plugin and theme tests inside the real Workers runtime |
 | `npm run lint` / `npm run typecheck` | Lint and type checks |

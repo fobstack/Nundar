@@ -6,12 +6,13 @@ Thanks for taking the time to contribute.
 
 ```bash
 npm ci
-npm run build        # stages the admin and the theme's assets
-npm run smoke:shop   # the whole shop on a throwaway local Worker
+npm run preview      # a local shop with the sample catalogue, to look at
+npm run smoke:shop   # the same shop, checked end to end
 ```
 
 No Cloudflare account is needed for local development: D1 and R2 are simulated
-locally. The README has the steps for a local shop you can browse.
+locally. `preview` runs on a throwaway database; the README has the steps for a
+local site that keeps its data.
 
 **npm, not pnpm or yarn.** Nundar is a Mallok site, and Mallok's CLI installs
 and upgrades with npm only; it refuses a project that carries another

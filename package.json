@@ -14,6 +14,7 @@
   },
   "scripts": {
     "dev": "mallok prepare && wrangler dev",
+    "preview": "mallok prepare && node scripts/preview.mjs",
     "build": "mallok prepare && wrangler deploy --dry-run --outdir dist/worker",
     "deploy": "mallok prepare && wrangler deploy",
     "lint": "biome check .",

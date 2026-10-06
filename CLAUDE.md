@@ -15,7 +15,8 @@ Nundar is in development. Several features wait for extension points Mallok does
 ```bash
 npm ci
 npm run build                 # mallok prepare (stages admin + theme assets) then a deploy dry run
-npm run dev                   # wrangler dev with local D1 and R2; needs .dev.vars
+npm run preview               # a filled local shop on a throwaway database; prints an admin login
+npm run dev                   # wrangler dev with local D1 and R2 that keep their data; starts empty, needs .dev.vars
 npm run lint                  # biome check .   (npm run lint:fix to apply)
 npm run typecheck
 npm test                      # test:project, then test:shop
@@ -90,6 +91,7 @@ Each is a task in Mallok's plan for plugin API 2. When Mallok ships one, upgrade
 - `countD1Calls` in `test/shop/helpers.ts` counts round trips; use it wherever the number is a design constraint. `interceptBatches` runs a hook around each batch: it is how a test changes the data between a function's reading and its writing, or loses the answer to a write that committed.
 - `test/theme/pages.test.ts` renders every layout from content it creates itself, with everything set; `test/theme/bare.test.ts` does the same for a site that has filled in almost nothing, and fails on any empty element or `href=""`. Neither reads `content/`. A template that prints a wrapper has to check that there is something to put in it — and `content.html` is not a string, so capture it before comparing it with `blank`. The sample is checked by `test/content.test.ts` and `test/project.test.ts` (files only, no Worker) and by the smoke run.
 - `npm run smoke:shop` is the only place theme, plugin, content and the Mallok CLI run together; run it when touching any of them. It publishes the real sample, requests every kind of page, and follows every header and footer link in all four languages.
+- `scripts/lib/local-shop.mjs` is the one place that brings a local shop up — administrator, plugins, settings, content, variants, in that order and before any page is requested. The smoke run and `npm run preview` both use it; do not grow a second copy. Locally nothing purges the page cache (`s-maxage=3600`, persisted under the state directory), so a page requested before the set-up finished stays as it was.
 
 ## Commerce invariants (do not "simplify" them away)
 

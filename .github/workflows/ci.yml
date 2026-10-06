@@ -40,5 +40,9 @@ jobs:
       - run: npm run smoke
 
       # The whole shop on a real Worker: settings, content published with the
-      # Mallok CLI, the seed, pages in two languages, the cart
+      # Mallok CLI, the seed, every kind of page in four languages, the cart
       - run: npm run smoke:shop
+
+      # The one command a newcomer runs first still ends with a filled shop
+      # and an admin login that works
+      - run: npm run preview -- --check

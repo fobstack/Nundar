@@ -19,128 +19,23 @@
  * free port.
  */
 
-import { execFile, spawn } from 'node:child_process';
-import { randomBytes } from 'node:crypto';
 import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
-import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { promisify } from 'node:util';
+import {
+  expect,
+  fillShop,
+  freePort,
+  query as queryState,
+  startWorker,
+  timeout,
+} from './lib/local-shop.mjs';
 
-const run = promisify(execFile);
-
-/** An OS-assigned free port, so two runs cannot collide. */
-function freePort() {
-  return new Promise((resolve, reject) => {
-    const server = createServer();
-    server.on('error', reject);
-    server.listen(0, '127.0.0.1', () => {
-      const { port } = server.address();
-      server.close(() => resolve(port));
-    });
-  });
-}
-
-function expect(condition, message) {
-  if (!condition) {
-    throw new Error(message);
-  }
-}
-
-const wrangler = join(process.cwd(), 'node_modules/wrangler/bin/wrangler.js');
-const mallok = join(process.cwd(), 'node_modules/.bin/mallok');
-
-const port = await freePort();
 // Throwaway state, so a run never sees yesterday's database.
 const state = await mkdtemp(join(tmpdir(), 'nundar-smoke-'));
-const processGroup = process.platform !== 'win32';
-
-const child = spawn(
-  process.execPath,
-  [
-    wrangler,
-    'dev',
-    '--local',
-    '--port',
-    String(port),
-    '--persist-to',
-    state,
-    // Passed on the command line rather than read from `.dev.vars`, so the
-    // run does not depend on, or disturb, a developer's own local secrets.
-    '--var',
-    `MALLOK_SECRET:${randomBytes(32).toString('base64')}`,
-    // Lets this script create the administrator without a one-time setup
-    // key. A deployed site never has this.
-    '--var',
-    'MALLOK_DEV_ALLOW_SETUP_WITHOUT_KEY:true',
-  ],
-  { stdio: ['ignore', 'pipe', 'pipe'], detached: processGroup },
-);
-let launchError = null;
-child.on('error', (error) => {
-  launchError = error;
-});
-const closed = new Promise((resolve) => child.once('close', resolve));
-
-async function stop() {
-  if (child.pid === undefined) return;
-  if (!processGroup) {
-    if (child.exitCode === null) {
-      await run('taskkill', ['/pid', String(child.pid), '/T', '/F']);
-    }
-  } else {
-    const signal = (name) => {
-      try {
-        process.kill(-child.pid, name);
-      } catch (error) {
-        if (error.code !== 'ESRCH') throw error;
-      }
-    };
-    // Killing only the launcher leaves inherited pipes open in descendants.
-    signal('SIGTERM');
-    const force = setTimeout(() => signal('SIGKILL'), 2_000);
-    try {
-      await closed;
-    } finally {
-      clearTimeout(force);
-    }
-  }
-  await closed;
-}
-
-let output = '';
-child.stdout.on('data', (chunk) => {
-  output += chunk;
-});
-child.stderr.on('data', (chunk) => {
-  output += chunk;
-});
-
-const base = `http://127.0.0.1:${port}`;
-const deadline = Date.now() + 120_000;
-const timeout = () => AbortSignal.timeout(15_000);
+const worker = startWorker({ port: await freePort(), state });
+const { base } = worker;
 let failure = null;
-
-async function waitForWorker() {
-  for (;;) {
-    if (launchError !== null) throw launchError;
-    if (child.exitCode !== null) {
-      throw new Error(`wrangler dev exited with ${child.exitCode}\n${output}`);
-    }
-    if (Date.now() > deadline) {
-      throw new Error(`wrangler dev did not start in time\n${output}`);
-    }
-    try {
-      const probe = await fetch(`${base}/_mallok/api/setup/status`, {
-        signal: timeout(),
-      });
-      if (probe.ok) return;
-    } catch {
-      // Not up yet.
-    }
-    await new Promise((done) => setTimeout(done, 500));
-  }
-}
 
 async function page(path) {
   const response = await fetch(`${base}${path}`, { signal: timeout() });
@@ -186,109 +81,14 @@ function addToCart(fields, cookie) {
 }
 
 /** Runs a query against the throwaway local D1 and returns its rows. */
-async function query(sql) {
-  const { stdout } = await run(process.execPath, [
-    wrangler,
-    'd1',
-    'execute',
-    'DB',
-    '--local',
-    '--persist-to',
-    state,
-    '--json',
-    '--command',
-    sql,
-  ]);
-  return JSON.parse(stdout)[0].results;
-}
+const query = (sql) => queryState(state, sql);
 
 try {
-  await waitForWorker();
+  await worker.ready();
 
-  // 1. The administrator, a token, the plugins.
-  const email = 'owner@example.test';
-  const password = randomBytes(18).toString('base64');
-  const json = { 'content-type': 'application/json' };
-
-  const bootstrap = await fetch(`${base}/_mallok/api/auth/bootstrap`, {
-    method: 'POST',
-    headers: json,
-    body: JSON.stringify({ email, password }),
-    signal: timeout(),
-  });
-  expect(bootstrap.ok, `bootstrap returned ${bootstrap.status}`);
-
-  const session = await fetch(`${base}/_mallok/api/auth/login`, {
-    method: 'POST',
-    headers: json,
-    body: JSON.stringify({ email, password }),
-    signal: timeout(),
-  });
-  expect(session.ok, `login returned ${session.status}`);
-  const sessionCookie = (session.headers.get('set-cookie') ?? '').split(';')[0];
-  const { csrf } = await session.json();
-
-  const minted = await fetch(`${base}/_mallok/api/tokens`, {
-    method: 'POST',
-    headers: { ...json, cookie: sessionCookie, 'x-mallok-csrf': csrf },
-    body: JSON.stringify({
-      name: 'smoke-shop',
-      // `media:write` because the sample bundles carry images, and publishing
-      // a bundle uploads them.
-      scopes: ['content:write', 'settings:write', 'media:write'],
-    }),
-    signal: timeout(),
-  });
-  expect(minted.ok, `minting a token returned ${minted.status}`);
-  const { token } = await minted.json();
-  const authorised = { ...json, authorization: `Bearer ${token}` };
-
-  // The token travels in the environment, as it would for an operator.
-  const operator = { env: { ...process.env, MALLOK_TOKEN: token } };
-
-  // The shop, and the inquiry form the contact pages ask for with
-  // `[[inquiry]]`. Both before any page is requested: nothing purges the
-  // edge cache here, so a page rendered while a plugin was off would stay
-  // as it was.
-  for (const plugin of ['shop', 'inquiry']) {
-    const enabled = await fetch(
-      `${base}/_mallok/api/plugins/${plugin}/enabled`,
-      {
-        method: 'POST',
-        headers: authorised,
-        body: JSON.stringify({ enabled: true }),
-        signal: timeout(),
-      },
-    );
-    expect(
-      enabled.ok,
-      `enabling the ${plugin} plugin returned ${enabled.status}`,
-    );
-  }
-
-  // 2. The site's settings and the sample content, with the one command the
-  //    README gives an operator. `site.json` and `content/` in this directory
-  //    are Mallok's export layout, so it applies the first and publishes the
-  //    second.
-  await run(
-    mallok,
-    ['publish', '.', '--with-settings', '--url', base],
-    operator,
-  );
-
-  // 3. The sample variants. The plugin's tables exist by now: Mallok created
-  //    them on the first request.
-  await run(process.execPath, [
-    wrangler,
-    'd1',
-    'execute',
-    'DB',
-    '--local',
-    '--persist-to',
-    state,
-    '--file',
-    'seed/shop-sample.sql',
-  ]);
+  // 1 to 3. The administrator, the plugins, the settings, the content and
+  // the variants: the same set-up `npm run preview` leaves running.
+  await fillShop({ base, state, tokenName: 'smoke-shop' });
 
   const variants = await query(
     `SELECT v.sku FROM p_shop_variant AS v
@@ -559,7 +359,7 @@ try {
   failure = error;
 } finally {
   try {
-    await stop();
+    await worker.stop();
   } finally {
     await rm(state, { recursive: true, force: true });
   }

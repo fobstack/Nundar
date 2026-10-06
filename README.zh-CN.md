@@ -82,13 +82,18 @@ Nundar 基于 `mallok@0.1.0-rc.9`。商城的一部分功能需要 Mallok 目前
 git clone https://github.com/fobstack/Nundar.git
 cd Nundar
 npm ci
-npm run build        # 准备后台和主题的静态资源
-npm run smoke:shop   # 在一次性的本地 Worker 上把整个商城走一遍
+npm run preview
 ```
 
-`smoke:shop` 是最快看到整体效果的方式：它创建管理员、应用 `site.json`、用 Mallok CLI 发布 `content/`、载入示例规格、请求每一类页面、把四种语言的导航逐个走一遍，并加入购物车。
+大约一分钟后，`preview` 会打印出一个本地商城的地址（带四种语言的示例目录）、后台地址，以及后台的登录账号。所有准备工作都替你做好了：管理员、两个插件、站点设置、内容和图片、规格数据。
 
-### 可以浏览的本地商城
+它是一次性的。数据库放在临时目录里，按 Ctrl+C 停掉命令就一起删除；下次运行从头开始，登录账号也会换。8799 端口被占用时用 `npm run preview -- --port 8800`。
+
+如果想看的是"检查"而不是"展示"——每一类页面、每种语言的每个导航链接、购物车——运行 `npm run smoke:shop`。
+
+### 保留数据的本地站点
+
+`npm run dev` 启动的是一个空站点，数据库保存在 `.wrangler/` 里，重启后还在。把它填起来要做 `preview` 替你做的那些步骤，而且顺序不能乱：
 
 ```bash
 # 仅第一次：本地密钥。绝不要提交 .dev.vars。
@@ -98,17 +103,19 @@ npm run smoke:shop   # 在一次性的本地 Worker 上把整个商城走一遍
 npm run dev
 ```
 
-1. 打开 Wrangler 打印的地址，进入 `/_mallok/setup`，输入 `.dev.vars` 里的 `MALLOK_SETUP_KEY` 创建管理员。
-2. 在后台打开 **Shop** 和 **Inquiry** 两个插件的开关，并创建一个带 `content:write`、`settings:write` 和 `media:write` 权限的 API 令牌。这一步要在下一步之前做：联系页需要询盘表单，而插件关闭时渲染过的页面会原样留在本地缓存里。`media:write` 用于上传示例内容自带的图片。
+1. 打开 Wrangler 打印的地址，**进入 `/_mallok/setup`，不要先打开 `/`**，输入 `.dev.vars` 里的 `MALLOK_SETUP_KEY` 创建管理员。如果页面提示站点没有 setup key，说明 `.dev.vars` 里缺这一行。
+2. 进入后台 `/_mallok/app`，打开 **Shop** 和 **Inquiry** 两个插件的开关，并创建一个带 `content:write`、`settings:write` 和 `media:write` 权限的 API 令牌。`media:write` 用于上传示例内容自带的图片。
 3. 把令牌放进环境变量，然后应用 `site.json`、发布内容、载入示例规格：
 
 ```bash
-export MALLOK_TOKEN=<令牌>
+read -s "MALLOK_TOKEN?粘贴令牌: " && export MALLOK_TOKEN   # zsh；bash 用：read -s -p "粘贴令牌: " MALLOK_TOKEN && export MALLOK_TOKEN
 npx mallok publish . --with-settings --url http://localhost:8787
 npm run seed:local
 ```
 
 站点在 `/`（英文）、`/de/`、`/fr/` 和 `/es/`。
+
+**做完这些再打开站点。** 本地没有任何机制会清页面缓存：站点还是空的时候、或者插件还关着的时候打开过的页面，会原样保留一小时，重启也没用。遇到这种情况，停掉服务，删除 `.wrangler/state/v3/cache`，再启动；数据库和上传的文件在旁边的目录里，不受影响。
 
 ### 示例目录
 
@@ -123,7 +130,8 @@ npm run seed:local
 
 | 命令 | 作用 |
 |---|---|
-| `npm run dev` | 本地开发服务器，带本地 D1 和 R2 |
+| `npm run preview` | 带示例目录和后台登录账号的本地商城，使用一次性数据库 |
+| `npm run dev` | 本地开发服务器，带保留数据的本地 D1 和 R2；启动时是空的 |
 | `npm run build` | 准备静态资源，然后做一次生产构建（部署预演） |
 | `npm test` | 站点检查，然后在真实 Workers 运行时里跑插件和主题测试 |
 | `npm run lint` / `npm run typecheck` | 代码检查和类型检查 |
