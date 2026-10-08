@@ -88,7 +88,6 @@ describe('the commerce theme', () => {
               'Titan-Verbindungselemente nach Spezifikation finden.',
             hero_title: 'Titan-Verbindungselemente nach Ihrer Zeichnung.',
             quote_href: '/de/sonderanfertigung',
-            catalogue_href: '/de/products',
           },
         },
       },
@@ -773,6 +772,56 @@ describe('the commerce theme', () => {
     });
   });
 
+  describe('the breadcrumb', () => {
+    /** The links of a page's breadcrumb, in the order they are read. */
+    async function trail(path: string): Promise<string[]> {
+      const { status, html } = await page(path);
+      expect(status, path).toBe(200);
+      const crumbs = between(html, '<nav class="crumbs"', '</nav>');
+      return [...crumbs.matchAll(/<a href="([^"]*)">([^<]*)<\/a>/g)].map(
+        (match) => `${match[1]} ${match[2]}`,
+      );
+    }
+
+    it('leads to a product through the catalogue and its collection', async () => {
+      expect(await trail(CAP_SCREW)).toEqual([
+        '/ Home',
+        '/products Products',
+        '/collections/socket-head-cap-screws Socket head cap screws',
+      ]);
+    });
+
+    it('stays in the page’s language at every step', async () => {
+      // The list's address and its name are Mallok's, for this language;
+      // the name is the theme's word for the kind.
+      expect(await trail(CAP_SCREW_DE)).toEqual([
+        '/de/ Startseite',
+        '/de/products Produkte',
+        '/de/collections/zylinderschrauben Zylinderschrauben',
+      ]);
+    });
+
+    it.each([
+      ['/collections/socket-head-cap-screws', '/collections Product types'],
+      ['/industries/motorsport', '/industries Industries'],
+      ['/de/news/meldung-1', '/de/news Aktuelles'],
+    ])('leads to %s through the list of its kind', async (path, list) => {
+      const links = await trail(path);
+
+      expect(links).toHaveLength(2);
+      expect(links[1]).toBe(list);
+    });
+
+    it('ends on the page itself, which is not a link', async () => {
+      const { html } = await page(CAP_SCREW);
+      const crumbs = between(html, '<nav class="crumbs"', '</nav>');
+
+      expect(crumbs.trimEnd()).toMatch(
+        /<span aria-current="page">M5 titanium socket head cap screw<\/span>$/,
+      );
+    });
+  });
+
   describe('a collection page', () => {
     it('lists the products that name it, and no others', async () => {
       const { status, html } = await page(
@@ -815,12 +864,13 @@ describe('the commerce theme', () => {
       );
     });
 
-    it('leads its breadcrumb home, not through the product', async () => {
+    it('leads its breadcrumb through the list of industries, not through the product', async () => {
       // An industry is not a child of the part it happens to mention.
       const { html } = await page('/industries/motorsport');
       const crumbs = between(html, 'class="crumbs"', '</nav>');
 
       expect(crumbs).toContain('<a href="/">Home</a>');
+      expect(crumbs).toContain('<a href="/industries">Industries</a>');
       expect(crumbs).not.toContain('/products/');
     });
 
@@ -1090,7 +1140,9 @@ describe('the commerce theme', () => {
     });
 
     it('links to the whole catalogue under the finder, in the visitor’s language', async () => {
-      // The home page holds the ten newest products and no more.
+      // The home page holds the ten newest products and no more. The address
+      // is Mallok's, from the base the site gives the kind: nothing in the
+      // theme's options names it.
       const english = await page('/');
       const german = await page('/de/');
 

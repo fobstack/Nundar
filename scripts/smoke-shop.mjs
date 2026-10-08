@@ -294,6 +294,17 @@ try {
       ),
       `${start} is not titled with the ${locale} tagline in site.json`,
     );
+    // Under the finder, the way into the whole catalogue. Its address is
+    // Mallok's, from the base `site.json` gives products; no option names it.
+    const catalogue = `${start}${site.kinds.product.base}`;
+    expect(
+      front.html.includes(
+        `<p class="finder-more"><a class="text-link" href="${catalogue}">`,
+      ),
+      `${start} does not link to the catalogue at ${catalogue}`,
+    );
+    const listed = await page(catalogue);
+    expect(listed.status === 200, `${catalogue} returned ${listed.status}`);
     const chrome = [
       /<header class="topbar">[\s\S]*?<\/header>/.exec(front.html)?.[0] ?? '',
       /<footer class="footer">[\s\S]*?<\/footer>/.exec(front.html)?.[0] ?? '',

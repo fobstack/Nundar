@@ -1,10 +1,7 @@
 {% layout "layouts/base" %}
 {% block content %}
 <article class="shell detail">
-  <nav class="crumbs" aria-label="{{ t.breadcrumb }}">
-    <a href="{{ site.home_path }}">{{ t.home }}</a>
-    <span aria-hidden="true">/</span><span aria-current="page">{{ content.title }}</span>
-  </nav>
+  {% render "partials/crumbs" %}
 
   <header class="detail-head">
     <p class="eyebrow">{{ t.faq_eyebrow }}</p>

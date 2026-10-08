@@ -232,7 +232,6 @@
     "contact_phone": "",
     "quote_href": "/custom-manufacturing",
     "contact_href": "/contact",
-    "catalogue_href": "/products",
     "terms_href": "/terms",
     "privacy_href": "/privacy",
     "compliance_href": "/compliance",
@@ -261,7 +260,6 @@
         "footer_note": "Musterkatalog. Die gezeigten Produkte, Zertifizierungen und Fallstudien dienen der Veranschaulichung.",
         "quote_href": "/de/sonderanfertigung",
         "contact_href": "/de/kontakt",
-        "catalogue_href": "/de/products",
         "terms_href": "/de/agb",
         "privacy_href": "/de/datenschutz",
         "compliance_href": "/de/konformitaet"
@@ -290,7 +288,6 @@
         "footer_note": "Catalogue de démonstration. Les produits, certifications et études de cas présentés le sont à titre d’illustration.",
         "quote_href": "/fr/fabrication-sur-mesure",
         "contact_href": "/fr/contact",
-        "catalogue_href": "/fr/products",
         "terms_href": "/fr/conditions-generales",
         "privacy_href": "/fr/confidentialite",
         "compliance_href": "/fr/conformite"
@@ -319,7 +316,6 @@
         "footer_note": "Catálogo de muestra. Los productos, certificaciones y casos de éxito mostrados son ilustrativos.",
         "quote_href": "/es/fabricacion-a-medida",
         "contact_href": "/es/contacto",
-        "catalogue_href": "/es/products",
         "terms_href": "/es/terminos-y-condiciones",
         "privacy_href": "/es/privacidad",
         "compliance_href": "/es/cumplimiento"

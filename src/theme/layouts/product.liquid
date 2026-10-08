@@ -1,11 +1,7 @@
 {% layout "layouts/base" %}
 {% block content %}
 <article class="shell detail">
-  <nav class="crumbs" aria-label="{{ t.breadcrumb }}">
-    <a href="{{ site.home_path }}">{{ t.home }}</a>
-    {% if content.refs.collection %}<span aria-hidden="true">/</span><a href="{{ content.refs.collection.path }}">{{ content.refs.collection.title }}</a>{% endif %}
-    <span aria-hidden="true">/</span><span aria-current="page">{{ content.title }}</span>
-  </nav>
+  {% render "partials/crumbs", via: content.refs.collection %}
 
   {% assign shots = content.frontmatter.gallery %}
   {% assign has_gallery = false %}

@@ -86,8 +86,8 @@
 
   Mallok gives a home page the ten newest items of a kind. A catalogue larger
   than that is whole only on its list page, so the section ends with a link
-  there — to an address the site owner sets, because a template has no way
-  to ask where a kind's list page is.
+  there. `site.kinds.product` is that page's address in this language, and
+  is absent when the site serves no list of products.
 {%- endcomment -%}
 {% if recent.product.size > 0 %}
 <section class="band" id="specification-finder">
@@ -97,7 +97,7 @@
       <p>{{ t.finder_lede }}</p>
     </div>
     {% render "partials/spec-table", items: recent.product, filters: true %}
-    {% if theme.options.catalogue_href != blank %}<p class="finder-more"><a class="text-link" href="{{ theme.options.catalogue_href }}">{{ t.view_catalogue }} {% render "partials/icon", name: "arrow" %}</a></p>{% endif %}
+    {% if site.kinds.product %}<p class="finder-more"><a class="text-link" href="{{ site.kinds.product.path }}">{{ t.view_catalogue }} {% render "partials/icon", name: "arrow" %}</a></p>{% endif %}
   </div>
 </section>
 {% endif %}

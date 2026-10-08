@@ -30,6 +30,7 @@ import frJson from './locales/fr.json';
 import calculatorsLiquid from './partials/calculators.liquid';
 import cardLiquid from './partials/card.liquid';
 import closingLiquid from './partials/closing.liquid';
+import crumbsLiquid from './partials/crumbs.liquid';
 import footerLiquid from './partials/footer.liquid';
 import headerLiquid from './partials/header.liquid';
 import iconLiquid from './partials/icon.liquid';
@@ -55,6 +56,7 @@ export const nundarTheme = defineTheme(manifest, {
   'partials/card.liquid': cardLiquid,
   'partials/calculators.liquid': calculatorsLiquid,
   'partials/closing.liquid': closingLiquid,
+  'partials/crumbs.liquid': crumbsLiquid,
   'partials/icon.liquid': iconLiquid,
   'partials/spec-table.liquid': specTableLiquid,
   'locales/en.json': JSON.stringify(enJson),

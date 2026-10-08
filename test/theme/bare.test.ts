@@ -62,7 +62,6 @@ describe('the theme with almost nothing filled in', () => {
         hero_lede: '',
         quote_href: '',
         contact_href: '',
-        catalogue_href: '',
         // One selling point, and not the first of the three.
         prop_2_title: 'Standard packs',
       },
@@ -198,7 +197,6 @@ describe('the theme with almost nothing filled in', () => {
       expect(html).not.toContain('class="panel split"');
       expect(html).not.toContain('class="assure"');
       expect(html).not.toContain('class="closing"');
-      expect(html).not.toContain('class="finder-more"');
     });
 
     it('gives the case studies the whole row when there is no quality panel', async () => {

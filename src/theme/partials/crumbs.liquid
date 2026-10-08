@@ -1,0 +1,18 @@
+{%- comment -%}
+  Where a content page sits: the home page, the list of its kind, and — for a
+  product — the collection it belongs to, passed in as `via`.
+
+  `site.kinds` has an entry for a kind exactly when its list page exists, so
+  a kind the site serves without a list simply has no middle step.
+{%- endcomment -%}
+{%- assign own = site.kinds[content.kind] -%}
+<nav class="crumbs" aria-label="{{ t.breadcrumb }}">
+  <a href="{{ site.home_path }}">{{ t.home }}</a>
+  {%- if own %}
+  <span aria-hidden="true">/</span><a href="{{ own.path }}">{{ own.label }}</a>
+  {%- endif %}
+  {%- if via %}
+  <span aria-hidden="true">/</span><a href="{{ via.path }}">{{ via.title }}</a>
+  {%- endif %}
+  <span aria-hidden="true">/</span><span aria-current="page">{{ content.title }}</span>
+</nav>

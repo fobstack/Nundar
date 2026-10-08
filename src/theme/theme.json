@@ -277,12 +277,6 @@
       "label": "Link for the contact buttons",
       "default": "/contact"
     },
-    "catalogue_href": {
-      "type": "string",
-      "label": "Link to the full catalogue, under the home page finder",
-      "default": "/products",
-      "help": "The home page shows the ten newest products. Give this per language, for example /de/products; empty shows no link."
-    },
     "terms_href": {
       "type": "string",
       "label": "Footer: link to the terms",
