@@ -31,13 +31,14 @@
  */
 
 import { type Availability, availabilityOf } from './availability.js';
+import { MAX_LINE_QUANTITY } from './cart.js';
 import {
-  BASE_CURRENCY,
   CURRENCIES,
   CURRENCY_MINOR_UNITS,
   type Currency,
   defaultCurrencyForLocale,
   isCurrency,
+  settleCurrency,
 } from './currency.js';
 import { formatMoney, fromMinor } from './money.js';
 
@@ -129,7 +130,7 @@ function amountsByVariant(
  * is worse. So a currency is offered only when every priced variant on the
  * page has a price in it. The language's own currency comes first when it is
  * among them — before the first exchange rates arrive it is not — and the
- * base currency otherwise. This is the rule `priceCart` settles an order by.
+ * base currency otherwise (`settleCurrency`, which the cart uses too).
  *
  * A page with nothing priced offers no currency at all: there is nothing a
  * switch could change.
@@ -144,12 +145,7 @@ export function currenciesFor(
       : CURRENCIES.filter((currency) =>
           priced.every((amounts) => amounts.has(currency)),
         );
-  const preferred = defaultCurrencyForLocale(locale);
-  const currency = shared.includes(preferred)
-    ? preferred
-    : shared.includes(BASE_CURRENCY)
-      ? BASE_CURRENCY
-      : (shared[0] ?? preferred);
+  const currency = settleCurrency(defaultCurrencyForLocale(locale), shared);
   return { currency, currencies: shared };
 }
 
@@ -210,34 +206,40 @@ function display(
 }
 
 /**
+ * What a product starts at, once for each currency offered.
+ *
  * The lowest price a buyer can act on: among the variants that can be
  * ordered, or among all of them when none can, so that a product which is
- * out of stock still says what it costs.
+ * out of stock still says what it costs. Taken currency by currency — a
+ * price entered by hand can make one variant the cheapest in dollars and
+ * another the cheapest in euros.
  */
-function lowest(
+function pricesFrom(
   variants: readonly StorefrontVariantRow[],
   amounts: ReadonlyMap<string, Amounts>,
-  currency: Currency,
-): StorefrontVariantRow | undefined {
-  const priced = variants.filter(
-    (variant) => amounts.get(variant.id)?.has(currency) === true,
-  );
-  const orderable = priced.filter(
+  currencies: readonly Currency[],
+  locale: string,
+): DisplayPrice[] {
+  const orderable = variants.filter(
     (variant) => availabilityOf(variant) !== 'out_of_stock',
   );
-  const pool = orderable.length > 0 ? orderable : priced;
-  let best: StorefrontVariantRow | undefined;
-  for (const variant of pool) {
-    const own = amounts.get(variant.id)?.get(currency) ?? 0;
-    const least =
-      best === undefined
-        ? Infinity
-        : (amounts.get(best.id)?.get(currency) ?? 0);
-    if (own < least) {
-      best = variant;
-    }
-  }
-  return best;
+  return currencies.flatMap((currency) => {
+    const amountsIn = (pool: readonly StorefrontVariantRow[]): number[] =>
+      pool.flatMap((variant) => {
+        const amount = amounts.get(variant.id)?.get(currency);
+        return amount === undefined ? [] : [amount];
+      });
+    const fromOrderable = amountsIn(orderable);
+    const pool = fromOrderable.length > 0 ? fromOrderable : amountsIn(variants);
+    return pool.length === 0
+      ? []
+      : [
+          {
+            currency,
+            display: formatMoney(Math.min(...pool), currency, locale),
+          },
+        ];
+  });
 }
 
 /** One state for a whole product: the best any of its variants offers. */
@@ -270,18 +272,14 @@ export function productView(
     return own === undefined ? [] : [own];
   });
   const { currency, currencies } = currenciesFor(locale, priced);
-  const cheapest = lowest(variants, amounts, currency);
-  const pricesFrom =
-    cheapest === undefined
-      ? []
-      : display(amounts.get(cheapest.id), currencies, locale);
+  const from = pricesFrom(variants, amounts, currencies, locale);
 
   return {
     currency,
     currencies,
     price_from:
-      pricesFrom.find((price) => price.currency === currency)?.display ?? '',
-    prices_from: pricesFrom,
+      from.find((price) => price.currency === currency)?.display ?? '',
+    prices_from: from,
     variants: variants.map((variant) => {
       const own = display(amounts.get(variant.id), currencies, locale);
       const price =
@@ -296,9 +294,13 @@ export function productView(
         lead_time: leadTime(variant),
         price,
         prices: own,
-        // A cart line without a price cannot be priced, and one that is out
-        // of stock would be refused: neither is offered a form.
-        orderable: price !== '' && availability !== 'out_of_stock',
+        // A cart line without a price cannot be priced, one that is out of
+        // stock would be refused, and so would a minimum order above what a
+        // cart line may hold: none of them is offered a form.
+        orderable:
+          price !== '' &&
+          availability !== 'out_of_stock' &&
+          variant.moq <= MAX_LINE_QUANTITY,
       };
     }),
   };
@@ -343,15 +345,11 @@ export function listView(
 
   const products: Record<string, ListedProductView> = {};
   for (const product of listed) {
-    const cheapest = lowest(product.variants, amounts, currency);
-    const pricesFrom =
-      cheapest === undefined
-        ? []
-        : display(amounts.get(cheapest.id), currencies, locale);
+    const from = pricesFrom(product.variants, amounts, currencies, locale);
     products[product.id] = {
       price_from:
-        pricesFrom.find((price) => price.currency === currency)?.display ?? '',
-      prices_from: pricesFrom,
+        from.find((price) => price.currency === currency)?.display ?? '',
+      prices_from: from,
       availability: availabilityOfProduct(product.variants),
     };
   }
@@ -394,7 +392,12 @@ export function offersFor(
     const own = amounts.get(variant.id);
     return own === undefined ? [] : [own];
   });
-  const { currency } = currenciesFor(locale, priced);
+  const { currency, currencies } = currenciesFor(locale, priced);
+  // The page prints prices only in a currency every priced variant shares.
+  // Where there is none it prints none, and neither does this.
+  if (!currencies.includes(currency)) {
+    return undefined;
+  }
 
   const offers = variants.flatMap((variant) => {
     const minor = amounts.get(variant.id)?.get(currency);
@@ -421,11 +424,14 @@ export function offersFor(
             : {}),
           ...(leadTime(variant) !== '' && min !== null && max !== null
             ? {
+                // Business days, as the page says. The standard codes have a
+                // day and no business day, and five to ten days is not what
+                // the page states.
                 deliveryLeadTime: {
                   '@type': 'QuantitativeValue',
                   minValue: min,
                   maxValue: max,
-                  unitCode: 'DAY',
+                  unitText: 'business days',
                 },
               }
             : {}),

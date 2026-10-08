@@ -32,3 +32,28 @@ export function defaultCurrencyForLocale(locale: string): Currency {
   const language = locale.toLowerCase().split('-')[0];
   return language === 'en' ? 'USD' : 'EUR';
 }
+
+/**
+ * The one currency a page, or a cart, is in.
+ *
+ * `shared` are the currencies everything on it has a price in. The one asked
+ * for wins when it is among them — a page asks for its language's, a cart for
+ * the one its buyer chose. Failing that the base currency, and failing that
+ * whatever is shared at all: a part priced only in euros is shown in euros
+ * rather than not at all. With nothing shared, the one asked for stands and
+ * some of what is there has no price in it.
+ *
+ * One function, because a page and the cart it leads to must not disagree.
+ */
+export function settleCurrency(
+  wanted: Currency,
+  shared: readonly Currency[],
+): Currency {
+  if (shared.includes(wanted)) {
+    return wanted;
+  }
+  if (shared.includes(BASE_CURRENCY)) {
+    return BASE_CURRENCY;
+  }
+  return shared[0] ?? wanted;
+}

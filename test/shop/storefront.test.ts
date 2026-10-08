@@ -184,6 +184,42 @@ describe('a product page’s view', () => {
     expect(view?.price_from).toBe('$0.42');
   });
 
+  it('marks as orderable only a variant with a price that can be had, in a quantity a cart can hold', () => {
+    const view = productView(
+      [
+        variant('ok', { moq: 100 }),
+        variant('unpriced'),
+        variant('gone', { stock: 0 }),
+        variant('custom', { stock: 0, stock_policy: 'made_to_order' }),
+        // A cart line holds ten thousand at most: this minimum order could
+        // never be met, and a form for it would be refused every time.
+        variant('vast', { moq: 20000, stock_policy: 'made_to_order' }),
+        variant('limit', { moq: 10000, stock_policy: 'made_to_order' }),
+      ],
+      [
+        price('ok', 'USD', 100),
+        price('gone', 'USD', 100),
+        price('custom', 'USD', 100),
+        price('vast', 'USD', 100),
+        price('limit', 'USD', 100),
+      ],
+      'en',
+    );
+
+    expect(
+      Object.fromEntries(
+        (view?.variants ?? []).map((entry) => [entry.id, entry.orderable]),
+      ),
+    ).toEqual({
+      ok: true,
+      unpriced: false,
+      gone: false,
+      custom: true,
+      vast: false,
+      limit: true,
+    });
+  });
+
   it('says what state each variant is in, and never how many are left', () => {
     const view = productView(
       [
@@ -253,6 +289,27 @@ describe('a product page’s view', () => {
       ]);
     });
 
+    it('is the lowest in each currency, which need not be the same variant', () => {
+      // A price entered by hand makes one size the cheapest in dollars and
+      // the other the cheapest in euros.
+      const view = productView(
+        [variant('a'), variant('b')],
+        [
+          price('a', 'USD', 1000),
+          price('a', 'EUR', 1200),
+          price('b', 'USD', 1100),
+          price('b', 'EUR', 1020),
+        ],
+        'en',
+      );
+
+      expect(view?.price_from).toBe('$10.00');
+      expect(view?.prices_from).toEqual([
+        { currency: 'USD', display: '$10.00' },
+        { currency: 'EUR', display: '€10.20' },
+      ]);
+    });
+
     it('is the lowest of all when none can be ordered', () => {
       const view = productView(
         [variant('a', { stock: 0 }), variant('b', { stock: 0 })],
@@ -308,6 +365,28 @@ describe('a list page’s view', () => {
         availability: 'made_to_order',
       },
     });
+  });
+
+  it('gives each product its lowest price in each currency', () => {
+    const view = listView(
+      [{ id: 'content-a', translationGroup: 'group-a' }],
+      [
+        variant('a1', { product_group: 'group-a' }),
+        variant('a2', { product_group: 'group-a' }),
+      ],
+      [
+        price('a1', 'USD', 1000),
+        price('a1', 'EUR', 1200),
+        price('a2', 'USD', 1100),
+        price('a2', 'EUR', 1020),
+      ],
+      'en',
+    );
+
+    expect(view?.products['content-a']?.prices_from).toEqual([
+      { currency: 'USD', display: '$10.00' },
+      { currency: 'EUR', display: '€10.20' },
+    ]);
   });
 
   it('is in one currency for the whole page', () => {
@@ -384,6 +463,20 @@ describe('the offers in a product’s structured data', () => {
     ]);
   });
 
+  it('are absent when the page has no currency every priced variant shares', () => {
+    // One variant priced only in dollars, one only in euros: the page
+    // prints no price at all, and so offers none.
+    const rows = [variant('a'), variant('b')];
+    const prices = [price('a', 'USD', 1000), price('b', 'EUR', 900)];
+
+    for (const locale of ['en', 'de']) {
+      expect(
+        productView(rows, prices, locale)?.variants.map((entry) => entry.price),
+      ).toEqual(['', '']);
+      expect(offersFor(rows, prices, locale)).toBeUndefined();
+    }
+  });
+
   it('are in the currency the page is in, and leave out a variant the page shows no price for', () => {
     const offers = offersFor(
       [variant('a'), variant('b')],
@@ -437,9 +530,14 @@ describe('the offers in a product’s structured data', () => {
         '@type': 'QuantitativeValue',
         minValue: 15,
         maxValue: 20,
-        unitCode: 'DAY',
+        // Business days, as the page says: not the standard code for a day,
+        // which would state something the page does not.
+        unitText: 'business days',
       },
     });
+    expect(
+      (offer as { deliveryLeadTime: object }).deliveryLeadTime,
+    ).not.toHaveProperty('unitCode');
 
     const plain = offersFor(
       [variant('a', { lead_time_min: 15, lead_time_max: null })],

@@ -4,6 +4,7 @@ import {
   CURRENCIES,
   defaultCurrencyForLocale,
   isCurrency,
+  settleCurrency,
 } from '../../src/plugins/shop/lib/currency.js';
 
 describe('defaultCurrencyForLocale', () => {
@@ -32,5 +33,27 @@ describe('isCurrency', () => {
 
   it('prices by hand in a currency the shop supports', () => {
     expect(isCurrency(BASE_CURRENCY)).toBe(true);
+  });
+});
+
+describe('settleCurrency', () => {
+  it('is the currency asked for when everything has a price in it', () => {
+    expect(settleCurrency('EUR', ['USD', 'EUR', 'GBP'])).toBe('EUR');
+    expect(settleCurrency('GBP', ['USD', 'GBP'])).toBe('GBP');
+  });
+
+  it('is the base currency when the one asked for is not shared', () => {
+    expect(settleCurrency('EUR', ['USD', 'GBP'])).toBe('USD');
+  });
+
+  it('is whatever is shared when neither is', () => {
+    // A part priced only in euros, on a page that asked for dollars: shown
+    // in euros rather than not at all.
+    expect(settleCurrency('USD', ['EUR'])).toBe('EUR');
+    expect(settleCurrency('GBP', ['EUR'])).toBe('EUR');
+  });
+
+  it('is the currency asked for when nothing is shared at all', () => {
+    expect(settleCurrency('EUR', [])).toBe('EUR');
   });
 });

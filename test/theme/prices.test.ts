@@ -460,7 +460,7 @@ describe('prices on the pages', () => {
           '@type': 'QuantitativeValue',
           minValue: 5,
           maxValue: 10,
-          unitCode: 'DAY',
+          unitText: 'business days',
         },
       });
       expect(bySku.get('CS-16')?.availability).toBe(
