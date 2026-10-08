@@ -3,7 +3,7 @@
     <div class="footer-grid">
       <div>
         <a class="brand" href="{{ site.home_path }}">{{ site.name }}</a>
-        {% if theme.options.footer_blurb != blank %}<p class="footer-blurb">{{ theme.options.footer_blurb }}</p>{% elsif theme.options.tagline != blank %}<p class="footer-blurb">{{ theme.options.tagline }}</p>{% elsif site.tagline != "" %}<p class="footer-blurb">{{ site.tagline }}</p>{% endif %}
+        {% if theme.options.footer_blurb != blank %}<p class="footer-blurb">{{ theme.options.footer_blurb }}</p>{% elsif site.tagline != "" %}<p class="footer-blurb">{{ site.tagline }}</p>{% endif %}
         {% if theme.options.footer_note != blank %}<p class="footer-note">{{ theme.options.footer_note }}</p>{% endif %}
       </div>
       <nav aria-label="{{ t.footer_nav }}">

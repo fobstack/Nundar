@@ -1,6 +1,11 @@
 {
   "name": "Tungsten & Amber Aero",
-  "tagline": "Titanium fasteners and custom parts",
+  "tagline": {
+    "en": "Titanium fasteners and custom parts",
+    "de": "Verbindungselemente und Sonderteile aus Titan",
+    "fr": "Fixations et pièces sur mesure en titane",
+    "es": "Fijaciones y piezas a medida de titanio"
+  },
   "defaultLocale": "en",
   "locales": ["en", "de", "fr", "es"],
   "kinds": {
@@ -233,7 +238,6 @@
     "compliance_href": "/compliance",
     "$locales": {
       "de": {
-        "tagline": "Verbindungselemente und Sonderteile aus Titan",
         "home_description": "Titan-Verbindungselemente aus Grade 5 und Grade 2 nach Spezifikation finden. CNC-Sonderanfertigung mit rückverfolgbaren Zeugnissen für die Luft- und Raumfahrt.",
         "hero_title": "Titan-Verbindungselemente. Auf Ihre Anforderungen ausgelegt.",
         "hero_lede": "Finden Sie Titan-Verbindungselemente nach Spezifikation, beziehen Sie Standardpackungen oder besprechen Sie ein Sonderteil mit unserem Team.",
@@ -263,7 +267,6 @@
         "compliance_href": "/de/konformitaet"
       },
       "fr": {
-        "tagline": "Fixations et pièces sur mesure en titane",
         "home_description": "Trouvez des fixations en titane grade 5 et grade 2 par spécification. Fabrication CNC sur mesure avec certificats de traçabilité aéronautique.",
         "hero_title": "Fixations en titane. Conçues selon vos exigences.",
         "hero_lede": "Trouvez des fixations en titane par spécification, approvisionnez-vous en conditionnements standard ou étudiez une pièce sur mesure avec notre équipe.",
@@ -293,7 +296,6 @@
         "compliance_href": "/fr/conformite"
       },
       "es": {
-        "tagline": "Fijaciones y piezas a medida de titanio",
         "home_description": "Encuentre fijaciones de titanio grado 5 y grado 2 por especificación. Fabricación CNC a medida con certificados de trazabilidad aeroespacial.",
         "hero_title": "Fijaciones de titanio. Diseñadas según sus requisitos.",
         "hero_lede": "Encuentre fijaciones de titanio por especificación, adquiera paquetes estándar o estudie una pieza a medida con nuestro equipo.",

@@ -23,6 +23,7 @@ import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
+  escaped,
   expect,
   fillShop,
   freePort,
@@ -285,6 +286,14 @@ try {
     const start = locale === site.defaultLocale ? '/' : `/${locale}/`;
     const front = await page(start);
     expect(front.status === 200, `${start} returned ${front.status}`);
+    // The tagline is one of Mallok's own settings and has a value per
+    // language in `site.json`; `publish --with-settings` applied them all.
+    expect(
+      front.html.includes(
+        `<title>${escaped(site.name)} — ${escaped(site.tagline[locale])}</title>`,
+      ),
+      `${start} is not titled with the ${locale} tagline in site.json`,
+    );
     const chrome = [
       /<header class="topbar">[\s\S]*?<\/header>/.exec(front.html)?.[0] ?? '',
       /<footer class="footer">[\s\S]*?<\/footer>/.exec(front.html)?.[0] ?? '',

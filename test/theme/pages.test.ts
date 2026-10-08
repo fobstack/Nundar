@@ -61,10 +61,13 @@ describe('the commerce theme', () => {
 
     // The copy a site owner sets, and one language's override of it. A theme
     // option has one value for the site; `$locales` carries the exceptions.
+    // The tagline is Mallok's own setting and holds a value per language.
     const options = await api('PATCH', '/_mallok/api/settings', {
+      tagline: {
+        en: 'Titanium fasteners',
+        de: 'Verbindungselemente aus Titan',
+      },
       themeOptions: {
-        tagline: 'Titanium fasteners',
-        home_description: 'Find titanium fasteners by specification.',
         hero_title: 'Titanium fasteners, built to your drawing.',
         hero_badge: 'Grade 5 Ti-6Al-4V',
         prop_1_title: 'Exact specifications',
@@ -80,7 +83,7 @@ describe('the commerce theme', () => {
         terms_href: '/terms',
         $locales: {
           de: {
-            tagline: 'Verbindungselemente aus Titan',
+            // German alone has a description of its own for the home page.
             home_description:
               'Titan-Verbindungselemente nach Spezifikation finden.',
             hero_title: 'Titan-Verbindungselemente nach Ihrer Zeichnung.',
@@ -975,14 +978,18 @@ describe('the commerce theme', () => {
     });
 
     it('titles and describes itself in the visitor’s language', async () => {
-      // The site's own tagline is one string for every language; the theme's
-      // options stand in front of it because they can differ by language.
+      // The tagline is the site's, one per language, and Mallok describes
+      // the home page with it. The theme's option replaces that description
+      // where a language has been given a fuller one.
       const english = await page('/');
       const german = await page('/de/');
 
       expect(english.html).toContain(' — Titanium fasteners</title>');
       expect(english.html).toContain(
-        '<meta name="description" content="Find titanium fasteners by specification.">',
+        '<meta name="description" content="Titanium fasteners">',
+      );
+      expect(english.html).toContain(
+        '<meta property="og:description" content="Titanium fasteners">',
       );
       expect(german.html).toContain(' — Verbindungselemente aus Titan</title>');
       expect(german.html).toContain(
@@ -990,6 +997,25 @@ describe('the commerce theme', () => {
       );
       expect(german.html).toContain(
         '<meta property="og:description" content="Titan-Verbindungselemente nach Spezifikation finden.">',
+      );
+
+      // The option describes the home page and no other: a page in the same
+      // language keeps the description it was written with.
+      const article = await page('/de/news/meldung-1');
+      expect(article.html).toContain(
+        '<meta name="description" content="Eine Meldung aus dem Werk.">',
+      );
+    });
+
+    it('repeats the tagline under the site’s name in the footer, in the page’s language', async () => {
+      const english = await page('/');
+      const german = await page('/de/');
+
+      expect(english.html).toContain(
+        '<p class="footer-blurb">Titanium fasteners</p>',
+      );
+      expect(german.html).toContain(
+        '<p class="footer-blurb">Verbindungselemente aus Titan</p>',
       );
     });
 

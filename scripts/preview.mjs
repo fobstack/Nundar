@@ -27,6 +27,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import {
+  escaped,
   expect,
   fillShop,
   freePort,
@@ -82,16 +83,6 @@ for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
   process.on(signal, () => {
     shutDown().finally(() => process.exit(0));
   });
-}
-
-/** Text as a template prints it. */
-function escaped(text) {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
 
 /** What `--check` asks of the shop before calling this command sound. */

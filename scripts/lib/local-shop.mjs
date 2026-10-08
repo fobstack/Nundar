@@ -29,6 +29,16 @@ export function expect(condition, message) {
   }
 }
 
+/** Text as a template prints it. */
+export function escaped(text) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 /** An OS-assigned free port, so two runs cannot collide. */
 export function freePort() {
   return new Promise((resolve, reject) => {

@@ -9,21 +9,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   {%- comment -%}
-    The home page describes itself in the site owner's words, and those have
-    to be in the visitor's language. The site's own tagline is one string for
-    every language, so two theme options stand in front of it: an option can
-    carry a value per language.
+    The home page describes itself in the site owner's words. The tagline and
+    the description Mallok derives from it are the page's language's. The
+    option is for a site that wants more than a tagline under its name in a
+    search result.
   {%- endcomment -%}
-  {% assign tagline = site.tagline %}
-  {% if theme.options.tagline != blank %}{% assign tagline = theme.options.tagline %}{% endif %}
   {% assign summary = page.description %}
-  {% if page.kind == "home" %}
-    {% if theme.options.home_description != blank %}{% assign summary = theme.options.home_description %}{% elsif theme.options.tagline != blank %}{% assign summary = theme.options.tagline %}{% endif %}
-  {% endif %}
+  {% if page.kind == "home" and theme.options.home_description != blank %}{% assign summary = theme.options.home_description %}{% endif %}
   {%- comment -%}
     The pages of one list would otherwise all carry one title.
   {%- endcomment -%}
-  <title>{% if page.kind == "home" %}{{ site.name }}{% if tagline != "" %} — {{ tagline }}{% endif %}{% else %}{{ page.title }}{% if page.kind == "list" and list.page > 1 %}, {{ t.page }} {{ list.page }}{% endif %} — {{ site.name }}{% endif %}</title>
+  <title>{% if page.kind == "home" %}{{ site.name }}{% if site.tagline != "" %} — {{ site.tagline }}{% endif %}{% else %}{{ page.title }}{% if page.kind == "list" and list.page > 1 %}, {{ t.page }} {{ list.page }}{% endif %} — {{ site.name }}{% endif %}</title>
   {% if summary != "" %}<meta name="description" content="{{ summary }}">{% endif %}
   <link rel="canonical" href="{{ page.canonical }}">
   <meta property="og:site_name" content="{{ site.name }}">

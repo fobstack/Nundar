@@ -88,6 +88,7 @@ describe('site.json, in every language', () => {
   interface Settings {
     defaultLocale: string;
     locales: string[];
+    tagline: string | Record<string, string>;
     nav: Record<string, { label: string; href: string }[]>;
     themeOptions: Record<string, unknown> & {
       $locales?: Record<string, Record<string, string>>;
@@ -151,12 +152,6 @@ describe('site.json, in every language', () => {
       const original = site.themeOptions[name];
       for (const locale of others) {
         const own = site.themeOptions.$locales?.[locale]?.[name];
-        if (name === 'tagline') {
-          // The default language falls back to the site's own tagline; the
-          // others have nothing to fall back to in their language.
-          assert.ok(own, `site.json has no "${locale}" tagline`);
-          continue;
-        }
         if (typeof original !== 'string' || original === '') {
           continue;
         }
@@ -173,6 +168,31 @@ describe('site.json, in every language', () => {
       }
     }
     assert.ok(checked > 0);
+  });
+
+  it('gives each language a tagline of its own', async () => {
+    // The tagline follows the site's name in the home page's title and
+    // describes that page to a search engine. A language without one gets
+    // the default language's, and nothing reports it.
+    const site = await readSettings();
+    assert.equal(
+      typeof site.tagline,
+      'object',
+      'site.json has one tagline for every language',
+    );
+    const taglines = site.tagline as Record<string, string>;
+    assert.deepEqual(Object.keys(taglines).sort(), [...site.locales].sort());
+
+    const seen = new Set<string>();
+    for (const locale of site.locales) {
+      const tagline = taglines[locale] ?? '';
+      assert.ok(tagline.trim() !== '', `site.json has no "${locale}" tagline`);
+      assert.ok(
+        !seen.has(tagline),
+        `site.json gives "${locale}" another language's tagline`,
+      );
+      seen.add(tagline);
+    }
   });
 
   it('keeps each language’s links inside that language', async () => {

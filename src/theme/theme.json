@@ -2,7 +2,7 @@
   "id": "nundar",
   "name": "Nundar",
   "description": "A commerce theme for a technical catalogue: a specification finder, product pages built around a size table, landing pages for the applications a part is used in, collections by type, case studies and reference pages. HTML first: every page is complete without a script, and the two it declares only add to what is already there — filters for a table, calculators beside the tables of an engineering reference.",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "themeApi": 1,
   "home": "layouts/home.liquid",
   "kinds": {
@@ -146,17 +146,11 @@
       "label": "Accent colour",
       "default": "#b45309"
     },
-    "tagline": {
-      "type": "string",
-      "label": "Tagline, after the site name in the home page title",
-      "default": "",
-      "help": "Empty uses the site's own tagline. That one has a single value for every language; this option can be given per language."
-    },
     "home_description": {
       "type": "text",
       "label": "Home page description, for search results and link previews",
       "default": "",
-      "help": "Empty uses the tagline."
+      "help": "A sentence or two. Empty uses the site's tagline, which is also what follows the site's name in the home page's title."
     },
     "hero_title": {
       "type": "string",
