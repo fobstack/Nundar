@@ -110,7 +110,7 @@
           "label": "Status",
           "choices": ["active", "archived"],
           "default": "active",
-          "help": "An archived variant is on no page and in no cart."
+          "help": "An archived variant is on no page, and is taken out of every cart."
         },
         "price": {
           "type": "money",
@@ -122,7 +122,7 @@
           "type": "rows",
           "label": "Prices set by hand in other currencies",
           "max": 2,
-          "help": "A price here replaces the derived one and is never recomputed.",
+          "help": "A price here replaces the derived one and is never recomputed. It needs a base price above.",
           "fields": {
             "price": {
               "type": "money",
@@ -138,7 +138,8 @@
           "required": true,
           "default": 1,
           "min": 1,
-          "help": "The least that can be ordered; quantities go up in steps of it."
+          "help": "The least that can be ordered. On a page the quantity starts here and goes up in steps of it. At most 10,000, which is the most one cart line may hold.",
+          "max": 10000
         },
         "stock_policy": {
           "type": "select",
@@ -149,10 +150,9 @@
         },
         "stock": {
           "type": "number",
-          "label": "Stock",
-          "default": 0,
+          "label": "Set stock to",
           "min": 0,
-          "help": "Setting a figure records the difference in the stock ledger. A page says whether a size can be had, never this number."
+          "help": "Leave empty to keep the stock as it is — the figure in the list behind this form. Setting one records the difference in the stock ledger. A page says whether a size can be had, never this number."
         },
         "lead_time_min": {
           "type": "number",

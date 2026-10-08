@@ -34,6 +34,30 @@ export function productCacheTag(productGroup: string): string {
   return productGroup;
 }
 
+/**
+ * What a purge came to, as far as its answer says.
+ *
+ * Mallok's `purgeTags` does not reject when a purge does not happen: it
+ * resolves to an object saying whether one was attempted and whether it
+ * worked. A site without a purge token attempts none. Its type promises
+ * nothing about that object, so it is read for exactly those two answers,
+ * and anything else is taken at its word.
+ */
+export function purgeOutcome(
+  answer: unknown,
+): 'done' | 'not_attempted' | 'refused' {
+  if (answer !== null && typeof answer === 'object') {
+    const { attempted, ok } = answer as { attempted?: unknown; ok?: unknown };
+    if (attempted === false) {
+      return 'not_attempted';
+    }
+    if (ok === false) {
+      return 'refused';
+    }
+  }
+  return 'done';
+}
+
 async function readShop(
   db: D1Database,
   groups: readonly string[],

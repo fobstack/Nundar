@@ -206,6 +206,37 @@ describe('the scheduled tick', () => {
       );
     });
 
+    it.each([
+      ['was not attempted', { attempted: false, ok: false }],
+      ['was turned down', { attempted: true, ok: false, detail: '429' }],
+    ])('are not counted as purged when the purge %s', async (_how, answer) => {
+      // Mallok's purge resolves either way. A tick that only caught a
+      // rejection would report pages purged that were not.
+      await catalogue();
+      const ecb = feed(ecbXml('2026-09-30', 1.1622, 0.85898));
+      const purge = async () => answer;
+      await tick(ecb.impl, minutesAfter(0), purge);
+
+      expect(await tick(ecb.impl, minutesAfter(1), purge)).toMatchObject({
+        kind: 'repriced',
+        updated: 6,
+        purged: 0,
+        done: true,
+      });
+    });
+
+    it('are counted when the purge says it was done', async () => {
+      await catalogue();
+      const ecb = feed(ecbXml('2026-09-30', 1.1622, 0.85898));
+      const purge = async () => ({ attempted: true, ok: true });
+      await tick(ecb.impl, minutesAfter(0), purge);
+
+      expect(await tick(ecb.impl, minutesAfter(1), purge)).toMatchObject({
+        kind: 'repriced',
+        purged: 2,
+      });
+    });
+
     it('are not asked for where there is nothing to purge with', async () => {
       await catalogue();
       const ecb = feed(ecbXml('2026-09-30', 1.1622, 0.85898));

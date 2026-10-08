@@ -1,5 +1,5 @@
 import type { PluginContext, PluginRecordInput } from 'mallok/worker';
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   loadVariant,
   onProductDeleted,
@@ -167,7 +167,7 @@ function record(
       status: 'active',
       moq: 1,
       stock_policy: 'track',
-      stock: 0,
+      stock: null,
       lead_time_min: null,
       lead_time_max: null,
       weight_grams: null,
@@ -262,10 +262,17 @@ describe('variants in the admin', () => {
       const { id = '' } = await create(screw, values);
 
       const loaded = await load(id);
-      expect(loaded).toEqual(values);
+      // Everything but the stock: the form's field is for setting a figure,
+      // and comes empty.
+      expect(loaded).toEqual({ ...values, stock: null });
 
-      // The rate moves, and the form is saved untouched for another reason.
+      // The rate moves, sixty are sold, and the form is saved untouched for
+      // another reason.
       await setRate('EUR', 0.99);
+      await db()
+        .prepare('UPDATE p_shop_variant SET stock = 440 WHERE id = ?')
+        .bind(id)
+        .run();
       const before = { prices: await prices(id), ledger: await ledger(id) };
       const again = await update(screw, id, loaded ?? {});
 
@@ -273,8 +280,10 @@ describe('variants in the admin', () => {
       // A derived price is not recomputed because someone pressed Save: only
       // a new base price, or a rate that has drifted, moves it.
       expect(await prices(id)).toEqual(before.prices);
+      // And the sixty stay sold: the save wrote no stock and no ledger row.
+      expect(await stockOf(id)).toBe(440);
       expect(await ledger(id)).toEqual(before.ledger);
-      expect(await load(id)).toEqual(values);
+      expect(await load(id)).toEqual({ ...values, stock: null });
     });
 
     it('refuses what Mallok can see is wrong before the shop is asked', async () => {
@@ -351,6 +360,24 @@ describe('variants in the admin', () => {
         .prepare('SELECT COUNT(*) AS n FROM p_shop_variant')
         .first<{ n: number }>();
       expect(count?.n).toBe(0);
+    });
+
+    it('refuses a minimum order no cart line could hold', async () => {
+      const { ctx } = context();
+
+      const atLimit = await saveVariant(
+        record(screw, null, { sku: 'CS-A', moq: 10000 }),
+        ctx,
+      );
+      const over = await saveVariant(
+        record(screw, null, { sku: 'CS-B', moq: 10001 }),
+        ctx,
+      );
+
+      expect(atLimit).toHaveProperty('id');
+      expect(over).toEqual({
+        errors: { moq: 'The minimum order can be at most 10000.' },
+      });
     });
 
     it('refuses the same currency priced by hand twice, naming the row', async () => {
@@ -527,32 +554,102 @@ describe('variants in the admin', () => {
       expect(await priceOf(id, 'EUR')).toBeNull();
     });
 
-    it('leaves a variant unpriced when the base price is taken off, and keeps what was entered by hand', async () => {
+    it('leaves a variant with no price at all when the base price is taken off', async () => {
       await setRate('EUR', 0.92);
-      await setRate('GBP', 0.79);
       const { id = '' } = await create(screw, {
         sku: 'CS-10',
         moq: 1,
         price: { amount: 9900, currency: 'USD' },
-        other_prices: [{ price: { amount: 8500, currency: 'EUR' } }],
       });
+      expect(await prices(id)).toHaveLength(2);
 
-      await update(screw, id, {
+      await update(screw, id, { sku: 'CS-10', moq: 1, price: null });
+
+      // Quoted on request: nothing left that was derived from a price that
+      // is no longer there.
+      expect(await prices(id)).toEqual([]);
+    });
+
+    it('refuses a price in another currency without a base price', async () => {
+      // A variant priced only in euros would leave its page with no currency
+      // every size shares, and so with no prices at all.
+      const refused = await create(screw, {
         sku: 'CS-10',
         moq: 1,
-        price: null,
         other_prices: [{ price: { amount: 8500, currency: 'EUR' } }],
       });
 
-      // Nothing left to derive pounds from; the euro price is the seller's.
-      expect(await prices(id)).toEqual([
-        {
-          currency: 'EUR',
-          amount_minor: 8500,
-          source: 'manual',
-          rate_used: null,
-        },
+      expect(refused.status).toBe(422);
+      expect(Object.keys(refused.errors ?? {})).toEqual(['price']);
+      expect(await variantRow('CS-10')).toBeNull();
+    });
+
+    it('refuses a price of nothing', async () => {
+      const { ctx } = context();
+
+      const free = await saveVariant(
+        record(screw, null, { price: { amount: 0, currency: 'USD' } }),
+        ctx,
+      );
+      const freeAbroad = await saveVariant(
+        record(screw, null, {
+          price: { amount: 100, currency: 'USD' },
+          other_prices: [{ price: { amount: 0, currency: 'EUR' } }],
+        }),
+        ctx,
+      );
+
+      expect(Object.keys((free as { errors: object }).errors)).toEqual([
+        'price',
       ]);
+      expect(Object.keys((freeAbroad as { errors: object }).errors)).toEqual([
+        'other_prices.0.price',
+      ]);
+    });
+
+    it('keeps a derived price in step with the base price when two saves cross', async () => {
+      await setRate('EUR', 0.92);
+      const { id = '' } = await create(screw, {
+        sku: 'CS-10',
+        moq: 1,
+        price: { amount: 10000, currency: 'USD' },
+      });
+      // One seller saves the form as it was opened, with only the minimum
+      // order changed. Between that save's reading and its write, another
+      // doubles the base price.
+      const { ctx } = context({
+        db: interceptBatches({
+          before: async (index) => {
+            if (index === 1) {
+              await update(screw, id, {
+                sku: 'CS-10',
+                moq: 1,
+                price: { amount: 20000, currency: 'USD' },
+              });
+            }
+          },
+        }),
+      });
+
+      await saveVariant(
+        record(screw, id, {
+          sku: 'CS-10',
+          moq: 5,
+          price: { amount: 10000, currency: 'USD' },
+        }),
+        ctx,
+      );
+
+      // The later write wins the base price. Whichever does, the euro price
+      // is the one derived from it: 10000 * 0.92 = 9200; * 1.03 = 9476; up
+      // to the next .99 = 9499. Not 18999, left over from the price that
+      // was overwritten.
+      expect(await priceOf(id, 'USD')).toMatchObject({ amount_minor: 10000 });
+      expect(await priceOf(id, 'EUR')).toEqual({
+        amount_minor: 9499,
+        source: 'auto',
+        rate_used: 0.92,
+      });
     });
 
     it('refuses a base price in another currency, and the base currency among the hand-entered ones', async () => {
@@ -563,7 +660,7 @@ describe('variants in the admin', () => {
           record(screw, null, { price: { amount: 100, currency: 'EUR' } }),
           ctx,
         ),
-      ).toEqual({ errors: { price: 'The base price is an amount in USD.' } });
+      ).toMatchObject({ errors: { price: expect.stringContaining('in USD') } });
       expect(
         await saveVariant(
           record(screw, null, {
@@ -608,6 +705,57 @@ describe('variants in the admin', () => {
         { delta: 500, reason: 'manual' },
         { delta: -80, reason: 'manual' },
         { delta: 30, reason: 'manual' },
+      ]);
+    });
+
+    it('leaves the stock alone when the field is empty, whatever has happened to it since', async () => {
+      const { id = '' } = await create(screw, {
+        sku: 'CS-10',
+        moq: 1,
+        stock: 500,
+      });
+      // Sixty are sold while the seller has the form open to change a lead
+      // time. The form never held the 500, so it cannot put them back.
+      const { ctx } = context({
+        db: interceptBatches({
+          before: async (index) => {
+            if (index === 1) {
+              await db()
+                .prepare('UPDATE p_shop_variant SET stock = 440 WHERE id = ?')
+                .bind(id)
+                .run();
+            }
+          },
+        }),
+      });
+
+      await saveVariant(
+        record(screw, id, {
+          sku: 'CS-10',
+          lead_time_min: 5,
+          lead_time_max: 10,
+        }),
+        ctx,
+      );
+
+      expect(await stockOf(id)).toBe(440);
+      expect(await ledger(id)).toEqual([{ delta: 500, reason: 'manual' }]);
+      expect(await variantRow(id)).toMatchObject({ lead_time_min: 5 });
+    });
+
+    it('starts a new variant with none when the field is empty, and can set a stock to none', async () => {
+      const { id = '' } = await create(screw, { sku: 'CS-10', moq: 1 });
+      expect(await stockOf(id)).toBe(0);
+      expect(await ledger(id)).toEqual([]);
+
+      await update(screw, id, { sku: 'CS-10', moq: 1, stock: 30 });
+      // Nought is a figure, not an empty field.
+      await update(screw, id, { sku: 'CS-10', moq: 1, stock: 0 });
+
+      expect(await stockOf(id)).toBe(0);
+      expect(await ledger(id)).toEqual([
+        { delta: 30, reason: 'manual' },
+        { delta: -30, reason: 'manual' },
       ]);
     });
 
@@ -801,6 +949,92 @@ describe('variants in the admin', () => {
     });
   });
 
+  describe('archiving a variant', () => {
+    it('takes it out of every cart, and leaves the other lines', async () => {
+      const { id = '' } = await create(screw, { sku: 'CS-10', moq: 1 });
+      const other = await create(screw, { sku: 'CS-16', moq: 1 });
+      await db().batch([
+        db().prepare(
+          `INSERT INTO p_shop_cart (id, created_at, updated_at, expires_at)
+           VALUES ('cart-1', 'now', 'now', '2999-01-01T00:00:00.000Z')`,
+        ),
+        db()
+          .prepare(
+            "INSERT INTO p_shop_cart_line (cart_id, variant_id, quantity) VALUES ('cart-1', ?, 1), ('cart-1', ?, 1)",
+          )
+          .bind(id, other.id ?? ''),
+      ]);
+
+      await update(screw, id, { sku: 'CS-10', moq: 1, status: 'archived' });
+
+      const left = await db()
+        .prepare('SELECT variant_id FROM p_shop_cart_line')
+        .all<{ variant_id: string }>();
+      expect(left.results.map((row) => row.variant_id)).toEqual([other.id]);
+      expect(await variantRow(id)).toMatchObject({ status: 'archived' });
+    });
+
+    it('leaves carts alone when a variant is saved active', async () => {
+      const { id = '' } = await create(screw, { sku: 'CS-10', moq: 1 });
+      await db().batch([
+        db().prepare(
+          `INSERT INTO p_shop_cart (id, created_at, updated_at, expires_at)
+           VALUES ('cart-1', 'now', 'now', '2999-01-01T00:00:00.000Z')`,
+        ),
+        db()
+          .prepare(
+            "INSERT INTO p_shop_cart_line (cart_id, variant_id, quantity) VALUES ('cart-1', ?, 1)",
+          )
+          .bind(id),
+      ]);
+
+      await update(screw, id, { sku: 'CS-10', moq: 2 });
+
+      const left = await db()
+        .prepare('SELECT COUNT(*) AS n FROM p_shop_cart_line')
+        .first<{ n: number }>();
+      expect(left?.n).toBe(1);
+    });
+  });
+
+  describe('what a purge answers', () => {
+    // Mallok's `purgeTags` resolves, rather than rejects, when a purge does
+    // not happen. A handler that only caught a rejection would never know.
+    async function logged(answer: unknown): Promise<string[]> {
+      const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+      try {
+        const { ctx, background } = context({
+          purgeTags: async () => answer,
+        });
+        const created = await saveVariant(
+          record(screw, null, { sku: `CS-${crypto.randomUUID()}` }),
+          ctx,
+        );
+        expect(created).toHaveProperty('id');
+        await Promise.all(background);
+        return log.mock.calls.map((call) => String(call[0]));
+      } finally {
+        log.mockRestore();
+      }
+    }
+
+    it('is noted when Cloudflare turned the purge down', async () => {
+      expect(
+        await logged({ attempted: true, ok: false, detail: '429' }),
+      ).toEqual(['{"event":"shop_purge_failed","reason":"refused"}']);
+    });
+
+    it('is not a failure on a site that has nothing to purge with', async () => {
+      // Every save on such a site would log one otherwise.
+      expect(await logged({ attempted: false, ok: false })).toEqual([]);
+    });
+
+    it('is taken at its word when it says the purge was done, or says nothing', async () => {
+      expect(await logged({ attempted: true, ok: true })).toEqual([]);
+      expect(await logged(undefined)).toEqual([]);
+    });
+  });
+
   describe('deleting a variant', () => {
     it('takes it, its prices and its place in every cart away, and purges its product', async () => {
       const { ctx, purged } = context();
@@ -891,10 +1125,14 @@ describe('variants in the admin', () => {
 
       expect(await variantRow(fresh.id ?? '')).toBeNull();
       expect(await prices(fresh.id ?? '')).toEqual([]);
+      // Kept, because an order names it — and nobody can open it any more,
+      // so it gives its SKU back for another product's variant to take.
       expect(await variantRow(sold.id ?? '')).toMatchObject({
         status: 'archived',
+        sku: `CS-16#${sold.id}`,
       });
       expect(await prices(sold.id ?? '')).toHaveLength(1);
+      expect((await create(bolt, { sku: 'CS-16', moq: 1 })).status).toBe(201);
       // Another product's variants are not this one's business.
       expect(await variantRow(other.id ?? '')).toMatchObject({
         status: 'active',

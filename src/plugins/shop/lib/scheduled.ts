@@ -13,7 +13,7 @@ import { BASE_CURRENCY, CURRENCIES } from './currency.js';
 import { fetchEcbRates, ratesFromBase } from './ecb.js';
 import { pricingRulesFromSettings } from './pricing.js';
 import { readRates, repriceChunk, storeRatesStatements } from './rates.js';
-import { productCacheTag } from './render-data.js';
+import { productCacheTag, purgeOutcome } from './render-data.js';
 import {
   clearStateStatement,
   readState,
@@ -42,7 +42,10 @@ export type TickOutcome =
       readonly updated: number;
       readonly skipped: number;
       readonly manual: number;
-      /** Products whose pages were purged because a price on them moved. */
+      /**
+       * Products whose pages were purged because a price on them moved: 0
+       * when there was nothing to purge with, or the purge did not happen.
+       */
       readonly purged: number;
       readonly done: boolean;
     }
@@ -100,8 +103,14 @@ export async function runScheduledTick(
     let purged = 0;
     if (result.changedProductGroups.length > 0 && ctx.purgeTags !== undefined) {
       try {
-        await ctx.purgeTags(result.changedProductGroups.map(productCacheTag));
-        purged = result.changedProductGroups.length;
+        // The answer is read, not assumed: Mallok resolves, rather than
+        // rejects, when a purge was not attempted or was turned down.
+        const answer = await ctx.purgeTags(
+          result.changedProductGroups.map(productCacheTag),
+        );
+        if (purgeOutcome(answer) === 'done') {
+          purged = result.changedProductGroups.length;
+        }
       } catch {
         purged = 0;
       }
