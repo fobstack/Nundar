@@ -46,7 +46,7 @@ security document describes each. Nundar implements none of them again.
 | Stripe keys and the webhook signing secret | Not stored yet | They will be plugin secrets, which Mallok encrypts. No code path reads them today. |
 | Cart contents | D1, keyed by an unguessable 128-bit id | Variant ids and quantities only — **never prices**. A test asserts the table has no price column. |
 | The cart cookie | `HttpOnly`, `SameSite=Lax`, `Secure` on HTTPS, scoped to `/_mallok/p/shop` | It identifies a cart and nothing else. It is not a session and grants nothing in the admin. |
-| Prices, stock, variants | D1 | Changed only through the admin or the plugin's own scheduled repricing. |
+| Prices, stock, variants | D1 | Changed only through the admin's variant form — which needs a signed-in administrator, or a token with `content:write` — or the plugin's own scheduled repricing. Every change of stock is a row in a ledger. |
 
 ## Design decisions that are security controls
 
@@ -65,20 +65,35 @@ These are deliberate and should not be "simplified" away:
   parameter rather than being spliced into the statement.
 - **The redirect after a cart change goes only to a path on the same site.**
   Another origin, a protocol-relative `//host` and a backslash trick all fall
-  back to the home page, so the cart cannot be used as an open redirect.
+  back to the cart page, so the cart cannot be used as an open redirect.
+- **A public page carries nothing of anyone's cart.** The form beside a size
+  and the header's link to the cart are the same for every visitor, so the
+  page stays in the shared cache. The cart cookie is sent only to the shop's
+  own routes, and the cart page is served `private, no-store` and `noindex`.
+- **A form posted from another site is refused** by Mallok before the shop
+  sees it, so a page elsewhere cannot fill or empty a visitor's cart.
+- **A page says whether a size can be had, never how many are left.** The
+  count is read to decide the state and goes no further. Only the cart page,
+  which is one visitor's own, says how many can be had — when it refuses a
+  quantity that is more than that.
 - **A cart cookie that is not a well-formed id is ignored**, and a fresh id is
   issued.
 - **Cart size is bounded**: at most 100 lines and 10,000 units per line, so one
   cart cannot be grown without limit.
-- **The cart route is rate limited** through Mallok's rate-limit binding.
+- **The cart's routes are rate limited** through Mallok's rate-limit bindings, each route with its own count per visitor, at the relaxed tier: a buyer changes a cart many times in ordinary use.
 - **Logs never contain personal data.** The scheduled work logs counts and a
   reference date.
-- **The theme runs two scripts in a visitor's browser, and says so.** Each is
-  a file of the site's own, declared in `theme.json` with its size. One is
+- **The theme runs three scripts in a visitor's browser, and says so.** Each
+  is a file of the site's own, declared in `theme.json` with its size. One is
   loaded on the home page and the catalogue to filter a table that is
-  already in the page; the other on an engineering reference page that asks
-  for it, to compute from numbers the visitor types. Neither sends anything
-  anywhere or stores anything. There is no inline
+  already in the page; one on an engineering reference page that asks for
+  it, to compute from numbers the visitor types; one on pages with prices in
+  more than one currency, to show another currency's amounts, which are
+  already in the page. None sends anything anywhere. The currency switch
+  keeps one thing, the code of the currency chosen, in the browser's own
+  storage — not in a cookie, which would be sent with every page — and works
+  without it where storage is blocked. The cart needs no script: adding,
+  changing and removing are plain forms. There is no inline
   script and no inline event handler. Tests fail if a template loads a
   script that is not declared, if a declared size is not the file's, or if
   any other page carries a script that is not structured data.
@@ -141,19 +156,28 @@ to be remembered when the routes are written:
 
 Stated plainly rather than left for an auditor to find:
 
-- **The rate limit is coarse.** Mallok's binding counts per Cloudflare location,
-  is eventually consistent, and gives every route of a plugin one shared budget
-  per address. It slows scripted abuse; it is not an exact quota. A determined
-  client can still create carts, and each costs D1 writes against the
-  account's daily allowance.
+- **The rate limit is coarse.** Cloudflare's binding counts per location and
+  is eventually consistent, by its own description. It slows scripted abuse;
+  it is not an exact quota. A determined client can still create carts, and
+  each costs D1 writes against the account's daily allowance; the cart page
+  costs D1 reads on every request, since it is never cached.
 - **The exchange-rate feed is a third-party dependency.** If the ECB serves
   wrong data, automatic prices recompute from it. The drift threshold and the
   buffer limit the blast radius, and a failed fetch keeps the previous
   snapshot, but no sanity band on the rate itself is enforced yet.
-- **Prices are not shown on cached pages yet**, so nothing can drift between a
-  page and the cart today. When they are, the page and its structured data
-  will be purged whenever a price or an availability state changes; until that
-  exists, do not show prices by another route.
+- **A cached page can show a price that has since changed.** A page carries
+  the price it was rendered with, and is purged when a variant is saved in
+  the admin or a repricing run moves a price. Where the purge does not reach
+  — a site without a purge token, a purge Cloudflare refuses, or the defect
+  Mallok has recorded in which a purge is reported and does not happen — the
+  page keeps the old price until its cache entry expires, an hour by default.
+  The cart never does: it prices every line from the database on every
+  request, so what a buyer is shown before ordering is the price they pay.
+  Whether purges evict on a deployed site has not been verified here.
+- **Setting stock in the admin overwrites it.** The form sets a figure. A
+  payment that lands between opening the form and saving it is lost from the
+  figure, though not from the ledger, which records the difference from the
+  stock as it was when the write landed.
 - **Sample content and sample variants are public test data.** Do not load
   `seed/shop-sample.sql` into a production database. The sample catalogue
   describes a supplier that does not exist: its certifications, test figures
