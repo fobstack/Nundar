@@ -8,6 +8,9 @@
   and the size alone. Its values arrive ready to print; the words around
   them are this theme's.
 
+  A price carries its amount in every currency the page offers, as
+  attributes, for the currency switch to put in its place.
+
   Called as {% render "partials/offer", sku: …, size: …, variant: … %}.
 {%- endcomment -%}
 <li class="offer">
@@ -15,7 +18,7 @@
   {% if variant %}
   {% assign state = "avail_" | append: variant.availability %}
   <dl class="offer-terms">
-    <div><dt>{{ t.unit_price }}</dt><dd>{% if variant.price != blank %}<span class="price">{{ variant.price }}</span>{% else %}{{ t.price_on_request }}{% endif %}</dd></div>
+    <div><dt>{{ t.unit_price }}</dt><dd>{% if variant.price != blank %}<span class="price"{% if plugins.shop.currencies.size > 1 %} data-price{% for price in variant.prices %} data-{{ price.currency | downcase }}="{{ price.display }}"{% endfor %}{% endif %}>{{ variant.price }}</span>{% else %}{{ t.price_on_request }}{% endif %}</dd></div>
     <div><dt>{{ t.moq }}</dt><dd>{{ variant.moq }}</dd></div>
     <div><dt>{{ t.availability }}</dt><dd><span class="avail avail-{{ variant.availability }}">{{ t[state] }}</span></dd></div>
     {% if variant.lead_time != blank %}<div><dt>{{ t.lead_time }}</dt><dd>{{ variant.lead_time }} {{ t.business_days }}</dd></div>{% endif %}

@@ -573,3 +573,64 @@ describe('the engagement calculator', () => {
     }
   });
 });
+
+interface CurrencySwitch {
+  KEY: string;
+  choose(wanted: unknown, offered: string[], own: string): string;
+  recall(storage: () => { getItem(key: string): string | null }): string | null;
+  remember(
+    storage: () => { setItem(key: string, value: string): void },
+    code: string,
+  ): void;
+}
+
+describe('the currency switch', () => {
+  const offered = ['usd', 'eur'];
+
+  it('shows the currency a visitor chose before, when this page has prices in it', async () => {
+    const { choose } = await load<CurrencySwitch>('currency.js');
+
+    assert.equal(choose('eur', offered, 'usd'), 'eur');
+    assert.equal(choose('usd', offered, 'eur'), 'usd');
+  });
+
+  it('shows the page’s own currency when nothing was chosen, or this page cannot show the choice', async () => {
+    const { choose } = await load<CurrencySwitch>('currency.js');
+
+    assert.equal(choose(null, offered, 'usd'), 'usd');
+    assert.equal(choose(undefined, offered, 'eur'), 'eur');
+    // Chosen on a page that offered pounds; this one does not.
+    assert.equal(choose('gbp', offered, 'eur'), 'eur');
+    // Whatever else storage may hold under the key.
+    assert.equal(choose('', offered, 'usd'), 'usd');
+    assert.equal(choose('EUR', offered, 'usd'), 'usd');
+    assert.equal(choose(42, offered, 'usd'), 'usd');
+  });
+
+  it('reads and keeps the choice under one key', async () => {
+    const { KEY, recall, remember } = await load<CurrencySwitch>('currency.js');
+    const kept = new Map<string, string>();
+    const storage = () => ({
+      getItem: (key: string) => kept.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        kept.set(key, value);
+      },
+    });
+
+    assert.equal(recall(storage), null);
+    remember(storage, 'eur');
+    assert.deepEqual([...kept], [[KEY, 'eur']]);
+    assert.equal(recall(storage), 'eur');
+  });
+
+  it('carries on when the browser refuses storage', async () => {
+    // With storage blocked, even reaching for it throws.
+    const { recall, remember } = await load<CurrencySwitch>('currency.js');
+    const blocked = (): never => {
+      throw new Error('The operation is insecure.');
+    };
+
+    assert.equal(recall(blocked), null);
+    assert.doesNotThrow(() => remember(blocked, 'eur'));
+  });
+});

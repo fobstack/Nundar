@@ -2,7 +2,7 @@
   "id": "nundar",
   "name": "Nundar",
   "description": "A commerce theme for a technical catalogue: a specification finder, product pages built around a size table, landing pages for the applications a part is used in, collections by type, case studies and reference pages. HTML first: every page is complete without a script, and the two it declares only add to what is already there — filters for a table, calculators beside the tables of an engineering reference.",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "themeApi": 1,
   "home": "layouts/home.liquid",
   "kinds": {
@@ -306,6 +306,11 @@
       "path": "assets/calculators.js",
       "purpose": "Engineering reference pages that ask for it only: three fastener calculators above a page that prints the same formulas, constants and tables of results.",
       "bytes": 9426
+    },
+    {
+      "path": "assets/currency.js",
+      "purpose": "Pages that show prices in more than one currency only: buttons that put each price's amount in another currency in its place, and keep the choice in this browser. The page is complete, in its language's own currency, without it.",
+      "bytes": 2980
     }
   ]
 }

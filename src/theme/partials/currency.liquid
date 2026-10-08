@@ -1,0 +1,18 @@
+{%- comment -%}
+  The currency switch. The prices on the page are in the page's own currency;
+  each also carries its amount in every other currency the page offers, and
+  `assets/currency.js` puts one of those in its place when a buyer asks.
+
+  It is in the page hidden: without the script there is nothing to press,
+  and the page is what it was rendered as. It is not in the page at all when
+  there is nothing to switch between — no prices, or one currency.
+
+  The buttons say the currencies' own codes, which are the same in every
+  language; the group's name is from the language pack. The layout that
+  renders this also loads the script.
+{%- endcomment -%}
+{% if plugins.shop.currencies.size > 1 %}
+<div class="currency" role="group" aria-label="{{ t.currency }}" data-currency="{{ plugins.shop.currency | downcase }}" hidden>
+  {% for code in plugins.shop.currencies %}<button type="button" value="{{ code | downcase }}" aria-pressed="{% if code == plugins.shop.currency %}true{% else %}false{% endif %}">{{ code }}</button>{% endfor %}
+</div>
+{% endif %}

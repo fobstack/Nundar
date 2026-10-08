@@ -44,6 +44,7 @@
     <button class="btn btn-outline btn-sm" type="reset">{{ t.filter_reset }}</button>
   </form>
 {% endif %}
+{% if plugins.shop.products %}{% render "partials/currency" %}{% endif %}
 <div class="finder-table-wrap">
   <table class="finder-table" role="table">
     <thead role="rowgroup">
@@ -63,7 +64,7 @@
             {% if item.cover != blank %}<span class="finder-thumb"><img src="{{ item.cover }}" alt="" width="104" height="80" loading="lazy" decoding="async"></span>{% endif %}
             <div class="finder-name">
               <a href="{{ item.path }}">{{ item.title }}</a>
-              {% if offer %}{% assign state = "avail_" | append: offer.availability %}<p class="finder-offer">{% if offer.price_from != blank %}<span class="price">{{ t.price_from }} {{ offer.price_from }}</span>{% endif %}<span class="avail avail-{{ offer.availability }}">{{ t[state] }}</span></p>{% endif %}
+              {% if offer %}{% assign state = "avail_" | append: offer.availability %}<p class="finder-offer">{% if offer.price_from != blank %}<span class="price">{{ t.price_from }} <span{% if plugins.shop.currencies.size > 1 %} data-price{% for price in offer.prices_from %} data-{{ price.currency | downcase }}="{{ price.display }}"{% endfor %}{% endif %}>{{ offer.price_from }}</span></span>{% endif %}<span class="avail avail-{{ offer.availability }}">{{ t[state] }}</span></p>{% endif %}
             </div>
           </div>
         </td>

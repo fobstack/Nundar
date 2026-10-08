@@ -99,10 +99,12 @@ describe('the currency a page is in', () => {
     expect(currenciesFor('en', priced).currencies).toEqual(['USD', 'GBP']);
   });
 
-  it('is the language’s own when nothing on the page is priced', () => {
+  it('is the language’s own when nothing on the page is priced, and no currency is offered', () => {
+    // Nothing to switch between: a switch that changed nothing would be a
+    // control that does nothing.
     expect(currenciesFor('es', [])).toEqual({
       currency: 'EUR',
-      currencies: ['USD', 'EUR', 'GBP'],
+      currencies: [],
     });
   });
 });

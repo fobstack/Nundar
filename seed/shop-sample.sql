@@ -13,8 +13,11 @@
 --
 --   npm run seed:local
 --
--- It is idempotent. Only the USD base prices are entered here. The EUR and GBP
--- prices are derived by the plugin once it has fetched exchange rates.
+-- It is idempotent. Each variant has three prices: a USD base price, and a
+-- EUR and a GBP price entered by hand, as a seller with a price list for each
+-- market enters them. A price entered by hand is `manual` and is never
+-- recomputed. Leave one out and the plugin derives it from the base price,
+-- once it has fetched exchange rates, and keeps it in step with them.
 
 INSERT OR IGNORE INTO p_shop_variant
   (id, product_group, sku, option_values, moq, lead_time_min, lead_time_max,
@@ -68,4 +71,22 @@ VALUES
   ('sample-ti-btn-m4-12', 'USD', 210, 'base', NULL, '2026-10-05T00:00:00.000Z'),
   ('sample-ti-csk-m6-16', 'USD', 260, 'base', NULL, '2026-10-05T00:00:00.000Z'),
   ('sample-ti-hex-m8-30', 'USD', 480, 'base', NULL, '2026-10-05T00:00:00.000Z'),
-  ('sample-ti-shl-m6-20', 'USD', 1250, 'base', NULL, '2026-10-05T00:00:00.000Z');
+  ('sample-ti-shl-m6-20', 'USD', 1250, 'base', NULL, '2026-10-05T00:00:00.000Z'),
+  ('sample-ti-shc-m5-10', 'EUR', 175, 'manual', NULL, '2026-10-05T00:00:00.000Z'),
+  ('sample-ti-shc-m5-10', 'GBP', 150, 'manual', NULL, '2026-10-05T00:00:00.000Z'),
+  ('sample-ti-shc-m5-16', 'EUR', 195, 'manual', NULL, '2026-10-05T00:00:00.000Z'),
+  ('sample-ti-shc-m5-16', 'GBP', 165, 'manual', NULL, '2026-10-05T00:00:00.000Z'),
+  ('sample-ti-shc-m5-20', 'EUR', 210, 'manual', NULL, '2026-10-05T00:00:00.000Z'),
+  ('sample-ti-shc-m5-20', 'GBP', 180, 'manual', NULL, '2026-10-05T00:00:00.000Z'),
+  ('sample-ti-shc-m5-25', 'EUR', 230, 'manual', NULL, '2026-10-05T00:00:00.000Z'),
+  ('sample-ti-shc-m5-25', 'GBP', 200, 'manual', NULL, '2026-10-05T00:00:00.000Z'),
+  ('sample-ti-btn-m3-10', 'EUR', 150, 'manual', NULL, '2026-10-05T00:00:00.000Z'),
+  ('sample-ti-btn-m3-10', 'GBP', 130, 'manual', NULL, '2026-10-05T00:00:00.000Z'),
+  ('sample-ti-btn-m4-12', 'EUR', 200, 'manual', NULL, '2026-10-05T00:00:00.000Z'),
+  ('sample-ti-btn-m4-12', 'GBP', 170, 'manual', NULL, '2026-10-05T00:00:00.000Z'),
+  ('sample-ti-csk-m6-16', 'EUR', 245, 'manual', NULL, '2026-10-05T00:00:00.000Z'),
+  ('sample-ti-csk-m6-16', 'GBP', 210, 'manual', NULL, '2026-10-05T00:00:00.000Z'),
+  ('sample-ti-hex-m8-30', 'EUR', 455, 'manual', NULL, '2026-10-05T00:00:00.000Z'),
+  ('sample-ti-hex-m8-30', 'GBP', 390, 'manual', NULL, '2026-10-05T00:00:00.000Z'),
+  ('sample-ti-shl-m6-20', 'EUR', 1185, 'manual', NULL, '2026-10-05T00:00:00.000Z'),
+  ('sample-ti-shl-m6-20', 'GBP', 1020, 'manual', NULL, '2026-10-05T00:00:00.000Z');

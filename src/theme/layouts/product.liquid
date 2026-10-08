@@ -54,7 +54,10 @@
       {% assign shop = plugins.shop %}
       {% if sizes != blank or shop.variants.size > 0 %}
       <section class="size-list">
-        <h2>{{ t.sizes }}</h2>
+        <div class="size-head">
+          <h2>{{ t.sizes }}</h2>
+          {% render "partials/currency" %}
+        </div>
         <ul class="offers">
           {% for pair in sizes %}
             {% assign own = nil %}
@@ -142,4 +145,8 @@
   </section>
   {% endif %}
 </article>
+{%- comment -%}
+  The currency switch, where there is more than one currency to show.
+{%- endcomment -%}
+{% if plugins.shop.currencies.size > 1 %}<script src="{{ theme.asset_base }}/currency.js" defer></script>{% endif %}
 {% endblock %}

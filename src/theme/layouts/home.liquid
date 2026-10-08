@@ -208,4 +208,5 @@
   here. It adds the filters above the finder and nothing else.
 {%- endcomment -%}
 {% if recent.product.size > 0 %}<script src="{{ theme.asset_base }}/finder.js" defer></script>{% endif %}
+{% if plugins.shop.currencies.size > 1 %}<script src="{{ theme.asset_base }}/currency.js" defer></script>{% endif %}
 {% endblock %}

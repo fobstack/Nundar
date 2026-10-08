@@ -22,4 +22,5 @@
   Filters for the table above, added by a script when there is a table.
 {%- endcomment -%}
 {% if list.items.size > 0 %}<script src="{{ theme.asset_base }}/finder.js" defer></script>{% endif %}
+{% if plugins.shop.currencies.size > 1 %}<script src="{{ theme.asset_base }}/currency.js" defer></script>{% endif %}
 {% endblock %}

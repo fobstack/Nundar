@@ -1787,6 +1787,73 @@ p {
   font-weight: 700;
 }
 
+.size-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+/* The currency switch: one button for each currency the page has prices in,
+   the one showing pressed. It is in the page hidden and shown by its script,
+   so the rule that lays it out must not also bring it back. */
+.currency {
+  display: inline-flex;
+  border: 1px solid var(--slate-300);
+  border-radius: var(--radius);
+  background: var(--white);
+  overflow: hidden;
+}
+
+.currency[hidden] {
+  display: none;
+}
+
+.currency button {
+  min-width: 2.75rem;
+  min-height: 2rem;
+  padding: 0.25rem 0.625rem;
+  border: 0;
+  border-left: 1px solid var(--slate-300);
+  background: transparent;
+  color: var(--slate-600);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.currency button:first-child {
+  border-left: 0;
+}
+
+.currency button:hover {
+  background: var(--slate-50);
+  color: var(--slate-900);
+}
+
+.currency button[aria-pressed="true"] {
+  background: var(--slate-900);
+  color: var(--white);
+}
+
+/* Inside a box that clips: the ring is drawn within the button. */
+.currency button:focus-visible {
+  outline-offset: -3px;
+}
+
+.currency button[aria-pressed="true"]:focus-visible {
+  outline-color: var(--accent-bright);
+}
+
+/* Above the finder's table, at the end of the line the filters start. */
+.finder > .currency,
+.currency + .finder-table-wrap {
+  margin-top: 0.75rem;
+}
+
 /* One row for each size on offer. A list and not a table: a row holds a
    name, up to four facts and — once there is a cart — a form, and no column
    layout carries those from a phone to the half of a wide screen this sits

@@ -31,6 +31,7 @@ import calculatorsLiquid from './partials/calculators.liquid';
 import cardLiquid from './partials/card.liquid';
 import closingLiquid from './partials/closing.liquid';
 import crumbsLiquid from './partials/crumbs.liquid';
+import currencyLiquid from './partials/currency.liquid';
 import footerLiquid from './partials/footer.liquid';
 import headerLiquid from './partials/header.liquid';
 import iconLiquid from './partials/icon.liquid';
@@ -58,6 +59,7 @@ export const nundarTheme = defineTheme(manifest, {
   'partials/calculators.liquid': calculatorsLiquid,
   'partials/closing.liquid': closingLiquid,
   'partials/crumbs.liquid': crumbsLiquid,
+  'partials/currency.liquid': currencyLiquid,
   'partials/icon.liquid': iconLiquid,
   'partials/offer.liquid': offerLiquid,
   'partials/spec-table.liquid': specTableLiquid,

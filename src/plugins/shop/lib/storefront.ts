@@ -122,14 +122,20 @@ function amountsByVariant(
  * page has a price in it. The language's own currency comes first when it is
  * among them — before the first exchange rates arrive it is not — and the
  * base currency otherwise. This is the rule `priceCart` settles an order by.
+ *
+ * A page with nothing priced offers no currency at all: there is nothing a
+ * switch could change.
  */
 export function currenciesFor(
   locale: string,
   priced: readonly Amounts[],
 ): { currency: Currency; currencies: Currency[] } {
-  const shared = CURRENCIES.filter((currency) =>
-    priced.every((amounts) => amounts.has(currency)),
-  );
+  const shared =
+    priced.length === 0
+      ? []
+      : CURRENCIES.filter((currency) =>
+          priced.every((amounts) => amounts.has(currency)),
+        );
   const preferred = defaultCurrencyForLocale(locale);
   const currency = shared.includes(preferred)
     ? preferred

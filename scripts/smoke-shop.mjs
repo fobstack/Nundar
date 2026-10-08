@@ -140,11 +140,25 @@ try {
       product.html,
     )?.[0] ?? '';
   expect(
-    offered.includes('<span class="price">$2.20</span>') &&
+    offered.includes('>$2.20</span>') &&
       offered.includes('<dd>100</dd>') &&
       offered.includes('<span class="avail avail-in_stock">In stock</span>') &&
       offered.includes('<dd>5–10 business days</dd>'),
     'the product page does not show the price, minimum order, availability and lead time of a size',
+  );
+  // The row's price also holds its amount in the sample's other currencies,
+  // and the page has the switch that shows them — hidden, with its script.
+  expect(
+    offered.includes(
+      '<span class="price" data-price data-usd="$2.20" data-eur="€2.10" data-gbp="£1.80">$2.20</span>',
+    ) &&
+      /<div class="currency"[^>]* data-currency="usd" hidden>/.test(
+        product.html,
+      ) &&
+      /<script src="\/theme\/[^"]+\/currency\.js" defer><\/script>/.test(
+        product.html,
+      ),
+    'the product page does not carry its prices in the other currencies, or the switch that shows them',
   );
   // The same prices, and no others, in the page's structured data.
   const structured = JSON.parse(
@@ -175,7 +189,7 @@ try {
         '<span class="avail avail-made_to_order">Made to order</span>',
       ) &&
       shoulder.html.includes('<dd>20–30 business days</dd>') &&
-      shoulder.html.includes('<span class="price">$12.50</span>'),
+      shoulder.html.includes('>$12.50</span>'),
     'the made-to-order part does not say it is made to order, at what price and how soon',
   );
   // The cards under the text are built from the references other pages
@@ -223,6 +237,19 @@ try {
       ) &&
       german.html.includes('5–10 Werktage'),
     'the German product page does not show its sizes’ terms in German',
+  );
+  // A German page is in euros, on the page and in what it tells a crawler.
+  const germanData = JSON.parse(
+    /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(
+      german.html,
+    )?.[1] ?? '{}',
+  );
+  expect(
+    />2,10\s€<\/span>/.test(german.html) &&
+      germanData.offers?.priceCurrency === 'EUR' &&
+      germanData.offers.lowPrice === '1.75' &&
+      germanData.offers.highPrice === '2.30',
+    `the German product page is not priced in euros: ${JSON.stringify(germanData.offers)}`,
   );
   expect(
     german.html.includes(
@@ -283,8 +310,9 @@ try {
   // Under each product's name, what it starts at and whether it can be had.
   expect(
     (finder?.match(/<p class="finder-offer">/g) ?? []).length === 6 &&
-      finder.includes('<span class="price">from $1.85</span>') &&
-      finder.includes('<span class="price">from $12.50</span>'),
+      finder.includes('>$1.85</span></span>') &&
+      finder.includes('>$12.50</span></span>') &&
+      finder.includes('<span class="price">from <span data-price '),
     'the home page’s finder does not show what each product starts at',
   );
 

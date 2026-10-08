@@ -1,5 +1,6 @@
 import { SELF } from 'cloudflare:test';
 import { beforeAll, describe, expect, it } from 'vitest';
+import manifest from '../../src/theme/theme.json';
 import {
   countD1Calls,
   createContent,
@@ -41,6 +42,30 @@ function between(html: string, start: string, end: string): string {
   const from = html.indexOf(start);
   const to = html.indexOf(end, from + start.length);
   return from === -1 ? '' : html.slice(from, to === -1 ? undefined : to);
+}
+
+/** The tag that loads the currency switch's script, at this version of the theme. */
+const SWITCH_SCRIPT = `<script src="/theme/${manifest.id}/${manifest.version}/currency.js" defer></script>`;
+
+/** The currency switch of a page: what it says, as plain facts. */
+function currencySwitches(html: string): {
+  readonly own: string;
+  readonly label: string;
+  readonly hidden: boolean;
+  readonly buttons: readonly (readonly [string, string, string])[];
+}[] {
+  return [
+    ...html.matchAll(/<div class="currency"([^>]*)>([\s\S]*?)<\/div>/g),
+  ].map(([, attributes = '', inside = '']) => ({
+    own: /data-currency="([^"]*)"/.exec(attributes)?.[1] ?? '',
+    label: /aria-label="([^"]*)"/.exec(attributes)?.[1] ?? '',
+    hidden: /\shidden$/.test(attributes),
+    buttons: [
+      ...inside.matchAll(
+        /<button type="button" value="([^"]*)" aria-pressed="([^"]*)">([^<]*)<\/button>/g,
+      ),
+    ].map(([, value = '', pressed = '', text = '']) => [value, pressed, text]),
+  }));
 }
 
 /** One row of a product page's sizes, as plain facts. */
@@ -504,6 +529,97 @@ describe('prices on the pages', () => {
 
       expect(cell).toMatch(/<a href="[^"]+">[^<]+<\/a>/);
       expect(html).toContain('<form class="finder-filters" hidden ');
+    });
+  });
+
+  describe('the currency switch', () => {
+    it('gives each price its amount in every currency the page offers', async () => {
+      const english = (await page(screw.path)).html;
+      const german = (await page(screwDe.path)).html;
+
+      // The amount showing is the page's own currency's; the others wait in
+      // attributes, formatted as this language writes them.
+      expect(english).toContain(
+        '<span class="price" data-price data-usd="$0.42" data-eur="€0.39">$0.42</span>',
+      );
+      expect(german.replace(/\u00a0/g, ' ')).toContain(
+        '<span class="price" data-price data-usd="0,42 $" data-eur="0,39 €">0,39 €</span>',
+      );
+    });
+
+    it('is in the page once, hidden, with the page’s own currency pressed', async () => {
+      expect(currencySwitches((await page(screw.path)).html)).toEqual([
+        {
+          own: 'usd',
+          label: 'Currency',
+          hidden: true,
+          buttons: [
+            ['usd', 'true', 'USD'],
+            ['eur', 'false', 'EUR'],
+          ],
+        },
+      ]);
+      expect(currencySwitches((await page(screwDe.path)).html)).toEqual([
+        {
+          own: 'eur',
+          label: 'Währung',
+          hidden: true,
+          buttons: [
+            ['usd', 'false', 'USD'],
+            ['eur', 'true', 'EUR'],
+          ],
+        },
+      ]);
+    });
+
+    it.each(['/products', '/'])(
+      'is above the finder on %s, whose starting prices it can change',
+      async (path) => {
+        const { html } = await page(path);
+
+        expect(currencySwitches(html)).toHaveLength(1);
+        expect(html).toContain(
+          '<span class="price">from <span data-price data-usd="$0.42" data-eur="€0.39">$0.42</span></span>',
+        );
+        expect(html).toContain(SWITCH_SCRIPT);
+      },
+    );
+
+    it('comes with its script, and only where there is a switch', async () => {
+      expect((await page(screw.path)).html).toContain(SWITCH_SCRIPT);
+
+      // Nothing priced, so nothing to switch: no control, no script.
+      for (const path of [washer.path, spacer.path, collection.path]) {
+        const { html } = await page(path);
+
+        expect(currencySwitches(html), path).toEqual([]);
+        expect(html, path).not.toContain('currency.js');
+        expect(html, path).not.toContain('data-price');
+      }
+    });
+
+    it('is absent from a page priced in one currency only', async () => {
+      const single = await createContent({
+        kind: 'product',
+        title: 'Dollar part',
+        slug: 'dollar-part',
+      });
+      await createVariant({
+        id: 'dp-1',
+        productGroup: single.translationGroup,
+        sku: 'DP-1',
+      });
+      await setPrice({
+        variantId: 'dp-1',
+        currency: 'USD',
+        amountMinor: 100,
+        source: 'base',
+      });
+      const { html } = await page(single.path);
+
+      expect(html).toContain('<span class="price">$1.00</span>');
+      expect(currencySwitches(html)).toEqual([]);
+      expect(html).not.toContain('currency.js');
     });
   });
 
