@@ -13,12 +13,20 @@ import {
 let valve: TestProduct;
 let draft: TestProduct;
 
-/** Posts the form a product page would post, optionally with a cart cookie. */
+const CART = '/_mallok/p/shop/cart';
+
+/**
+ * Posts the form a product page would post, optionally with a cart cookie.
+ * `locale` is the language of the page the form is on: it is part of the
+ * address the form posts to, after the plugin's id.
+ */
 function post(
   fields: Record<string, string>,
   cookie?: string,
+  locale?: string,
 ): Promise<Response> {
-  return SELF.fetch(`${ORIGIN}/_mallok/p/shop/cart`, {
+  const base = locale === undefined ? '' : `/${locale}`;
+  return SELF.fetch(`${ORIGIN}/_mallok/p/shop${base}/cart/update`, {
     method: 'POST',
     headers: {
       'content-type': 'application/x-www-form-urlencoded',
@@ -27,6 +35,25 @@ function post(
     body: new URLSearchParams(fields).toString(),
     redirect: 'manual',
   });
+}
+
+/**
+ * What a refused change is answered with: the cart page, saying what was
+ * refused. The reason is in the page as an attribute, so that these tests
+ * read the plugin's answer and not one language's words for it.
+ */
+async function refusal(
+  response: Response,
+): Promise<{ kind: string | undefined; text: string }> {
+  const html = await response.text();
+  const box =
+    /<div class="cart-problem"[^>]*data-problem="([^"]*)"[^>]*>([\s\S]*?)<\/div>/.exec(
+      html,
+    );
+  return {
+    kind: box?.[1],
+    text: (box?.[2] ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '),
+  };
 }
 
 /** The `name=value` pair of the cart cookie a response set, if any. */
@@ -52,7 +79,7 @@ async function cartCount(): Promise<number> {
   return row?.n ?? 0;
 }
 
-describe('POST /_mallok/p/shop/cart', () => {
+describe('POST /_mallok/p/shop/cart/update', () => {
   beforeAll(async () => {
     await ensureSite();
     valve = await createProduct({
@@ -76,7 +103,27 @@ describe('POST /_mallok/p/shop/cart', () => {
     });
   });
 
-  it('adds a line, sets a cart cookie and sends the buyer back', async () => {
+  it('adds a line, sets a cart cookie and sends the buyer to the cart', async () => {
+    const response = await post({ variant: 'dn50', quantity: '10' });
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get('location')).toBe(CART);
+    expect(cartCookie(response)).toMatch(/^nundar_cart=[0-9a-f]{32}$/);
+    expect(await lines()).toMatchObject([{ variant_id: 'dn50', quantity: 10 }]);
+  });
+
+  it('sends the buyer to the cart in the language of the page they came from', async () => {
+    const response = await post(
+      { variant: 'dn50', quantity: '10' },
+      undefined,
+      'de',
+    );
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get('location')).toBe('/_mallok/p/shop/de/cart');
+  });
+
+  it('sends the buyer back where the form says, when it says', async () => {
     const response = await post({
       variant: 'dn50',
       quantity: '10',
@@ -85,7 +132,6 @@ describe('POST /_mallok/p/shop/cart', () => {
 
     expect(response.status).toBe(303);
     expect(response.headers.get('location')).toBe('/products/route-ball-valve');
-    expect(await lines()).toMatchObject([{ variant_id: 'dn50', quantity: 10 }]);
   });
 
   it('scopes the cookie to the plugin’s path so public pages stay cacheable', async () => {
@@ -111,12 +157,11 @@ describe('POST /_mallok/p/shop/cart', () => {
     const response = await post({ variant: 'dn50', quantity: '9' });
 
     expect(response.status).toBe(422);
-    expect(await response.json()).toEqual({
-      error: 'below_moq',
-      variantId: 'dn50',
-      moq: 10,
-      requested: 9,
-    });
+    // Told on the cart page: the SKU that was asked for, and its minimum.
+    const { kind, text } = await refusal(response);
+    expect(kind).toBe('below_moq');
+    expect(text).toContain('SKU-dn50');
+    expect(text).toMatch(/\b10\b/);
     expect(await lines()).toEqual([]);
     // A refused request must not leave an empty cart behind either.
     expect(await cartCount()).toBe(0);
@@ -145,6 +190,7 @@ describe('POST /_mallok/p/shop/cart', () => {
       cookie,
     );
     expect(tooFew.status).toBe(422);
+    expect((await refusal(tooFew)).kind).toBe('below_moq');
     expect(await lines()).toMatchObject([{ quantity: 40 }]);
   });
 
@@ -170,11 +216,12 @@ describe('POST /_mallok/p/shop/cart', () => {
     const response = await post({ variant: 'dn50', quantity: '101' });
 
     expect(response.status).toBe(422);
-    expect(await response.json()).toMatchObject({
-      error: 'insufficient_stock',
-      available: 100,
-      requested: 101,
-    });
+    const { kind, text } = await refusal(response);
+    expect(kind).toBe('insufficient_stock');
+    // How many can be had: said to the one buyer asking, on a page that is
+    // theirs alone and never cached.
+    expect(text).toMatch(/\b100\b/);
+    expect(await lines()).toEqual([]);
   });
 
   it('counts what is already in the cart against the stock', async () => {
@@ -186,6 +233,7 @@ describe('POST /_mallok/p/shop/cart', () => {
     );
 
     expect(second.status).toBe(422);
+    expect((await refusal(second)).kind).toBe('insufficient_stock');
     expect(await lines()).toMatchObject([{ quantity: 60 }]);
   });
 
@@ -216,9 +264,10 @@ describe('POST /_mallok/p/shop/cart', () => {
     for (const variant of ['ghost', 'old', 'secret']) {
       const response = await post({ variant, quantity: '1' });
       expect(response.status).toBe(409);
-      expect(await response.json()).toMatchObject({ error: 'unavailable' });
+      expect((await refusal(response)).kind).toBe('unavailable');
     }
     expect(await lines()).toEqual([]);
+    expect(await cartCount()).toBe(0);
   });
 
   it('refuses an absurd quantity', async () => {
@@ -231,9 +280,38 @@ describe('POST /_mallok/p/shop/cart', () => {
     const response = await post({ variant: 'bulk', quantity: '10001' });
 
     expect(response.status).toBe(422);
-    expect(await response.json()).toMatchObject({
-      error: 'quantity_too_large',
-    });
+    const { kind, text } = await refusal(response);
+    expect(kind).toBe('quantity_too_large');
+    expect(text).toMatch(/\b10000\b/);
+  });
+
+  it('refuses one more kind of part than a cart may hold', async () => {
+    const first = await post({ variant: 'dn50', quantity: '10' });
+    const cookie = cartCookie(first);
+    const cartId = cookie?.split('=')[1] ?? '';
+    // A cart at its limit, filled directly: a hundred requests would say
+    // nothing more.
+    await db().batch(
+      Array.from({ length: 99 }, (_, index) =>
+        db()
+          .prepare(
+            'INSERT INTO p_shop_cart_line (cart_id, variant_id, quantity) VALUES (?, ?, 1)',
+          )
+          .bind(cartId, `filler-${index}`),
+      ),
+    );
+    await createVariant({ id: 'extra', productGroup: valve.translationGroup });
+
+    const response = await post({ variant: 'extra', quantity: '1' }, cookie);
+
+    expect(response.status).toBe(422);
+    expect((await refusal(response)).kind).toBe('cart_full');
+    // A part already in the cart can still be given another quantity.
+    const more = await post(
+      { action: 'set', variant: 'dn50', quantity: '20' },
+      cookie,
+    );
+    expect(more.status).toBe(303);
   });
 
   it('refuses malformed input', async () => {
@@ -242,7 +320,10 @@ describe('POST /_mallok/p/shop/cart', () => {
       { variant: 'dn50', quantity: '-5' },
       { variant: 'dn50', quantity: '1.5' },
       { variant: '', quantity: '10' },
+      { quantity: '10' },
       { action: 'steal', variant: 'dn50', quantity: '10' },
+      { action: 'currency', currency: 'JPY' },
+      { action: 'currency' },
     ]) {
       const response = await post(fields);
       expect(response.status).toBe(400);
@@ -251,12 +332,11 @@ describe('POST /_mallok/p/shop/cart', () => {
   });
 
   it('records the language and currency the buyer was browsing in', async () => {
-    await post({
-      variant: 'dn50',
-      quantity: '10',
-      locale: 'de',
-      currency: 'GBP',
-    });
+    await post(
+      { variant: 'dn50', quantity: '10', currency: 'GBP' },
+      undefined,
+      'de',
+    );
 
     const cart = await db()
       .prepare('SELECT locale, currency FROM p_shop_cart')
@@ -264,8 +344,8 @@ describe('POST /_mallok/p/shop/cart', () => {
     expect(cart).toEqual({ locale: 'de', currency: 'GBP' });
   });
 
-  it('defaults the currency from the language: USD for English, EUR otherwise', async () => {
-    await post({ variant: 'dn50', quantity: '10', locale: 'de' });
+  it('starts a cart in its language’s currency: USD for English, EUR otherwise', async () => {
+    await post({ variant: 'dn50', quantity: '10' }, undefined, 'de');
     const german = await db()
       .prepare('SELECT currency FROM p_shop_cart')
       .first<{ currency: string }>();
@@ -280,18 +360,80 @@ describe('POST /_mallok/p/shop/cart', () => {
     expect(english?.currency).toBe('USD');
   });
 
-  it('falls back to defaults for a language or currency it does not know', async () => {
-    await post({
-      variant: 'dn50',
-      quantity: '10',
-      locale: 'xx',
-      currency: 'JPY',
-    });
+  it('starts a cart in its language’s currency when the form names one it does not know', async () => {
+    await post({ variant: 'dn50', quantity: '10', currency: 'JPY' });
 
     const cart = await db()
       .prepare('SELECT locale, currency FROM p_shop_cart')
       .first<{ locale: string; currency: string }>();
     expect(cart).toEqual({ locale: 'en', currency: 'USD' });
+  });
+
+  it('keeps a cart’s currency when a later change names none', async () => {
+    const first = await post({
+      variant: 'dn50',
+      quantity: '10',
+      currency: 'GBP',
+    });
+
+    // The cart page's own forms name no currency: only what changes.
+    await post(
+      { action: 'set', variant: 'dn50', quantity: '20' },
+      cartCookie(first),
+      'de',
+    );
+
+    const cart = await db()
+      .prepare('SELECT currency FROM p_shop_cart')
+      .first<{ currency: string }>();
+    expect(cart?.currency).toBe('GBP');
+  });
+
+  it('changes the currency a cart is shown in', async () => {
+    const first = await post({ variant: 'dn50', quantity: '10' });
+
+    const response = await post(
+      { action: 'currency', currency: 'EUR' },
+      cartCookie(first),
+    );
+
+    expect(response.status).toBe(303);
+    expect(response.headers.get('location')).toBe(CART);
+    const cart = await db()
+      .prepare('SELECT currency FROM p_shop_cart')
+      .first<{ currency: string }>();
+    expect(cart?.currency).toBe('EUR');
+    expect(await lines()).toMatchObject([{ variant_id: 'dn50', quantity: 10 }]);
+  });
+
+  it('creates no cart for a visitor who only chooses a currency', async () => {
+    const response = await post({ action: 'currency', currency: 'EUR' });
+
+    expect(response.status).toBe(303);
+    expect(await cartCount()).toBe(0);
+    expect(response.headers.get('set-cookie')).toBeNull();
+  });
+
+  it('creates no cart for a cookie that names one which does not exist', async () => {
+    // A cart that expired, or an id made up: well formed, and nobody's.
+    const response = await post(
+      { action: 'currency', currency: 'EUR' },
+      'nundar_cart=0123456789abcdef0123456789abcdef',
+    );
+
+    expect(response.status).toBe(303);
+    expect(await cartCount()).toBe(0);
+  });
+
+  it('is not there under a language the site does not have', async () => {
+    const response = await post(
+      { variant: 'dn50', quantity: '10' },
+      undefined,
+      'xx',
+    );
+
+    expect(response.status).toBe(404);
+    expect(await cartCount()).toBe(0);
   });
 
   it('only ever redirects to a path on this site', async () => {
@@ -308,7 +450,7 @@ describe('POST /_mallok/p/shop/cart', () => {
         return: target,
       });
       expect(response.status).toBe(303);
-      expect(response.headers.get('location')).toBe('/');
+      expect(response.headers.get('location')).toBe(CART);
     }
   });
 

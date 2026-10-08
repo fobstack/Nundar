@@ -1,0 +1,99 @@
+{% layout "layouts/base" %}
+{%- comment -%}
+  The cart page. The route, what is in the cart and what each line costs are
+  the shop plugin's (`plugin_page`, described in the plugin's
+  `lib/cart-view.ts`); how it looks, and every word on it, are this theme's.
+
+  The page is one visitor's own: Mallok serves it uncached and unindexed.
+  Every control is a plain form posting to `plugin_page.action`, so the cart
+  works without a script, and the quantity fields carry the minimum order in
+  `min` and `step` — which the server checks again.
+{%- endcomment -%}
+{% block title %}{{ t.cart_title }} — {{ site.name }}{% endblock %}
+{% block content %}
+{% assign cart = plugin_page %}
+<section class="shell detail cart">
+  <header class="detail-head">
+    <h1 class="detail-title">{{ t.cart_title }}</h1>
+  </header>
+
+  {%- comment -%}
+    A change that was refused: said here, above the cart as it still is. The
+    reason is a kind the plugin names; the words for it are in the pack, and
+    the number it is about follows them.
+  {%- endcomment -%}
+  {% if cart.problem %}
+  {% assign reason = "problem_" | append: cart.problem.kind %}
+  <div class="cart-problem" role="alert" data-problem="{{ cart.problem.kind }}">
+    <p><strong>{{ t.cart_refused }}</strong>{% if cart.problem.sku != blank %} <span class="offer-sku">{{ cart.problem.sku }}</span>{% endif %}</p>
+    <p>{{ t[reason] }}{% if cart.problem.kind == "below_moq" %} {{ cart.problem.moq }}{% elsif cart.problem.kind == "insufficient_stock" %} {{ cart.problem.available }}{% elsif cart.problem.kind == "quantity_too_large" %} {{ cart.problem.max }}{% endif %}</p>
+  </div>
+  {% endif %}
+
+  {% if cart.empty %}
+  <p class="empty">{{ t.cart_empty }}</p>
+  {% if site.kinds.product %}<p class="cart-back"><a class="btn btn-outline" href="{{ site.kinds.product.path }}">{{ t.back_to_catalogue }}</a></p>{% endif %}
+  {% else %}
+  <ul class="cart-lines">
+    {% for line in cart.lines %}
+    <li class="cart-line">
+      <div class="cart-what">
+        {% if line.name != blank %}<p class="cart-name">{{ line.name }}</p>{% endif %}
+        {% if line.sku != blank %}<p class="offer-sku">{{ line.sku }}</p>{% endif %}
+        {%- comment -%}
+          What stands in the way of ordering this line as it is. A line whose
+          product is gone has no name left, and says only that.
+        {%- endcomment -%}
+        {% if line.problem != blank %}
+        {% assign reason = "problem_" | append: line.problem %}
+        <p class="cart-line-note" data-problem="{{ line.problem }}">{{ t[reason] }}{% if line.problem == "below_moq" %} {{ line.moq }}{% elsif line.problem == "insufficient_stock" %} {{ line.available }}{% endif %}</p>
+        {% endif %}
+      </div>
+      {% if line.unit_price != blank %}
+      <dl class="offer-terms cart-terms">
+        <div><dt>{{ t.unit_price }}</dt><dd><span class="price">{{ line.unit_price }}</span></dd></div>
+        <div><dt>{{ t.line_total }}</dt><dd><span class="price">{{ line.line_total }}</span></dd></div>
+      </dl>
+      {% endif %}
+      <div class="cart-controls">
+        {% if line.problem != "unavailable" %}
+        <form class="offer-buy" method="post" action="{{ cart.action }}">
+          <input type="hidden" name="action" value="set">
+          <input type="hidden" name="variant" value="{{ line.variant_id }}">
+          <label class="offer-qty"><span>{{ t.quantity }}</span><input type="number" name="quantity" min="{{ line.moq }}" step="{{ line.moq }}" value="{{ line.quantity }}" required inputmode="numeric"></label>
+          <button class="btn btn-outline btn-sm" type="submit">{{ t.update }}</button>
+        </form>
+        {% endif %}
+        <form method="post" action="{{ cart.action }}">
+          <input type="hidden" name="action" value="remove">
+          <input type="hidden" name="variant" value="{{ line.variant_id }}">
+          <button class="cart-remove" type="submit">{{ t.remove }}{% if line.sku != blank %}<span class="visually-hidden"> {{ line.sku }}</span>{% endif %}</button>
+        </form>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+
+  <div class="cart-foot">
+    {%- comment -%}
+      The currency, chosen here by a form: the page is rendered for this
+      visitor on every request, so the server can simply show another one.
+    {%- endcomment -%}
+    {% if cart.currencies.size > 1 %}
+    <form class="currency" method="post" action="{{ cart.action }}" role="group" aria-label="{{ t.currency }}">
+      <input type="hidden" name="action" value="currency">
+      {% for code in cart.currencies %}<button type="submit" name="currency" value="{{ code }}" aria-pressed="{% if code == cart.currency %}true{% else %}false{% endif %}">{{ code }}</button>{% endfor %}
+    </form>
+    {% endif %}
+    {% if cart.subtotal != blank %}<p class="cart-subtotal"><span>{{ t.subtotal }}</span> <span class="price">{{ cart.subtotal }}</span></p>{% endif %}
+    <p class="cart-note">{{ t.cart_note }}</p>
+    {% if theme.options.quote_href != blank or site.kinds.product %}
+    <div class="buy-actions">
+      {% if theme.options.quote_href != blank %}<a class="btn btn-solid" href="{{ theme.options.quote_href }}">{{ t.request_quote }}</a>{% endif %}
+      {% if site.kinds.product %}<a class="btn btn-outline" href="{{ site.kinds.product.path }}">{{ t.back_to_catalogue }}</a>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

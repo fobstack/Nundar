@@ -76,6 +76,12 @@
     for (const button of document.querySelectorAll('[data-currency] button')) {
       button.setAttribute('aria-pressed', String(button.value === code));
     }
+    // What goes in the cart goes in the currency the buyer was reading.
+    for (const field of document.querySelectorAll(
+      '.offer-buy input[name="currency"]',
+    )) {
+      field.value = code.toUpperCase();
+    }
   }
 
   const chosen = choose(recall(storage), offered, own);

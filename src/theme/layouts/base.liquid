@@ -19,7 +19,12 @@
   {%- comment -%}
     The pages of one list would otherwise all carry one title.
   {%- endcomment -%}
-  <title>{% if page.kind == "home" %}{{ site.name }}{% if site.tagline != "" %} — {{ site.tagline }}{% endif %}{% else %}{{ page.title }}{% if page.kind == "list" and list.page > 1 %}, {{ t.page }} {{ list.page }}{% endif %} — {{ site.name }}{% endif %}</title>
+  {%- comment -%}
+    A block, so that a layout whose page Mallok has no title for — a plugin's
+    page, which is titled with the site's name unless the plugin has words —
+    can say what it is in this theme's own.
+  {%- endcomment -%}
+  <title>{% block title %}{% if page.kind == "home" %}{{ site.name }}{% if site.tagline != "" %} — {{ site.tagline }}{% endif %}{% else %}{{ page.title }}{% if page.kind == "list" and list.page > 1 %}, {{ t.page }} {{ list.page }}{% endif %} — {{ site.name }}{% endif %}{% endblock %}</title>
   {% if summary != "" %}<meta name="description" content="{{ summary }}">{% endif %}
   <link rel="canonical" href="{{ page.canonical }}">
   <meta property="og:site_name" content="{{ site.name }}">

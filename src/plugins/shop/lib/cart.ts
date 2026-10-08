@@ -70,6 +70,43 @@ export function readCartStatement(
     .bind(cartId, now.toISOString());
 }
 
+/** The currency a cart was last shown in; no row for an unknown or expired cart. */
+export function readCartCurrencyStatement(
+  db: D1Database,
+  cartId: string,
+  now: Date,
+): D1PreparedStatement {
+  return db
+    .prepare('SELECT currency FROM p_shop_cart WHERE id = ? AND expires_at > ?')
+    .bind(cartId, now.toISOString());
+}
+
+/**
+ * Sets the currency a cart is shown in, and keeps the cart alive. A cart
+ * that does not exist is not created: there is nothing in it to show.
+ */
+export function setCartCurrencyStatement(
+  db: D1Database,
+  input: {
+    readonly cartId: string;
+    readonly currency: string;
+    readonly now: Date;
+  },
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `UPDATE p_shop_cart SET currency = ?, updated_at = ?, expires_at = ?
+       WHERE id = ? AND expires_at > ?`,
+    )
+    .bind(
+      input.currency,
+      input.now.toISOString(),
+      new Date(input.now.getTime() + CART_TTL_SECONDS * 1000).toISOString(),
+      input.cartId,
+      input.now.toISOString(),
+    );
+}
+
 /**
  * Builds the statements that set one line to an absolute quantity and keep
  * the cart alive. A quantity of zero removes the line.

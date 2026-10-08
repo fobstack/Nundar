@@ -13,7 +13,13 @@
  *   currencies    the currencies every priced variant has a price in
  *   price_from    the lowest unit price that can be ordered; '' when none
  *   prices_from   the same, once per currency
- *   variants[]    id, sku, label, moq, availability, lead_time, price, prices
+ *   variants[]    id, sku, label, moq, availability, lead_time, price, prices,
+ *                 orderable
+ *
+ * On every page, priced or not:
+ *
+ *   cart_path     the cart page, in the page's language
+ *   cart_action   where a form that changes the cart posts
  *
  * On a list or home page:
  *
@@ -73,6 +79,8 @@ export interface VariantView {
   readonly price: string;
   /** The unit price in every currency the page offers. */
   readonly prices: readonly DisplayPrice[];
+  /** Can go in the cart: it has a price and can be had. */
+  readonly orderable: boolean;
 }
 
 export interface ProductView {
@@ -276,15 +284,21 @@ export function productView(
     prices_from: pricesFrom,
     variants: variants.map((variant) => {
       const own = display(amounts.get(variant.id), currencies, locale);
+      const price =
+        own.find((entry) => entry.currency === currency)?.display ?? '';
+      const availability = availabilityOf(variant);
       return {
         id: variant.id,
         sku: variant.sku,
         label: labelOf(variant.option_values),
         moq: variant.moq,
-        availability: availabilityOf(variant),
+        availability,
         lead_time: leadTime(variant),
-        price: own.find((price) => price.currency === currency)?.display ?? '',
+        price,
         prices: own,
+        // A cart line without a price cannot be priced, and one that is out
+        // of stock would be refused: neither is offered a form.
+        orderable: price !== '' && availability !== 'out_of_stock',
       };
     }),
   };

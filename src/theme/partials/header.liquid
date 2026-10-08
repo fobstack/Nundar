@@ -36,6 +36,16 @@
       </details>
       {% endif %}
       {%- comment -%}
+        The cart, where there is a shop: the plugin says where its cart page
+        is, in this page's language, and a site without the plugin is told
+        nothing and shows no link. On the cart page itself the address comes
+        with the page. It is the same link for every visitor — what is in a
+        cart is never in a page the cache keeps.
+      {%- endcomment -%}
+      {% assign cart_path = plugins.shop.cart_path %}
+      {% if cart_path == blank %}{% assign cart_path = plugin_page.cart_path %}{% endif %}
+      {% if cart_path != blank %}<a class="cart-link" href="{{ cart_path }}"{% if plugin_page.cart_path != blank %} aria-current="page"{% endif %}>{% render "partials/icon", name: "cart" %}<span>{{ t.cart }}</span></a>{% endif %}
+      {%- comment -%}
         The short wording: this button shares one line with the whole
         navigation, in every language.
       {%- endcomment -%}

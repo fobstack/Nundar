@@ -457,7 +457,11 @@ p {
   display: flex;
   flex: 1;
   align-items: center;
-  gap: clamp(0.6875rem, 1.05vw, 1.125rem);
+  /* Tightest where the one-line bar begins, and opening out quickly from
+     there: at 80rem the sample's longest language — Spanish, by its button —
+     has about a dozen pixels to spare with the cart in the bar, and by 95rem
+     the links are as far apart as they get. */
+  gap: clamp(0.625rem, calc(0.625rem + (100vw - 80rem) * 0.035), 1.125rem);
   min-width: 0;
   font-size: 0.78125rem;
   font-weight: 500;
@@ -495,9 +499,48 @@ p {
   margin-left: 0;
 }
 
+/* The way to the cart, where there is a shop: in the group at the far end,
+   after the language switcher and before the call to action. It heads that
+   group on a page with no translations to switch between. On the one-line
+   bar it is its icon — the bar has no room for another word in German — and
+   its name is still what it is called when read aloud. */
+.menu-nav > .cart-link {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.menu-nav .langs + .cart-link,
+.menu-nav > .cart-link + .btn {
+  margin-left: 0;
+}
+
+.cart-link svg {
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+@media (min-width: 80rem) {
+  .menu-nav > .cart-link {
+    padding: 0.25rem;
+  }
+
+  .cart-link span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
 .menu-nav .btn {
   flex: none;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 0.75rem;
   font-size: 0.75rem;
 }
 
@@ -635,6 +678,11 @@ p {
 
   .menu-nav .langs {
     margin: 0.875rem 0 0;
+  }
+
+  /* In the open menu the cart is a row like the links above it. */
+  .menu-nav > .cart-link {
+    margin-left: 0;
   }
 
   /* The open menu is a column with room to spare. */
@@ -1925,6 +1973,45 @@ p {
   font-size: 0.8125rem;
 }
 
+/* The form that puts a size in the cart, or sets how many of it there are:
+   a quantity and a button, on one line where they fit. */
+.offer-buy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem 0.75rem;
+  margin: 0.75rem 0 0;
+}
+
+.offer-qty {
+  display: grid;
+  gap: 0.1875rem;
+}
+
+.offer-qty span {
+  color: var(--slate-500);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.offer-qty input {
+  width: 7rem;
+  min-height: 2.25rem;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--slate-500);
+  border-radius: var(--radius);
+  background: var(--white);
+  color: var(--slate-900);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+
+.offer-buy .btn {
+  min-height: 2.25rem;
+}
+
 /* An amount is never split from its currency sign. */
 .price {
   color: var(--slate-900);
@@ -2005,6 +2092,161 @@ p {
   color: var(--slate-600);
   font-size: 0.8125rem;
   font-weight: 600;
+}
+
+/* --------------------------------------------------------------- the cart */
+
+.cart {
+  max-width: 60rem;
+}
+
+/* A change the shop refused: what, and why, above the cart as it still is. */
+.cart-problem {
+  margin-bottom: 1.5rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid #fecaca;
+  border-left: 0.25rem solid #b91c1c;
+  border-radius: var(--radius-lg);
+  background: #fef2f2;
+  color: #7f1d1d;
+  font-size: 0.875rem;
+}
+
+.cart-problem p {
+  margin: 0;
+}
+
+.cart-problem p + p {
+  margin-top: 0.25rem;
+}
+
+.cart-problem .offer-sku {
+  color: inherit;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+
+.cart-back {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.cart-lines {
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-lg);
+  background: var(--white);
+  list-style: none;
+  overflow: hidden;
+}
+
+/* One line: what it is, what it costs, and the forms that change it. In a
+   row where there is room, one under the other on a phone. */
+.cart-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem 1.5rem;
+  padding: 1rem;
+  border-top: 1px solid var(--slate-100);
+}
+
+.cart-line:first-child {
+  border-top: 0;
+}
+
+@media (min-width: 48rem) {
+  .cart-line {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 4fr) minmax(0, 4fr);
+    align-items: start;
+  }
+}
+
+.cart-what p {
+  margin: 0;
+}
+
+.cart-name {
+  color: var(--slate-900);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.cart-what .offer-sku {
+  margin-top: 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.cart-what .cart-line-note {
+  margin-top: 0.5rem;
+  color: #b91c1c;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.cart-terms {
+  margin: 0;
+}
+
+.cart-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem 1rem;
+}
+
+.cart-controls form {
+  margin: 0;
+}
+
+.cart-remove {
+  min-height: 2.25rem;
+  padding: 0.375rem 0.25rem;
+  border: 0;
+  background: transparent;
+  color: var(--slate-600);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.cart-remove:hover {
+  color: #b91c1c;
+}
+
+.cart-foot {
+  display: grid;
+  justify-items: end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  text-align: right;
+}
+
+.cart-subtotal {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  margin: 0;
+  color: var(--slate-600);
+  font-size: 0.875rem;
+}
+
+.cart-subtotal .price {
+  font-size: 1.25rem;
+}
+
+.cart-note {
+  margin: 0;
+  color: var(--slate-500);
+  font-size: 0.8125rem;
+}
+
+.cart-foot .buy-actions {
+  justify-content: flex-end;
+  margin-top: 0.5rem;
 }
 
 .spec-card {

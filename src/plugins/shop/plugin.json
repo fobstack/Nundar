@@ -8,8 +8,17 @@
   "routes": [
     {
       "path": "cart",
+      "method": "GET",
+      "render": "page",
+      "layout": "shop/cart",
+      "rateLimit": "relaxed"
+    },
+    {
+      "path": "cart/update",
       "method": "POST",
-      "rateLimit": true
+      "render": "page",
+      "layout": "shop/cart",
+      "rateLimit": "relaxed"
     }
   ],
   "settings": {

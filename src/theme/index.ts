@@ -22,6 +22,7 @@ import listLiquid from './layouts/list.liquid';
 import pageLiquid from './layouts/page.liquid';
 import productLiquid from './layouts/product.liquid';
 import productsLiquid from './layouts/products.liquid';
+import shopCartLiquid from './layouts/shop-cart.liquid';
 import toolLiquid from './layouts/tool.liquid';
 import deJson from './locales/de.json';
 import enJson from './locales/en.json';
@@ -53,6 +54,7 @@ export const nundarTheme = defineTheme(manifest, {
   'layouts/faq-list.liquid': faqListLiquid,
   'layouts/tool.liquid': toolLiquid,
   'layouts/list.liquid': listLiquid,
+  'layouts/shop-cart.liquid': shopCartLiquid,
   'partials/header.liquid': headerLiquid,
   'partials/footer.liquid': footerLiquid,
   'partials/card.liquid': cardLiquid,

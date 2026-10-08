@@ -9,7 +9,8 @@
  *   3. load the sample variants from `seed/shop-sample.sql`;
  *   4. request every kind of page, follow the navigation in every language,
  *      and fetch the theme's own files;
- *   5. add to the cart through the same form POST a product page sends.
+ *   5. add to the cart with the form a product page offers, and read the
+ *      cart page it leads to.
  *
  * It exists because the unit tests, thorough as they are, run each piece in
  * isolation. This is the one place the theme, the plugin, the content and the
@@ -72,14 +73,41 @@ async function filesUnder(directory, prefix = '') {
   return found;
 }
 
-function addToCart(fields, cookie) {
-  return fetch(`${base}/_mallok/p/shop/cart`, {
+/**
+ * The form a page offers for one SKU, as a browser would submit it: where
+ * it posts, and the value of every field it carries.
+ */
+function offerForm(html, sku) {
+  const row = [...html.matchAll(/<li class="offer">([\s\S]*?)<\/li>/g)]
+    .map((match) => match[1])
+    .find((inside) => inside.includes(`<span class="offer-sku">${sku}</span>`));
+  const form = /<form\b[^>]*\baction="([^"]*)"[^>]*>([\s\S]*?)<\/form>/.exec(
+    row ?? '',
+  );
+  if (form === null) {
+    return null;
+  }
+  const fields = {};
+  for (const [, tag] of form[2].matchAll(/<input\b([^>]*)>/g)) {
+    const name = /\bname="([^"]*)"/.exec(tag)?.[1];
+    if (name !== undefined) {
+      fields[name] = /\bvalue="([^"]*)"/.exec(tag)?.[1] ?? '';
+    }
+  }
+  return { action: form[1], fields };
+}
+
+/** Submits a form the way a browser on this site does, without following. */
+function submit(form, change = {}, cookie) {
+  return fetch(`${base}${form.action}`, {
     method: 'POST',
     headers: {
       'content-type': 'application/x-www-form-urlencoded',
+      origin: base,
+      'sec-fetch-site': 'same-origin',
       ...(cookie === undefined ? {} : { cookie }),
     },
-    body: new URLSearchParams(fields).toString(),
+    body: new URLSearchParams({ ...form.fields, ...change }).toString(),
     redirect: 'manual',
     signal: timeout(),
   });
@@ -448,26 +476,117 @@ try {
     'the home page does not load the stylesheet of the theme version built',
   );
 
-  // 5. The cart, through the form POST a product page sends. The 20 mm
-  //    screw is sold in hundreds.
-  const refused = await addToCart({
-    variant: 'sample-ti-shc-m5-20',
-    quantity: '3',
-  });
+  // 5. The cart, the way a browser reaches it: the form the product page
+  //    offers for a size, posted as it stands, and the page the answer
+  //    sends the buyer to. The 20 mm screw is sold in hundreds.
+  const form = offerForm(product.html, 'TI-SHC-M5-20');
   expect(
-    refused.status === 422,
-    `a quantity below the MOQ returned ${refused.status}, not 422`,
+    form !== null &&
+      form.action === '/_mallok/p/shop/cart/update' &&
+      form.fields.variant === 'sample-ti-shc-m5-20' &&
+      form.fields.quantity === '100' &&
+      form.fields.currency === 'USD',
+    `the product page offers no usable form for its 20 mm size: ${JSON.stringify(form)}`,
+  );
+  expect(
+    /<input type="number" name="quantity" min="100" step="100" value="100"/.test(
+      product.html,
+    ),
+    'the quantity field does not start at the minimum order and step by it',
   );
 
-  const added = await addToCart({
-    variant: 'sample-ti-shc-m5-20',
-    quantity: '100',
-    return: capScrew,
-  });
-  expect(added.status === 303, `add to cart returned ${added.status}`);
+  // A request can skip the field: the server says no itself, on the cart
+  // page, and nothing is put in a cart.
+  const refused = await submit(form, { quantity: '3' });
+  const refusedPage = await refused.text();
   expect(
-    (added.headers.get('set-cookie') ?? '').includes('Path=/_mallok/p/shop'),
+    refused.status === 422 &&
+      refusedPage.includes('data-problem="below_moq"') &&
+      refusedPage.includes('The minimum order is 100'),
+    `a quantity below the minimum order returned ${refused.status} without saying why`,
+  );
+  expect(
+    refused.headers.get('set-cookie') === null,
+    'a refused request was given a cart',
+  );
+
+  const added = await submit(form);
+  expect(
+    added.status === 303 &&
+      added.headers.get('location') === '/_mallok/p/shop/cart',
+    `adding to the cart returned ${added.status} to ${added.headers.get('location')}`,
+  );
+  const cookieHeader = added.headers.get('set-cookie') ?? '';
+  expect(
+    cookieHeader.includes('Path=/_mallok/p/shop'),
     'the cart cookie is not scoped to the plugin path',
+  );
+  const cartCookie = cookieHeader.split(';')[0];
+
+  // The cart page: the site's own page, with the line priced now.
+  const cartPage = await fetch(`${base}/_mallok/p/shop/cart`, {
+    headers: { cookie: cartCookie },
+    signal: timeout(),
+  });
+  const cart = await cartPage.text();
+  expect(
+    cartPage.status === 200 &&
+      cart.includes('<h1 class="detail-title">Your cart</h1>') &&
+      cart.includes('<header class="topbar">') &&
+      cart.includes('<p class="offer-sku">TI-SHC-M5-20</p>') &&
+      cart.includes(
+        '<p class="cart-name">M5 × 0.8 Titanium Socket Head Cap Screw</p>',
+      ),
+    `the cart page does not show the part that was added (${cartPage.status})`,
+  );
+  expect(
+    />\$2\.20<\/span>/.test(cart) &&
+      /<p class="cart-subtotal">[\s\S]*?>\$220\.00<\/span>/.test(cart),
+    'the cart page does not price the line and state the sum',
+  );
+  expect(
+    cartPage.headers.get('cache-control') === 'private, no-store' &&
+      cartPage.headers.get('x-robots-tag') === 'noindex' &&
+      !/<script\b/.test(cart),
+    'the cart page is cached, indexable or carries a script',
+  );
+
+  // The same cart in German, in euros once the buyer chooses them.
+  const chosen = await fetch(`${base}/_mallok/p/shop/de/cart/update`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/x-www-form-urlencoded',
+      origin: base,
+      cookie: cartCookie,
+    },
+    body: 'action=currency&currency=EUR',
+    redirect: 'manual',
+    signal: timeout(),
+  });
+  expect(
+    chosen.status === 303 &&
+      chosen.headers.get('location') === '/_mallok/p/shop/de/cart',
+    `choosing a currency returned ${chosen.status}`,
+  );
+  const germanCart = await (
+    await fetch(`${base}/_mallok/p/shop/de/cart`, {
+      headers: { cookie: cartCookie },
+      signal: timeout(),
+    })
+  ).text();
+  expect(
+    germanCart.includes('<h1 class="detail-title">Ihr Warenkorb</h1>') &&
+      germanCart.includes(
+        '<p class="cart-name">Titan-Zylinderschraube mit Innensechskant M5 × 0,8</p>',
+      ) &&
+      />210,00\s€<\/span>/.test(germanCart),
+    'the German cart page does not show the same cart in German and in euros',
+  );
+
+  // The header's way to the cart is on a public page, the same for everyone.
+  expect(
+    /<a class="cart-link" href="\/_mallok\/p\/shop\/cart">/.test(home.html),
+    'the home page has no link to the cart',
   );
 
   const lines = await query(

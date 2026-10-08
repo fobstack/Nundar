@@ -5,7 +5,7 @@
 [![CI](https://github.com/fobstack/Nundar/actions/workflows/ci.yml/badge.svg)](https://github.com/fobstack/Nundar/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](LICENSE)
 
-> **Status: in development.** Nundar is being rebuilt on Mallok. The catalogue side works today. Prices on pages, the cart page and checkout are not there yet — see [What works today](#what-works-today). It is not ready to run a real shop.
+> **Status: in development.** Nundar is being rebuilt on Mallok. The catalogue side works today. Prices and a cart are on the pages; checkout is not there yet — see [What works today](#what-works-today). It is not ready to run a real shop.
 
 ---
 
@@ -59,7 +59,7 @@ Nundar builds on `mallok@0.1.0-rc.11`, the first release with the plugin API the
 | **Pages** | A home page with a specification finder; product pages with their sizes and SKUs, and for each size its price, minimum order, availability and lead time, read from the shop while the page is rendered and cached with it; the same offers in the page's `Product` structured data; a starting price under each product in the finder and the catalogue; collection, industry, case study, question, engineering reference and contact pages — all in English, German, French and Spanish, with `hreflang`, canonicals, sitemap and FAQ structured data; self-hosted fonts; prices in US dollars on English pages and in euros on the others, with a switch to any currency the shop prices in; no client JavaScript except three small scripts, each added to a page that is complete without it: filters for the finder, the currency switch, and calculators on the engineering reference page | Prices beside the products a collection page lists (Mallok does not yet tell a plugin which products a content page shows) |
 | **Catalogue data** | Variants, prices as integer minor units, stock, MOQ, lead time, a made-to-order policy | Editing them in the admin (read-only for now; the sample data is loaded from SQL) |
 | **Pricing** | USD base price; EUR and GBP derived from ECB rates with a buffer, rounding to a price point and a drift threshold; manual prices never overwritten | |
-| **Cart** | Add, set and remove through a plain form POST, with MOQ and stock enforced server-side | The cart page; submitting a cart as one inquiry |
+| **Cart** | A form beside each size on a product page, and a cart page in the site's own design and language: set a quantity, remove a line, choose a currency. No script anywhere in it. MOQ and stock are enforced by the server, which says what it refused on the cart page | Submitting a cart as one inquiry; checkout |
 | **Orders and payment** | The logic, tested and not yet reachable: orders with line snapshots, a payment that takes stock exactly once however often Stripe reports it, oversold orders, refunds that return stock, Stripe signature checks, order emails in four languages | The checkout and order pages, the webhook route, and order handling in the admin |
 
 The reasoning and the plan are in [`docs/superpowers/specs/2026-09-30-nundar-on-mallok-design.md`](docs/superpowers/specs/2026-09-30-nundar-on-mallok-design.md).
@@ -71,6 +71,7 @@ The reasoning and the plan are in [`docs/superpowers/specs/2026-09-30-nundar-on-
 - The structured data offers exactly the prices the page prints. A test compares the two digit for digit.
 - The cart stores variants and quantities only — never a price.
 - MOQ is enforced by the form *and* by the server, because a form can be bypassed.
+- A public page is the same for every visitor and stays in the cache: nothing about a cart is in it, and the cart's cookie is sent only to the shop's own routes.
 - Stock carries a database constraint, so a payment's decrement cannot go negative: a test proves the whole D1 batch rolls back.
 - Stock comes off when a payment is confirmed, never before, and once: tests deliver the same payment twice at the same moment.
 - A payment is believed only with Stripe's signature on the exact bytes received, and only for five minutes.

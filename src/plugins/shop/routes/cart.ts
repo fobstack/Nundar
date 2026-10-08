@@ -1,93 +1,236 @@
 /**
- * `POST /_mallok/p/shop/cart` — add a line, set its quantity, or remove it.
+ * The cart's two routes.
  *
- * A plain HTML form on a product page posts here, so adding to the cart needs
- * no client JavaScript. The quantity field's `min` and `step` enforce the
- * minimum order quantity in the browser; this handler enforces it again,
- * because a form can be bypassed.
+ * `GET /_mallok/p/shop/cart` is the cart page. The plugin supplies what is in
+ * the cart, priced now; the theme's `shop/cart` layout draws it, inside the
+ * site's own header and footer.
+ *
+ * `POST /_mallok/p/shop/cart/update` is where every form that changes the
+ * cart posts: the one on a product page that adds a size, and the cart page's
+ * own, which set a quantity, remove a line or choose a currency. So adding to
+ * the cart needs no client JavaScript. A change that goes through answers 303
+ * to the cart page. One that is refused — fewer than the minimum order, more
+ * than there is — answers with the cart page itself, saying what was refused,
+ * so that the buyer is told in the place they can put it right.
+ *
+ * A quantity field's `min` and `step` enforce the minimum order in the
+ * browser. This enforces it again, because a form can be bypassed.
+ *
+ * Either route is one visitor's own page: Mallok serves it uncached and
+ * unindexed, whatever is returned here.
  */
 
-import type { PluginRequestContext, RouteInput } from 'mallok/worker';
+import type {
+  PluginPageResult,
+  PluginRequestContext,
+  RouteInput,
+} from 'mallok/worker';
 import { z } from 'zod';
 import {
   isCartId,
   MAX_CART_LINES,
   MAX_LINE_QUANTITY,
   newCartId,
+  readCartCurrencyStatement,
   readCartStatement,
+  setCartCurrencyStatement,
   setLineStatements,
 } from '../lib/cart.js';
-import { quantityIssue, type VariantRow } from '../lib/cart-pricing.js';
+import {
+  quantityIssue,
+  readCartFacts,
+  type VariantRow,
+} from '../lib/cart-pricing.js';
+import { cartView } from '../lib/cart-view.js';
 import { cartCookieHeader, readCartCookie } from '../lib/cookie.js';
-import { defaultCurrencyForLocale, isCurrency } from '../lib/currency.js';
+import {
+  type Currency,
+  defaultCurrencyForLocale,
+  isCurrency,
+} from '../lib/currency.js';
+import { CART_ROUTE, CART_UPDATE_ROUTE, shopPath } from '../lib/paths.js';
 
-const cartSchema = z.object({
-  action: z.enum(['add', 'set', 'remove']).default('add'),
-  variant: z.string().min(1).max(100),
+const updateSchema = z.object({
+  action: z.enum(['add', 'set', 'remove', 'currency']).default('add'),
+  variant: z.string().max(100).default(''),
   quantity: z
     .string()
     .regex(/^\d{1,6}$/)
     .default('1'),
   currency: z.string().max(3).default(''),
-  locale: z.string().max(20).default(''),
   /** Where to send the buyer afterwards: a path on this site. */
-  return: z.string().max(500).default('/'),
+  return: z.string().max(500).default(''),
 });
 
 interface VariantLookup extends VariantRow {
   product_published: number;
 }
 
-function problem(
-  status: number,
-  body: Readonly<Record<string, unknown>>,
-): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'content-type': 'application/json; charset=utf-8' },
-  });
+/**
+ * What was refused, for the page to say. `kind` is the reason; the rest is
+ * what the reason is about. A theme has its own words for each kind.
+ */
+interface Refusal {
+  readonly kind:
+    | 'unavailable'
+    | 'below_moq'
+    | 'insufficient_stock'
+    | 'quantity_too_large'
+    | 'cart_full';
+  /** The SKU the buyer asked for; '' when the shop does not know it. */
+  readonly sku: string;
+  readonly requested: number;
+  readonly moq: number | null;
+  readonly available: number | null;
+  readonly max: number | null;
 }
 
 /**
  * Accepts only a path on this site. Anything else — another origin, a
- * protocol-relative `//host`, a backslash trick — falls back to the home page,
- * so the redirect cannot be used to send a buyer somewhere else.
+ * protocol-relative `//host`, a backslash trick — falls back, so the
+ * redirect cannot be used to send a buyer somewhere else.
  */
-function safeReturnPath(value: string, origin: string): string {
+function safeReturnPath(
+  value: string,
+  origin: string,
+  fallback: string,
+): string {
   if (
     !value.startsWith('/') ||
     value.startsWith('//') ||
     value.includes('\\')
   ) {
-    return '/';
+    return fallback;
   }
   try {
     const url = new URL(value, origin);
-    return url.origin === origin ? `${url.pathname}${url.search}` : '/';
+    return url.origin === origin ? `${url.pathname}${url.search}` : fallback;
   } catch {
-    return '/';
+    return fallback;
   }
 }
 
-export async function cart(
+function paths(ctx: PluginRequestContext): { cart: string; update: string } {
+  const { defaultLocale } = ctx.site;
+  return {
+    cart: shopPath(CART_ROUTE, ctx.locale, defaultLocale),
+    update: shopPath(CART_UPDATE_ROUTE, ctx.locale, defaultLocale),
+  };
+}
+
+/**
+ * The cart page for a cart id, as it stands now.
+ *
+ * Two round trips: the cart's lines and its currency, then everything those
+ * lines depend on. An unknown, expired or absent cart is an empty one.
+ */
+async function showCart(
+  ctx: PluginRequestContext,
+  cartId: string | null,
+  now: Date,
+  extra: {
+    readonly status?: number;
+    readonly refused?: Refusal;
+    readonly headers?: HeadersInit;
+  } = {},
+): Promise<PluginPageResult> {
+  const known = cartId !== null && isCartId(cartId) ? cartId : '';
+  const [linesResult, currencyResult] = await ctx.db.batch<
+    { variant_id: string; quantity: number } | { currency: string | null }
+  >([
+    readCartStatement(ctx.db, known, now),
+    readCartCurrencyStatement(ctx.db, known, now),
+  ]);
+  const lines = (
+    (linesResult?.results ?? []) as { variant_id: string; quantity: number }[]
+  ).map((row) => ({ variantId: row.variant_id, quantity: row.quantity }));
+  const chosen = (
+    (currencyResult?.results ?? []) as { currency: string | null }[]
+  )[0]?.currency;
+  const currency: Currency =
+    typeof chosen === 'string' && isCurrency(chosen)
+      ? chosen
+      : defaultCurrencyForLocale(ctx.locale);
+
+  const facts = await readCartFacts(ctx.db, {
+    lines,
+    locale: ctx.locale,
+    defaultLocale: ctx.site.defaultLocale,
+    currency,
+  });
+  const { cart, update } = paths(ctx);
+  return {
+    view: {
+      ...cartView(facts, ctx.locale),
+      action: update,
+      cart_path: cart,
+      problem: extra.refused ?? null,
+    },
+    ...(extra.status === undefined ? {} : { status: extra.status }),
+    ...(extra.headers === undefined ? {} : { headers: extra.headers }),
+  };
+}
+
+/** `GET cart`: the cart page. It reads and never writes. */
+export async function cartPage(
+  _input: RouteInput,
+  ctx: PluginRequestContext,
+): Promise<PluginPageResult> {
+  return showCart(ctx, readCartCookie(ctx.request), new Date());
+}
+
+/** `POST cart/update`: add a line, set its quantity, remove it, or choose a currency. */
+export async function cartUpdate(
   input: RouteInput,
   ctx: PluginRequestContext,
-): Promise<Response> {
-  const parsed = cartSchema.safeParse(input.fields);
+): Promise<Response | PluginPageResult> {
+  const parsed = updateSchema.safeParse(input.fields);
   if (!parsed.success) {
-    return problem(400, { error: 'invalid_request' });
+    // Not something a form on this site sends: no page to show for it.
+    return new Response('Bad request', { status: 400 });
   }
   const form = parsed.data;
   const now = new Date();
+  const { cart } = paths(ctx);
+  const existingCartId = readCartCookie(ctx.request);
+  const secure = ctx.url.protocol === 'https:';
 
-  const locale = ctx.site.locales.includes(form.locale)
-    ? form.locale
-    : ctx.site.defaultLocale;
+  const redirect = (cartId: string | null): Response => {
+    const headers = new Headers({
+      location: safeReturnPath(form.return, ctx.url.origin, cart),
+    });
+    if (cartId !== null) {
+      headers.set('set-cookie', cartCookieHeader(cartId, secure));
+    }
+    return new Response(null, { status: 303, headers });
+  };
+
+  if (form.action === 'currency') {
+    if (!isCurrency(form.currency)) {
+      return new Response('Bad request', { status: 400 });
+    }
+    // Nothing to do for a visitor without a cart: an empty cart has no
+    // prices to show in any currency, and is not created for the asking.
+    if (existingCartId !== null) {
+      await setCartCurrencyStatement(ctx.db, {
+        cartId: existingCartId,
+        currency: form.currency,
+        now,
+      }).run();
+    }
+    return redirect(existingCartId);
+  }
+
+  if (form.variant === '') {
+    return new Response('Bad request', { status: 400 });
+  }
+  // A form that names no currency leaves the cart's own as it is, and a new
+  // cart starts in its language's.
   const currency = isCurrency(form.currency)
     ? form.currency
-    : defaultCurrencyForLocale(locale);
-
-  const existingCartId = readCartCookie(ctx.request);
+    : existingCartId === null
+      ? defaultCurrencyForLocale(ctx.locale)
+      : null;
   const cartId = existingCartId ?? newCartId();
 
   // One batch: the variant, whether its product is published, and the cart
@@ -107,7 +250,7 @@ export async function cart(
          FROM p_shop_variant AS v WHERE v.id = ?`,
       )
       .bind(form.variant),
-    readCartStatement(ctx.db, isCartId(cartId) ? cartId : '', now),
+    readCartStatement(ctx.db, cartId, now),
   ]);
 
   const variant = (variantResult?.results ?? [])[0] as
@@ -128,26 +271,48 @@ export async function cart(
         ? requested
         : current + requested;
 
+  /** The cart as it is, unchanged, with what was refused. */
+  const refuse = (
+    status: number,
+    refused: Omit<Refusal, 'sku' | 'requested'>,
+  ): Promise<PluginPageResult> =>
+    showCart(ctx, existingCartId, now, {
+      status,
+      refused: { sku: variant?.sku ?? '', requested: target, ...refused },
+    });
+  const nothing = { moq: null, available: null, max: null };
+
   if (target > 0) {
     if (variant === undefined || variant.product_published !== 1) {
-      return problem(409, { error: 'unavailable', variant: form.variant });
+      return refuse(409, { kind: 'unavailable', ...nothing });
     }
     if (target > MAX_LINE_QUANTITY) {
-      return problem(422, {
-        error: 'quantity_too_large',
+      return refuse(422, {
+        kind: 'quantity_too_large',
+        ...nothing,
         max: MAX_LINE_QUANTITY,
       });
     }
     const issue = quantityIssue(variant, target);
     if (issue !== null) {
-      const { kind, ...detail } = issue;
-      return problem(kind === 'unavailable' ? 409 : 422, {
-        error: kind,
-        ...detail,
-      });
+      if (issue.kind === 'below_moq') {
+        return refuse(422, { kind: 'below_moq', ...nothing, moq: issue.moq });
+      }
+      if (issue.kind === 'insufficient_stock') {
+        return refuse(422, {
+          kind: 'insufficient_stock',
+          ...nothing,
+          available: issue.available,
+        });
+      }
+      return refuse(409, { kind: 'unavailable', ...nothing });
     }
     if (current === 0 && lines.length >= MAX_CART_LINES) {
-      return problem(422, { error: 'cart_full', max: MAX_CART_LINES });
+      return refuse(422, {
+        kind: 'cart_full',
+        ...nothing,
+        max: MAX_CART_LINES,
+      });
     }
   }
 
@@ -160,20 +325,11 @@ export async function cart(
         variantId: form.variant,
         quantity: target,
         currency,
-        locale,
+        locale: ctx.locale,
         now,
       }),
     );
   }
 
-  const headers = new Headers({
-    location: safeReturnPath(form.return, ctx.url.origin),
-  });
-  if (target > 0 || existingCartId !== null) {
-    headers.set(
-      'set-cookie',
-      cartCookieHeader(cartId, ctx.url.protocol === 'https:'),
-    );
-  }
-  return new Response(null, { status: 303, headers });
+  return redirect(target > 0 || existingCartId !== null ? cartId : null);
 }

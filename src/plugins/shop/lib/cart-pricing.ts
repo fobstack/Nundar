@@ -8,7 +8,7 @@
  */
 
 import type { CartLine } from './cart.js';
-import { BASE_CURRENCY, type Currency } from './currency.js';
+import { BASE_CURRENCY, CURRENCIES, type Currency } from './currency.js';
 import { sumMinor } from './money.js';
 
 export interface PricedLine {
@@ -101,7 +101,39 @@ export function quantityIssue(
   return null;
 }
 
-export async function priceCart(
+/** One line of a cart, with everything current the database says of it. */
+export interface CartLineFacts {
+  readonly variantId: string;
+  readonly quantity: number;
+  /** Empty when the variant is gone. */
+  readonly sku: string;
+  /** The product's name in the buyer's language; null when it cannot be bought. */
+  readonly name: string | null;
+  /** 1 when the variant is gone: nothing can be ordered of it anyway. */
+  readonly moq: number;
+  /** The unit price in the currency the cart settles in; null when there is none. */
+  readonly unitPriceMinor: number | null;
+  /** Why this line cannot be ordered as it stands; null when it can. */
+  readonly issue: CartIssue | null;
+}
+
+export interface CartFacts {
+  /** The one currency every amount is in. */
+  readonly currency: Currency;
+  /** The currencies every line has a price in: what the cart could settle in. */
+  readonly currencies: readonly Currency[];
+  readonly lines: readonly CartLineFacts[];
+}
+
+/**
+ * Reads everything a cart's lines depend on, in one round trip, and judges
+ * each line: is it there, can that many be ordered, what does one cost.
+ *
+ * Nothing here is taken from the client but the variant ids and quantities.
+ * `priceCart` turns the result into an order's lines or its list of
+ * problems; the cart page shows it line by line, problems included.
+ */
+export async function readCartFacts(
   db: D1Database,
   input: {
     readonly lines: readonly CartLine[];
@@ -109,10 +141,10 @@ export async function priceCart(
     readonly defaultLocale: string;
     readonly currency: Currency;
   },
-): Promise<PricedCart> {
+): Promise<CartFacts> {
   const { lines, locale, defaultLocale, currency } = input;
   if (lines.length === 0) {
-    return { ok: false, issues: [{ kind: 'empty' }] };
+    return { currency, currencies: [], lines: [] };
   }
 
   const ids = JSON.stringify(lines.map((line) => line.variantId));
@@ -131,10 +163,9 @@ export async function priceCart(
     db
       .prepare(
         `SELECT variant_id, currency, amount_minor FROM p_shop_price
-         WHERE variant_id IN (SELECT value FROM json_each(?))
-           AND currency IN (?, ?)`,
+         WHERE variant_id IN (SELECT value FROM json_each(?))`,
       )
-      .bind(ids, currency, BASE_CURRENCY),
+      .bind(ids),
     // Only a published product can be bought. The name comes from the buyer's
     // language, falling back to the site's default language.
     db
@@ -179,51 +210,72 @@ export async function priceCart(
   // requested currency, every line falls back to the base currency: two
   // currencies inside one order produce a meaningless total, and charging a
   // dollar amount in euros is never acceptable.
-  const settleCurrency: Currency = lines.every(
-    (line) => priceOf(line.variantId, currency) !== null,
-  )
+  const shared = CURRENCIES.filter((candidate) =>
+    lines.every((line) => priceOf(line.variantId, candidate) !== null),
+  );
+  const settleCurrency: Currency = shared.includes(currency)
     ? currency
     : BASE_CURRENCY;
 
-  const issues: CartIssue[] = [];
-  const priced: PricedLine[] = [];
+  return {
+    currency: settleCurrency,
+    currencies: shared,
+    lines: lines.map((line) => {
+      const variant = variants.get(line.variantId);
+      const name = variant === undefined ? null : nameOf(variant.product_group);
+      const unitPriceMinor = priceOf(line.variantId, settleCurrency);
+      const issue: CartIssue | null =
+        variant === undefined || name === null
+          ? { kind: 'unavailable', variantId: line.variantId }
+          : (quantityIssue(variant, line.quantity) ??
+            (unitPriceMinor === null
+              ? { kind: 'no_price', variantId: line.variantId }
+              : null));
+      return {
+        variantId: line.variantId,
+        quantity: line.quantity,
+        sku: variant?.sku ?? '',
+        name,
+        moq: variant?.moq ?? 1,
+        unitPriceMinor,
+        issue,
+      };
+    }),
+  };
+}
 
-  for (const line of lines) {
-    const variant = variants.get(line.variantId);
-    const name = variant === undefined ? null : nameOf(variant.product_group);
-    if (variant === undefined || name === null) {
-      issues.push({ kind: 'unavailable', variantId: line.variantId });
-      continue;
-    }
-
-    const issue = quantityIssue(variant, line.quantity);
-    if (issue !== null) {
-      issues.push(issue);
-      continue;
-    }
-
-    const unitPriceMinor = priceOf(line.variantId, settleCurrency);
-    if (unitPriceMinor === null) {
-      issues.push({ kind: 'no_price', variantId: line.variantId });
-      continue;
-    }
-
-    priced.push({
-      variantId: line.variantId,
-      sku: variant.sku,
-      name,
-      quantity: line.quantity,
-      unitPriceMinor,
-      lineTotalMinor: unitPriceMinor * line.quantity,
-    });
+export async function priceCart(
+  db: D1Database,
+  input: {
+    readonly lines: readonly CartLine[];
+    readonly locale: string;
+    readonly defaultLocale: string;
+    readonly currency: Currency;
+  },
+): Promise<PricedCart> {
+  if (input.lines.length === 0) {
+    return { ok: false, issues: [{ kind: 'empty' }] };
   }
+  const facts = await readCartFacts(db, input);
 
+  const issues = facts.lines.flatMap((line) =>
+    line.issue === null ? [] : [line.issue],
+  );
   if (issues.length > 0) {
     return { ok: false, issues };
   }
+  const priced: PricedLine[] = facts.lines.map((line) => ({
+    variantId: line.variantId,
+    sku: line.sku,
+    // Both are present: a line without either carries an issue.
+    name: line.name ?? '',
+    quantity: line.quantity,
+    unitPriceMinor: line.unitPriceMinor ?? 0,
+    lineTotalMinor: (line.unitPriceMinor ?? 0) * line.quantity,
+  }));
   return {
     ok: true,
-    currency: settleCurrency,
+    currency: facts.currency,
     lines: priced,
     subtotalMinor: sumMinor(priced.map((line) => line.lineTotalMinor)),
   };

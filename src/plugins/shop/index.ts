@@ -15,7 +15,7 @@ import { runScheduledTick } from './lib/scheduled.js';
 import shopSql from './migrations/0001_shop.sql';
 import ordersSql from './migrations/0002_orders.sql';
 import manifest from './plugin.json';
-import { cart } from './routes/cart.js';
+import { cartPage, cartUpdate } from './routes/cart.js';
 
 async function scheduled(ctx: PluginContext): Promise<void> {
   const outcome = await runScheduledTick(ctx);
@@ -33,5 +33,5 @@ export const shop = definePlugin({
     { id: 'plugin:shop:0002_orders', sql: ordersSql },
   ],
   hooks: { scheduled, renderData },
-  routes: { cart },
+  routes: { cart: cartPage, 'cart/update': cartUpdate },
 });

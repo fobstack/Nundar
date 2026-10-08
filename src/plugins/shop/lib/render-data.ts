@@ -11,6 +11,7 @@
  */
 
 import type { PluginRenderDataContext } from 'mallok/worker';
+import { CART_ROUTE, CART_UPDATE_ROUTE, shopPath } from './paths.js';
 import {
   listView,
   offersFor,
@@ -73,12 +74,30 @@ async function readShop(
   };
 }
 
+/**
+ * Where the cart is, in the page's language: on every page, priced or not,
+ * so that a theme can link to it from its header and post a form to it. It
+ * costs no query. A theme that finds no `plugins.shop` knows the shop is off.
+ */
+function cartAddresses(ctx: PluginRenderDataContext): {
+  cart_path: string;
+  cart_action: string;
+} {
+  const { defaultLocale } = ctx.site;
+  return {
+    cart_path: shopPath(CART_ROUTE, ctx.locale, defaultLocale),
+    cart_action: shopPath(CART_UPDATE_ROUTE, ctx.locale, defaultLocale),
+  };
+}
+
 export async function renderData(
   ctx: PluginRenderDataContext,
 ): Promise<Readonly<Record<string, unknown>> | undefined> {
+  const cart = cartAddresses(ctx);
+
   if (ctx.content !== null) {
     if (ctx.content.kind !== PRODUCT_KIND) {
-      return undefined;
+      return cart;
     }
     const group = ctx.content.translationGroup;
     const { variants, prices } = await readShop(ctx.db, [group]);
@@ -87,10 +106,11 @@ export async function renderData(
     const cacheTags = [productCacheTag(group)];
     const view = productView(variants, prices, ctx.locale);
     if (view === undefined) {
-      return { cacheTags };
+      return { ...cart, cacheTags };
     }
     const offers = offersFor(variants, prices, ctx.locale);
     return {
+      ...cart,
       ...view,
       cacheTags,
       ...(offers === undefined ? {} : { structuredData: { offers } }),
@@ -99,11 +119,13 @@ export async function renderData(
 
   const products = ctx.items.filter((item) => item.kind === PRODUCT_KIND);
   if (products.length === 0) {
-    return undefined;
+    return cart;
   }
   const groups = [...new Set(products.map((item) => item.translationGroup))];
   const { variants, prices } = await readShop(ctx.db, groups);
   const cacheTags = groups.map(productCacheTag);
   const view = listView(products, variants, prices, ctx.locale);
-  return view === undefined ? { cacheTags } : { ...view, cacheTags };
+  return view === undefined
+    ? { ...cart, cacheTags }
+    : { ...cart, ...view, cacheTags };
 }
