@@ -125,6 +125,12 @@
   "page": "página",
   "prev": "Anterior",
   "next": "Siguiente",
+  "inquiry_name": "Su nombre",
+  "inquiry_email": "Correo electrónico",
+  "inquiry_company": "Empresa",
+  "inquiry_phone": "Teléfono / WhatsApp",
+  "inquiry_message": "Su mensaje",
+  "inquiry_submit": "Enviar consulta",
   "not_found_title": "Página no encontrada",
   "not_found_body": "La página solicitada no está aquí. Puede que se haya movido o que el enlace sea incorrecto."
 }

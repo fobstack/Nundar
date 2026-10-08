@@ -256,13 +256,24 @@ try {
   }
 
   // The form is the inquiry plugin's, put where the page wrote `[[inquiry]]`.
-  for (const path of ['/contact', '/fr/contact']) {
+  // Its English is the plugin's own; the French comes from the theme's pack.
+  const french = JSON.parse(
+    await readFile('src/theme/locales/fr.json', 'utf8'),
+  );
+  for (const [path, submit] of [
+    ['/contact', 'Send inquiry'],
+    ['/fr/contact', french.inquiry_submit],
+  ]) {
     const contact = await page(path);
     expect(
       contact.status === 200 &&
         contact.html.includes('<form class="mallok-inquiry"') &&
         !contact.html.includes('[[inquiry]]'),
       `${path} does not carry the inquiry form`,
+    );
+    expect(
+      contact.html.includes(`<button type="submit">${submit}</button>`),
+      `${path} does not label the inquiry form in its language`,
     );
   }
 
