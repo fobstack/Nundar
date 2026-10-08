@@ -145,7 +145,7 @@ The sample is a supplier of titanium fasteners that does not exist. Its products
 
 ## Deploying
 
-Not yet. A deployed shop today would show a catalogue with no prices and no cart page. When Nundar is ready, deployment is Mallok's own: `npx mallok create . --slug <slug>`, which creates the Worker, the D1 database and the R2 bucket on your own Cloudflare account. That path has not been run for this repository.
+Not yet. A deployed shop today would show a catalogue with prices and a cart that leads nowhere: there is no checkout, and a cart cannot be sent as an inquiry. Nothing here has been measured on a real Cloudflare account either. When Nundar is ready, deployment is Mallok's own: `npx mallok create . --slug <slug>`, which creates the Worker, the D1 database and the R2 bucket on your own Cloudflare account. That path has not been run for this repository.
 
 ## Languages and currencies
 

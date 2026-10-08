@@ -64,8 +64,18 @@ These are deliberate and should not be "simplified" away:
 - **Every SQL statement is parameterised.** Lists of ids travel as one JSON
   parameter rather than being spliced into the statement.
 - **The redirect after a cart change goes only to a path on the same site.**
-  Another origin, a protocol-relative `//host` and a backslash trick all fall
-  back to the cart page, so the cart cannot be used as an open redirect.
+  It is judged by the path as a browser will read it, not by the text that
+  was sent: another origin, a protocol-relative `//host`, a backslash, and a
+  path that only becomes `//host` once its dot segments are resolved all
+  fall back to the cart page, so the cart cannot be used as an open redirect.
+- **What a refused change shows comes from the database, not from the
+  address.** The buyer is sent to the cart page with the reason and the
+  variant in the address; the page looks the figures up. A link somebody made
+  up can choose among the shop's own sentences and put no words of its own
+  on the page.
+- **Only what a visitor can see can be bought.** A product that is a draft,
+  or published for a later date, cannot be put in a cart by knowing its
+  variant's id.
 - **A public page carries nothing of anyone's cart.** The form beside a size
   and the header's link to the cart are the same for every visitor, so the
   page stays in the shared cache. The cart cookie is sent only to the shop's
@@ -76,8 +86,10 @@ These are deliberate and should not be "simplified" away:
   count is read to decide the state and goes no further. Only the cart page,
   which is one visitor's own, says how many can be had — when it refuses a
   quantity that is more than that.
-- **A cart cookie that is not a well-formed id is ignored**, and a fresh id is
-  issued.
+- **A cart cookie that is not a well-formed id is ignored**, and so is one
+  that names no live cart: a fresh id is issued. The id is the only thing
+  that protects a cart, so the shop never takes up one a visitor chose, and
+  an expired cart's lines do not come back with the next thing added.
 - **Cart size is bounded**: at most 100 lines and 10,000 units per line, so one
   cart cannot be grown without limit.
 - **The cart's routes are rate limited** through Mallok's rate-limit bindings, each route with its own count per visitor, at the relaxed tier: a buyer changes a cart many times in ordinary use.
@@ -174,10 +186,11 @@ Stated plainly rather than left for an auditor to find:
   The cart never does: it prices every line from the database on every
   request, so what a buyer is shown before ordering is the price they pay.
   Whether purges evict on a deployed site has not been verified here.
-- **Setting stock in the admin overwrites it.** The form sets a figure. A
-  payment that lands between opening the form and saving it is lost from the
-  figure, though not from the ledger, which records the difference from the
-  stock as it was when the write landed.
+- **Setting stock in the admin overwrites it.** When a seller types a figure,
+  a payment that lands between opening the form and saving it is lost from
+  the figure, though not from the ledger, which records the difference from
+  the stock as it was when the write landed. A save that names no figure
+  writes no stock: the field comes to the form empty for that reason.
 - **Sample content and sample variants are public test data.** Do not load
   `seed/shop-sample.sql` into a production database. The sample catalogue
   describes a supplier that does not exist: its certifications, test figures

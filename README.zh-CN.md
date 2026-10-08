@@ -144,7 +144,7 @@ npm run seed:local
 
 ## 部署
 
-暂时不要部署。现在部署出来的商城只有目录，没有价格，也没有购物车页。等 Nundar 就绪后，部署走 Mallok 自己的流程：`npx mallok create . --slug <slug>`，它会在你自己的 Cloudflare 账号上创建 Worker、D1 数据库和 R2 存储桶。这条路径还没有在本仓库上跑过。
+暂时不要部署。现在部署出来的商城有带价格的目录和购物车，但购物车没有下一步：还不能结账，也不能把购物车作为询盘提交；并且这里的一切都还没有在真实的 Cloudflare 账号上实测过。等 Nundar 就绪后，部署走 Mallok 自己的流程：`npx mallok create . --slug <slug>`，它会在你自己的 Cloudflare 账号上创建 Worker、D1 数据库和 R2 存储桶。这条路径还没有在本仓库上跑过。
 
 ## 语言和币种
 
