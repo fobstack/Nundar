@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repository is
 
-Nundar is a **shop plugin and a commerce theme for Mallok**, packaged as a Mallok site. It is not a standalone application: Mallok (the `mallok` npm package, pinned to an exact version, currently `0.1.0-rc.9`) provides routing, rendering, content, languages, hreflang, the sitemap, the admin, sign-in, media, email and the edge cache. Nundar adds only commerce.
+Nundar is a **shop plugin and a commerce theme for Mallok**, packaged as a Mallok site. It is not a standalone application: Mallok (the `mallok` npm package, pinned to an exact version, currently `0.1.0-rc.11`) provides routing, rendering, content, languages, hreflang, the sitemap, the admin, sign-in, media, email and the edge cache. Nundar adds only commerce.
 
 `docs/superpowers/specs/2026-09-30-nundar-on-mallok-design.md` is the source of truth for the architecture, with the owner's decisions in its §11. The commerce rules in `docs/superpowers/specs/2026-09-03-nundar-design.md` (§4–§7) still hold; its stack and architecture are superseded. The previous standalone Next.js implementation is at the tag `nextjs-final` — read it for reference, never restore it.
 
-Nundar is in development. Several features wait for extension points Mallok does not have yet (design §7). **Do not work around a missing Mallok capability** — no writing into Mallok's core tables, no `onRequest` hook to intercept pages, no client-side fetching of prices. The Mallok-side work is done by the owner in the Mallok repository; do not edit that repository from a session here.
+Nundar is in development. `mallok@0.1.0-rc.11` carries plugin API 2 — the extension points of design §7 — and several features are not built on them yet (the list is below). **Do not work around a missing Mallok capability** — no writing into Mallok's core tables, no `onRequest` hook to intercept pages, no client-side fetching of prices. A defect or a gap met in Mallok is written up for the owner, who does the Mallok-side work in the Mallok repository; do not edit that repository from a session here.
 
 ## Commands
 
@@ -72,15 +72,21 @@ Mallok decides the contracts on both sides. Its documentation is the reference: 
 - Each language of a bundle is its own content item with its own `slug` (`index.md`, `index.<locale>.md`); Mallok puts them in one `translation_group`. A bundle carries a `mallok.json` only when something outside the content must name it: each product's fixes the `translation_group` that `seed/shop-sample.sql` attaches its variants to. `test/content.test.ts` checks the reference rule, keeps every identity file in step with its bundle, and holds the seed's variants to the SKUs the product pages list.
 - The default language (English) is unprefixed; others are `/<locale>/…`. English pages default to USD, the rest to EUR (`lib/currency.ts`), never by IP.
 
-### Known limits of mallok 0.1.0-rc.9 that shape the code
+### What is not built on plugin API 2 yet
 
-- No render-time hook with database access, so prices and variants are not on pages yet.
-- Plugin routes cannot render through the theme, so there is no cart page yet.
-- Plugin admin panels are read-only tables; variants are seeded from `seed/shop-sample.sql`.
-- Plugin routes receive a parsed body, so a Stripe signature cannot be checked in one: there is no webhook route, and so no checkout.
-- `reference[]` fields are not resolved, so a product names one collection.
+`mallok@0.1.0-rc.11` allows each of these; the code here does not use it yet.
 
-Each is a task in Mallok's plan for plugin API 2. When Mallok ships one, upgrade, remove the corresponding limitation here, and prove the new behaviour with a test or the smoke run.
+- No `renderData` hook, so prices and variants are not on pages.
+- No page route and no `pluginLayouts` in the theme, so there is no cart page.
+- The variants panel is a read-only table; variants are seeded from `seed/shop-sample.sql`.
+- No raw-body route, so no Stripe webhook, and so no checkout.
+- The sample's products name one collection each, though `reference[]` is resolved now.
+
+When one is built, take it off this list and prove the behaviour with a test or the smoke run.
+
+### Known limits of mallok 0.1.0-rc.11 that shape the code
+
+- Switching a plugin on or off, or changing a setting, can leave cached pages as they were — and the admin's "Clear cached pages" can report success without clearing anything. So the plugins are switched on before the first publish (`scripts/lib/local-shop.mjs`, the README), and `test/shop/helpers.ts` deletes the cached home page by hand after changing settings. Keep both until a Mallok release says the purge can be trusted.
 
 ## Testing
 

@@ -42,13 +42,21 @@ describe('wrangler.jsonc', () => {
     );
     assert.equal((config.assets as { binding: string }).binding, 'ASSETS');
 
-    // Optional to the Worker, but its absence silently disables the rate
-    // limit on plugin routes such as inquiry submission.
+    // Optional to the Worker, but without the first nothing limits a plugin
+    // route such as inquiry submission, and without the second a route that
+    // asks for the relaxed tier is held to the strict one.
     const limits = config.ratelimits as
       | { name: string; namespace_id: string }[]
       | undefined;
-    assert.equal(limits?.[0]?.name, 'RATE_LIMITER');
-    assert.match(limits?.[0]?.namespace_id ?? '', /^\d+$/);
+    assert.deepEqual(
+      limits?.map((limit) => limit.name),
+      ['RATE_LIMITER', 'RATE_LIMITER_RELAXED'],
+    );
+    for (const limit of limits ?? []) {
+      assert.match(limit.namespace_id, /^\d+$/);
+    }
+    // Two tiers sharing a namespace would count against one limiter.
+    assert.notEqual(limits?.[0]?.namespace_id, limits?.[1]?.namespace_id);
   });
 
   it('keeps the cron trigger scheduling and cleanup need', async () => {

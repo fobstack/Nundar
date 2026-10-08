@@ -52,9 +52,9 @@ Everything runs on Cloudflare Workers with D1 and R2. Local development needs no
 
 ## What works today
 
-Nundar builds on `mallok@0.1.0-rc.9`. Some of the shop needs extension points Mallok does not have yet; those parts wait for them rather than being worked around.
+Nundar builds on `mallok@0.1.0-rc.11`, the first release with the plugin API the rest of the shop needs. The right-hand column is what has not been built on it yet.
 
-| | Works today | Waits for Mallok's next plugin API |
+| | Works today | Not built yet |
 |---|---|---|
 | **Pages** | A home page with a specification finder; product pages with their sizes and SKUs; collection, industry, case study, question, engineering reference and contact pages — all in English, German, French and Spanish, with `hreflang`, canonicals, sitemap and FAQ structured data; self-hosted fonts; no client JavaScript except two small scripts, each added to a page that is complete without it: filters for the finder, and calculators on the engineering reference page | Prices, variants and availability on the page; `Offer` structured data |
 | **Catalogue data** | Variants, prices as integer minor units, stock, MOQ, lead time, a made-to-order policy | Editing them in the admin (read-only for now; the sample data is loaded from SQL) |

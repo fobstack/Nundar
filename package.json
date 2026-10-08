@@ -28,7 +28,7 @@
     "smoke:shop": "node scripts/smoke-shop.mjs"
   },
   "dependencies": {
-    "mallok": "0.1.0-rc.9",
+    "mallok": "0.1.0-rc.11",
     "zod": "4.4.3"
   },
   "devDependencies": {
