@@ -13,6 +13,7 @@ import { BASE_CURRENCY, CURRENCIES } from './currency.js';
 import { fetchEcbRates, ratesFromBase } from './ecb.js';
 import { pricingRulesFromSettings } from './pricing.js';
 import { readRates, repriceChunk, storeRatesStatements } from './rates.js';
+import { productCacheTag } from './render-data.js';
 import {
   clearStateStatement,
   readState,
@@ -41,6 +42,8 @@ export type TickOutcome =
       readonly updated: number;
       readonly skipped: number;
       readonly manual: number;
+      /** Products whose pages were purged because a price on them moved. */
+      readonly purged: number;
       readonly done: boolean;
     }
   | {
@@ -64,6 +67,8 @@ export async function runScheduledTick(
   ctx: {
     readonly db: D1Database;
     readonly settings: Readonly<Record<string, unknown>>;
+    /** Purges the shop's own cache tags; absent where there is no cache. */
+    readonly purgeTags?: (tags: readonly string[]) => Promise<unknown>;
   },
   deps: {
     readonly fetch?: typeof fetch;
@@ -87,11 +92,26 @@ export async function runScheduledTick(
       ? clearStateStatement(db, STATE_KEYS.repriceCursor)
       : setStateStatement(db, STATE_KEYS.repriceCursor, result.nextCursor, now)
     ).run();
+    // The pages of the products whose prices just moved say the old price.
+    // One purge for the chunk — a chunk is fifty variants, and a purge call
+    // carries a hundred tags. The prices are written and the run has moved
+    // on either way: a purge that fails leaves those pages to expire, and
+    // repeating the chunk would find nothing left to change.
+    let purged = 0;
+    if (result.changedProductGroups.length > 0 && ctx.purgeTags !== undefined) {
+      try {
+        await ctx.purgeTags(result.changedProductGroups.map(productCacheTag));
+        purged = result.changedProductGroups.length;
+      } catch {
+        purged = 0;
+      }
+    }
     return {
       kind: 'repriced',
       updated: result.updated,
       skipped: result.skipped,
       manual: result.manual,
+      purged,
       done: result.nextCursor === null,
     };
   }

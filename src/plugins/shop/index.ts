@@ -9,9 +9,19 @@
  * in it — that is the theme's side of the boundary.
  */
 
-import { definePlugin, type PluginContext } from 'mallok/worker';
+import {
+  type ContentDeleteRef,
+  definePlugin,
+  type PluginContext,
+} from 'mallok/worker';
 import { renderData } from './lib/render-data.js';
 import { runScheduledTick } from './lib/scheduled.js';
+import {
+  loadVariant,
+  onProductDeleted,
+  removeVariant,
+  saveVariant,
+} from './lib/variant-records.js';
 import shopSql from './migrations/0001_shop.sql';
 import ordersSql from './migrations/0002_orders.sql';
 import manifest from './plugin.json';
@@ -32,6 +42,18 @@ export const shop = definePlugin({
     { id: 'plugin:shop:0001_shop', sql: shopSql },
     { id: 'plugin:shop:0002_orders', sql: ordersSql },
   ],
-  hooks: { scheduled, renderData },
+  hooks: {
+    scheduled,
+    renderData,
+    onContentDelete: (ref: ContentDeleteRef, ctx: PluginContext) =>
+      onProductDeleted(ref, ctx),
+  },
+  records: {
+    variants: {
+      load: loadVariant,
+      save: (record, ctx) => saveVariant(record, ctx),
+      remove: (id, ctx) => removeVariant(id, ctx),
+    },
+  },
   routes: { cart: cartPage, 'cart/update': cartUpdate },
 });

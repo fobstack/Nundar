@@ -3,6 +3,7 @@ import { readRates } from '../../src/plugins/shop/lib/rates.js';
 import { runScheduledTick } from '../../src/plugins/shop/lib/scheduled.js';
 import {
   clearShopTables,
+  createVariant,
   db,
   ensureSite,
   priceOf,
@@ -39,9 +40,17 @@ function minutesAfter(minutes: number): () => Date {
   return () => new Date(T0.getTime() + minutes * 60_000);
 }
 
-function tick(fetchImpl: typeof fetch, now: () => Date) {
+function tick(
+  fetchImpl: typeof fetch,
+  now: () => Date,
+  purgeTags?: (tags: readonly string[]) => Promise<unknown>,
+) {
   return runScheduledTick(
-    { db: db(), settings: {} },
+    {
+      db: db(),
+      settings: {},
+      ...(purgeTags === undefined ? {} : { purgeTags }),
+    },
     { fetch: fetchImpl, now },
   );
 }
@@ -95,6 +104,144 @@ describe('the scheduled tick', () => {
     expect(await priceOf('v1', 'GBP')).toMatchObject({ amount_minor: 7599 });
 
     expect(ecb.calls()).toBe(1);
+  });
+
+  describe('the pages a repricing run leaves out of date', () => {
+    /** Two products with a variant each, and one variant priced by hand. */
+    async function catalogue(): Promise<void> {
+      for (const [id, group] of [
+        ['a1', 'group-a'],
+        ['a2', 'group-a'],
+        ['b1', 'group-b'],
+        ['c1', 'group-c'],
+      ] as const) {
+        await createVariant({ id, productGroup: group });
+        await setPrice({
+          variantId: id,
+          currency: 'USD',
+          amountMinor: 9900,
+          source: 'base',
+        });
+      }
+      // Every other currency of this one is the seller's own figure.
+      for (const currency of ['EUR', 'GBP']) {
+        await setPrice({
+          variantId: 'c1',
+          currency,
+          amountMinor: 8000,
+          source: 'manual',
+        });
+      }
+    }
+
+    it('are purged by product, in one call for the whole chunk', async () => {
+      await catalogue();
+      const ecb = feed(ecbXml('2026-09-30', 1.1622, 0.85898));
+      const purges: string[][] = [];
+      const purge = async (tags: readonly string[]) => {
+        purges.push([...tags]);
+      };
+
+      await tick(ecb.impl, minutesAfter(0), purge);
+      // Storing rates moves no price: nothing to purge yet.
+      expect(purges).toEqual([]);
+
+      const repriced = await tick(ecb.impl, minutesAfter(1), purge);
+
+      expect(repriced).toMatchObject({ kind: 'repriced', purged: 2 });
+      // Each product once, however many of its variants moved; and not the
+      // product whose prices were entered by hand and did not move.
+      expect(purges.map((tags) => [...tags].sort())).toEqual([
+        ['group-a', 'group-b'],
+      ]);
+    });
+
+    it('are left alone when no price moved', async () => {
+      await catalogue();
+      const purges: string[][] = [];
+      const purge = async (tags: readonly string[]) => {
+        purges.push([...tags]);
+      };
+      await tick(
+        feed(ecbXml('2026-09-30', 1.1622, 0.85898)).impl,
+        minutesAfter(0),
+        purge,
+      );
+      await tick(feed().impl, minutesAfter(1), purge);
+      purges.length = 0;
+
+      // A day later the rate has barely moved: inside the threshold.
+      await tick(
+        feed(ecbXml('2026-10-01', 1.163, 0.859)).impl,
+        minutesAfter(24 * 60),
+        purge,
+      );
+      const second = await tick(feed().impl, minutesAfter(24 * 60 + 1), purge);
+
+      expect(second).toMatchObject({ kind: 'repriced', updated: 0, purged: 0 });
+      expect(purges).toEqual([]);
+    });
+
+    it('do not stop the run when the purge fails', async () => {
+      await catalogue();
+      const ecb = feed(ecbXml('2026-09-30', 1.1622, 0.85898));
+      const failing = async () => {
+        throw new Error('The purge service is down.');
+      };
+      await tick(ecb.impl, minutesAfter(0), failing);
+
+      const repriced = await tick(ecb.impl, minutesAfter(1), failing);
+
+      // The prices are written and the run is over; the pages expire.
+      expect(repriced).toMatchObject({
+        kind: 'repriced',
+        updated: 6,
+        purged: 0,
+        done: true,
+      });
+      expect(await priceOf('a1', 'EUR')).toMatchObject({ source: 'auto' });
+      // The run is over: the next tick goes on to something else.
+      expect((await tick(feed().impl, minutesAfter(2), failing)).kind).not.toBe(
+        'repriced',
+      );
+    });
+
+    it('are not asked for where there is nothing to purge with', async () => {
+      await catalogue();
+      const ecb = feed(ecbXml('2026-09-30', 1.1622, 0.85898));
+      await tick(ecb.impl, minutesAfter(0));
+
+      expect(await tick(ecb.impl, minutesAfter(1))).toMatchObject({
+        kind: 'repriced',
+        updated: 6,
+        purged: 0,
+      });
+    });
+
+    it('leave out a price whose variant no longer exists', async () => {
+      // A price row left behind by a variant that is gone names no product.
+      await setPrice({
+        variantId: 'orphan',
+        currency: 'USD',
+        amountMinor: 9900,
+        source: 'base',
+      });
+      const ecb = feed(ecbXml('2026-09-30', 1.1622, 0.85898));
+      const purges: string[][] = [];
+      const purge = async (tags: readonly string[]) => {
+        purges.push([...tags]);
+      };
+      await tick(ecb.impl, minutesAfter(0), purge);
+
+      const repriced = await tick(ecb.impl, minutesAfter(1), purge);
+
+      expect(repriced).toMatchObject({
+        kind: 'repriced',
+        updated: 2,
+        purged: 0,
+      });
+      expect(purges).toEqual([]);
+    });
   });
 
   it('does not refetch every minute', async () => {

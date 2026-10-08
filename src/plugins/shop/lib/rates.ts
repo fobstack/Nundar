@@ -30,13 +30,14 @@ export interface StoredRates {
   readonly byCurrency: ReadonlyMap<Currency, number>;
 }
 
-interface RateRow {
+export interface RateRow {
   quote_currency: string;
   rate: number;
   reference_date: string;
 }
 
-function ratesStatement(db: D1Database): D1PreparedStatement {
+/** The stored rates, as a statement for a caller's own batch. */
+export function readRatesStatement(db: D1Database): D1PreparedStatement {
   return db
     .prepare(
       `SELECT quote_currency, rate, reference_date FROM p_shop_rate
@@ -45,7 +46,7 @@ function ratesStatement(db: D1Database): D1PreparedStatement {
     .bind(BASE_CURRENCY);
 }
 
-function toStoredRates(rows: readonly RateRow[]): StoredRates {
+export function toStoredRates(rows: readonly RateRow[]): StoredRates {
   const byCurrency = new Map<Currency, number>();
   let referenceDate: string | null = null;
   for (const row of rows) {
@@ -61,7 +62,7 @@ function toStoredRates(rows: readonly RateRow[]): StoredRates {
 }
 
 export async function readRates(db: D1Database): Promise<StoredRates> {
-  const { results } = await ratesStatement(db).all<RateRow>();
+  const { results } = await readRatesStatement(db).all<RateRow>();
   return toStoredRates(results);
 }
 
@@ -117,12 +118,15 @@ export interface RepriceResult {
   readonly manual: number;
   /** Variants whose price in some currency changed. */
   readonly changedVariantIds: readonly string[];
+  /** The products those variants belong to: whose pages now show an old price. */
+  readonly changedProductGroups: readonly string[];
   /** Where the next chunk starts; null when the run is complete. */
   readonly nextCursor: string | null;
 }
 
 interface ChunkRow {
   variant_id: string;
+  product_group: string | null;
   base_minor: number;
   currency: string | null;
   source: string | null;
@@ -152,10 +156,11 @@ export async function repriceChunk(
   },
 ): Promise<RepriceResult> {
   const [rateResult, chunkResult] = await db.batch<RateRow | ChunkRow>([
-    ratesStatement(db),
+    readRatesStatement(db),
     db
       .prepare(
-        `SELECT b.variant_id AS variant_id, b.amount_minor AS base_minor,
+        `SELECT b.variant_id AS variant_id, v.product_group AS product_group,
+                b.amount_minor AS base_minor,
                 p.currency AS currency, p.source AS source,
                 p.rate_used AS rate_used
          FROM (
@@ -163,6 +168,7 @@ export async function repriceChunk(
            WHERE currency = ? AND source = 'base' AND variant_id > ?
            ORDER BY variant_id LIMIT ?
          ) AS b
+         LEFT JOIN p_shop_variant AS v ON v.id = b.variant_id
          LEFT JOIN p_shop_price AS p
            ON p.variant_id = b.variant_id AND p.currency <> ?
          ORDER BY b.variant_id`,
@@ -176,12 +182,16 @@ export async function repriceChunk(
   // Group the joined rows back into one entry per variant.
   const variants = new Map<
     string,
-    { baseMinor: number; existing: Map<string, ChunkRow> }
+    { baseMinor: number; group: string | null; existing: Map<string, ChunkRow> }
   >();
   for (const row of rows) {
     let entry = variants.get(row.variant_id);
     if (entry === undefined) {
-      entry = { baseMinor: row.base_minor, existing: new Map() };
+      entry = {
+        baseMinor: row.base_minor,
+        group: row.product_group,
+        existing: new Map(),
+      };
       variants.set(row.variant_id, entry);
     }
     if (row.currency !== null) {
@@ -264,6 +274,14 @@ export async function repriceChunk(
     skipped,
     manual,
     changedVariantIds: [...changed],
+    changedProductGroups: [
+      ...new Set(
+        [...changed].flatMap((variantId) => {
+          const group = variants.get(variantId)?.group;
+          return group === null || group === undefined ? [] : [group];
+        }),
+      ),
+    ],
     nextCursor:
       variants.size === input.limit && lastVariantId !== undefined
         ? lastVariantId

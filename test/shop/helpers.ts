@@ -61,7 +61,8 @@ async function bootstrap(): Promise<void> {
     headers: { ...json, cookie, 'x-mallok-csrf': csrf },
     body: JSON.stringify({
       name: 'shop-test',
-      scopes: ['content:write', 'settings:write', 'media:write'],
+      // `export` reads a plugin panel's rows and records, as the admin does.
+      scopes: ['content:write', 'settings:write', 'media:write', 'export'],
     }),
   });
   token = ((await minted.json()) as { token: string }).token;

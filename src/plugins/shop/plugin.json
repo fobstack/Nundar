@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Variants, prices in several currencies, stock, minimum order quantities and a cart for a Mallok site.",
   "pluginApi": 2,
-  "hooks": ["scheduled", "renderData"],
+  "hooks": ["scheduled", "renderData", "onContentDelete"],
   "routes": [
     {
       "path": "cart",
@@ -53,25 +53,129 @@
     {
       "id": "variants",
       "label": "Variants",
-      "type": "table",
+      "type": "records",
       "table": "p_shop_variant",
+      "attachTo": {
+        "kind": "product",
+        "column": "product_group"
+      },
       "columns": [
-        { "field": "sku", "label": "SKU" },
-        { "field": "stock", "label": "Stock" },
-        { "field": "moq", "label": "Minimum order" },
-        { "field": "stock_policy", "label": "Stock policy", "type": "badge" },
-        { "field": "status", "label": "Status", "type": "badge" },
-        { "field": "updated_at", "label": "Updated", "type": "datetime" }
+        {
+          "field": "sku",
+          "label": "SKU",
+          "sortable": true
+        },
+        {
+          "field": "stock",
+          "label": "Stock",
+          "sortable": true
+        },
+        {
+          "field": "moq",
+          "label": "Minimum order"
+        },
+        {
+          "field": "stock_policy",
+          "label": "Stock policy",
+          "type": "badge"
+        },
+        {
+          "field": "status",
+          "label": "Status",
+          "type": "badge"
+        },
+        {
+          "field": "updated_at",
+          "label": "Updated",
+          "type": "datetime"
+        }
       ],
+      "search": ["sku"],
       "filters": ["status", "stock_policy"],
-      "detail": [
-        "product_group",
-        "option_values",
-        "lead_time_min",
-        "lead_time_max",
-        "weight_grams"
-      ],
-      "orderBy": "updated_at"
+      "orderBy": "updated_at",
+      "fields": {
+        "sku": {
+          "type": "string",
+          "label": "SKU",
+          "required": true,
+          "help": "What a buyer quotes. The product page lists the sizes it names by SKU; a variant with another SKU is listed after them."
+        },
+        "options": {
+          "type": "keyvalue",
+          "label": "What distinguishes it",
+          "help": "A name and a value, for example length and 10 mm. Shown where the product page has no words of its own for this SKU."
+        },
+        "status": {
+          "type": "select",
+          "label": "Status",
+          "choices": ["active", "archived"],
+          "default": "active",
+          "help": "An archived variant is on no page and in no cart."
+        },
+        "price": {
+          "type": "money",
+          "label": "Base price, each",
+          "currencies": ["USD"],
+          "help": "Leave empty for a variant that is quoted on request. Other currencies are derived from this at the day's exchange rate."
+        },
+        "other_prices": {
+          "type": "rows",
+          "label": "Prices set by hand in other currencies",
+          "max": 2,
+          "help": "A price here replaces the derived one and is never recomputed.",
+          "fields": {
+            "price": {
+              "type": "money",
+              "label": "Price, each",
+              "currencies": ["EUR", "GBP"],
+              "required": true
+            }
+          }
+        },
+        "moq": {
+          "type": "number",
+          "label": "Minimum order",
+          "required": true,
+          "default": 1,
+          "min": 1,
+          "help": "The least that can be ordered; quantities go up in steps of it."
+        },
+        "stock_policy": {
+          "type": "select",
+          "label": "Stock policy",
+          "choices": ["track", "made_to_order"],
+          "default": "track",
+          "help": "track: the stock below is a limit. made_to_order: always orderable, and the lead time is what the buyer is told."
+        },
+        "stock": {
+          "type": "number",
+          "label": "Stock",
+          "default": 0,
+          "min": 0,
+          "help": "Setting a figure records the difference in the stock ledger. A page says whether a size can be had, never this number."
+        },
+        "lead_time_min": {
+          "type": "number",
+          "label": "Lead time from, business days",
+          "min": 0
+        },
+        "lead_time_max": {
+          "type": "number",
+          "label": "Lead time to, business days",
+          "min": 0
+        },
+        "weight_grams": {
+          "type": "number",
+          "label": "Weight, grams",
+          "min": 0
+        },
+        "sort_order": {
+          "type": "number",
+          "label": "Position",
+          "default": 0,
+          "help": "Lower comes first among the variants a product page does not name."
+        }
+      }
     }
   ]
 }

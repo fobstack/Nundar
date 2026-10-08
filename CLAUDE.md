@@ -51,6 +51,8 @@ Mallok decides the contracts on both sides. Its documentation is the reference: 
 - **Data access is raw D1 SQL, no ORM.** Read with one `db.batch`, write with one statement where possible: lists travel as a single JSON parameter through `json_each` (`lib/rates.ts`, `lib/cart-pricing.ts`). D1's Free plan allows 50 queries per invocation, and a tick of Mallok's cron shares its CPU budget across all plugins.
 - **What a page shows of the shop** is `plugins.shop`, built by `lib/storefront.ts` from rows alone and read by the `renderData` hook in `lib/render-data.ts`. That file's header is the contract a theme is written against. Mallok gives the hook one database call, a read: one batch of two statements serves a product page and a list alike, and a cold product page is three round trips in all (`test/theme/prices.test.ts` counts them). Every value arrives ready to print — a plugin cannot give a template a filter. The stock is read to decide a state and goes no further.
 - **A page says which products it depends on**: the hook returns each product's translation group as a cache tag, which the page carries as `p:shop:<group>` — a product page its own, a list or the home page every product's it shows, a product with no variants too, so that its first one reaches the page.
+- **Variants are edited in the admin**, in a `records` panel under the editor of every product (`attachTo` in `plugin.json`; the handlers are `lib/variant-records.ts`). Mallok checks each value against the field the manifest declares and never writes the table itself: `saveVariant` judges what only the shop can — a SKU that is taken, a lead time that ends before it starts — and writes the variant, its prices and the stock ledger in one batch after one read. `price` is the base price; `other_prices` are entered by hand and stored `manual`; any other currency is derived from the base price at the stored rate. A deleted product takes its variants with it (`onContentDelete`, once its last language has gone).
+- **Whoever changes what a page shows purges that product's tag**: a save or a delete in the admin, and a repricing chunk for the products whose prices moved, one call for the chunk. A handler does not wait for its purge — Mallok gathers two seconds of purges into one call, and a save that waited would take those two seconds — it hands the promise to `ctx.waitUntil`. A purge that fails leaves the pages to expire and is not a failed save.
 - **`lib/scheduled.ts`** does one small piece of work per minute tick: a repricing chunk in progress, else a rate fetch if due, else clearing expired carts. State between ticks is in `p_shop_state`.
 - **Migrations**: additive and idempotent. Mallok's migrator drops whole-line `--` comments, then splits on `;` — a comment must have a line to itself. They run on the Worker's first request, not from a CLI.
 - **The cart is two routes** (`routes/cart.ts`). `GET /_mallok/p/shop/cart` is the cart page: the plugin returns a view — `lib/cart-view.ts`, whose header is the contract — and the theme's `shop/cart` layout draws it. `POST /_mallok/p/shop/cart/update` is where every form that changes the cart posts: add, set, remove, choose a currency. A change that goes through answers 303 to the cart page; one that is refused answers with the cart page itself, at 422 or 409, saying what was refused. Mallok keys a handler by its path, so the page and the form cannot share one. The language is the segment after the plugin's id (`/_mallok/p/shop/de/cart`), and `lib/paths.ts` builds every such address. The cart cookie is scoped to `/_mallok/p/shop`, which every language shares: Mallok bypasses its edge cache for any public request that carries a cookie.
@@ -83,7 +85,6 @@ Mallok decides the contracts on both sides. Its documentation is the reference: 
 `mallok@0.1.0-rc.11` allows each of these; the code here does not use it yet.
 
 - A cart leads nowhere yet: it cannot be sent as one inquiry, and there is no checkout. The cart page ends on a link to the quote page.
-- The variants panel is a read-only table; variants are seeded from `seed/shop-sample.sql`.
 - No raw-body route, so no Stripe webhook, and so no checkout.
 - The sample's products name one collection each, though `reference[]` is resolved now.
 
@@ -92,6 +93,8 @@ When one is built, take it off this list and prove the behaviour with a test or 
 ### Known limits of mallok 0.1.0-rc.11 that shape the code
 
 - `renderData` is told the items a list or the home page shows, and nothing of what a content page lists through a reference. So the products on a collection's page, and a product's neighbours, have no prices; `test/theme/prices.test.ts` holds that, and fails the day Mallok passes them.
+- A `remove` handler of a records panel can only throw, which the admin shows as a failure with no reason; so deleting a variant that is on an order archives it instead of refusing. A panel's own order is always descending, so the variants list opens on the last one changed, not in the order a page shows them.
+- `renderData` does not run for a not-found page, so the header there has no link to the cart; and a plugin cannot ask where a content item lives, so a cart line names its product without linking to it.
 - Switching a plugin on or off, or changing a setting, can leave cached pages as they were — and the admin's "Clear cached pages" can report success without clearing anything. So the plugins are switched on before the first publish (`scripts/lib/local-shop.mjs`, the README), and `test/shop/helpers.ts` deletes the cached home page by hand after changing settings. Keep both until a Mallok release says the purge can be trusted.
 
 ## Testing
@@ -123,7 +126,9 @@ When one is built, take it off this list and prove the behaviour with a test or 
 - Money columns check `typeof(x) = 'integer'`: SQLite stores 99.5 in an `INTEGER` column rather than refuse it.
 - A Stripe failure is described by Stripe's identifiers and the status, never its free-text message: nothing rules out that text repeating a buyer's email address.
 - An order line is a snapshot of SKU, name and unit price. Nothing that later happens to the product may change a past order.
-- A `manual` price is never overwritten; the base price is never rewritten; an `auto` price moves only past the drift threshold.
+- A `manual` price is never overwritten; the base price is never rewritten; an `auto` price moves only past the drift threshold — or when the base price it is derived from is changed in the admin. Saving a variant for any other reason leaves its derived prices as they are.
+- Stock set in the admin is a figure, and the ledger records the difference from the stock as it is when the write lands, in the same batch — not from what the form was opened with.
+- A variant that has ever been ordered is never deleted, by the admin or with its product: an order's lines and the ledger name it. It is archived.
 - Order status changes only through `lib/order-state.ts`.
 - Every external input passes Zod; every SQL value is bound; redirects go only to same-site paths; logs carry no personal data.
 

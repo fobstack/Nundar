@@ -10,7 +10,8 @@
  *   4. request every kind of page, follow the navigation in every language,
  *      and fetch the theme's own files;
  *   5. add to the cart with the form a product page offers, and read the
- *      cart page it leads to.
+ *      cart page it leads to;
+ *   6. add a variant the way the admin's form does, and delete it.
  *
  * It exists because the unit tests, thorough as they are, run each piece in
  * isolation. This is the one place the theme, the plugin, the content and the
@@ -121,7 +122,7 @@ try {
 
   // 1 to 3. The administrator, the plugins, the settings, the content and
   // the variants: the same set-up `npm run preview` leaves running.
-  await fillShop({ base, state, tokenName: 'smoke-shop' });
+  const { token } = await fillShop({ base, state, tokenName: 'smoke-shop' });
 
   const variants = await query(
     `SELECT v.sku FROM p_shop_variant AS v
@@ -589,6 +590,76 @@ try {
     'the home page has no link to the cart',
   );
 
+  // 6. The admin's side: a variant added to a product the way the form
+  //    under its editor adds one, through Mallok's API, and taken away again.
+  const records = `${base}/_mallok/api/plugins/shop/panels/variants/records`;
+  const authorised = {
+    'content-type': 'application/json',
+    authorization: `Bearer ${token}`,
+  };
+  const created = await fetch(records, {
+    method: 'POST',
+    headers: authorised,
+    body: JSON.stringify({
+      // The cap screw's translation group, fixed in its `mallok.json`.
+      attachedTo: '50b0633f-18e5-5dd3-8079-19659453e7c6',
+      values: {
+        sku: 'TI-SHC-M5-30',
+        options: { length: '30 mm' },
+        moq: 100,
+        stock: 250,
+        price: { amount: 265, currency: 'USD' },
+        other_prices: [{ price: { amount: 250, currency: 'EUR' } }],
+      },
+    }),
+    signal: timeout(),
+  });
+  const { id: variantId } = await created.json();
+  expect(
+    created.status === 201 && typeof variantId === 'string',
+    `adding a variant through the admin's API returned ${created.status}`,
+  );
+  const stored = await query(
+    `SELECT v.product_group, v.stock, p.currency, p.amount_minor, p.source
+     FROM p_shop_variant AS v JOIN p_shop_price AS p ON p.variant_id = v.id
+     WHERE v.sku = 'TI-SHC-M5-30' ORDER BY p.currency`,
+  );
+  expect(
+    stored.length === 2 &&
+      stored[0].currency === 'EUR' &&
+      stored[0].source === 'manual' &&
+      stored[1].currency === 'USD' &&
+      stored[1].amount_minor === 265 &&
+      stored[1].stock === 250,
+    `the variant added through the admin's API was stored as ${JSON.stringify(stored)}`,
+  );
+  const taken = await fetch(records, {
+    method: 'POST',
+    headers: authorised,
+    body: JSON.stringify({
+      attachedTo: '50b0633f-18e5-5dd3-8079-19659453e7c6',
+      values: { sku: 'TI-SHC-M5-30', moq: 1 },
+    }),
+    signal: timeout(),
+  });
+  expect(
+    taken.status === 422 &&
+      Object.keys((await taken.json()).errors ?? {}).join() === 'sku',
+    `a second variant with the same SKU returned ${taken.status}`,
+  );
+  const removed = await fetch(`${records}/${variantId}`, {
+    method: 'DELETE',
+    headers: authorised,
+    signal: timeout(),
+  });
+  const left = await query(
+    "SELECT COUNT(*) AS n FROM p_shop_variant WHERE sku = 'TI-SHC-M5-30'",
+  );
+  expect(
+    removed.ok && left[0].n === 0,
+    `deleting the variant returned ${removed.status} and left ${left[0].n} behind`,
+  );
+
   const lines = await query(
     'SELECT variant_id, quantity FROM p_shop_cart_line',
   );
@@ -598,7 +669,7 @@ try {
   );
 
   process.stdout.write(
-    `smoke:shop: ok (settings, publish, seed, every kind of page, ${followed} navigation links in ${site.locales.length} languages, ${shipped.length} theme files, cart) on ${base}\n`,
+    `smoke:shop: ok (settings, publish, seed, every kind of page, ${followed} navigation links in ${site.locales.length} languages, ${shipped.length} theme files, cart, variants in the admin) on ${base}\n`,
   );
 } catch (error) {
   failure = error;
