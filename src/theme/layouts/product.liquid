@@ -38,20 +38,35 @@
       {% endif %}
 
       {%- comment -%}
-        The sizes on offer, each with the SKU a buyer quotes. Prices and
-        availability will sit in this table once the shop plugin can supply
-        them to the page.
+        The sizes on offer, each with the SKU a buyer quotes. The sizes are
+        the page's own: written in its front matter, in its language. What
+        the shop plugin knows of each — its price, the least that can be
+        ordered, whether it can be had and how soon — goes in the row whose
+        SKU it carries. A variant the page does not name follows them, under
+        the name its options give it, so that nothing that can be bought is
+        left off the page. Without the plugin the list is the sizes alone.
+
+        A variant is found by walking the list, not by `variants[sku]`:
+        Liquid answers `size`, `first` and `last` on any collection itself,
+        whatever a SKU happens to be called.
       {%- endcomment -%}
       {% assign sizes = content.frontmatter.sizes %}
-      {% if sizes != blank %}
+      {% assign shop = plugins.shop %}
+      {% if sizes != blank or shop.variants.size > 0 %}
       <section class="size-list">
         <h2>{{ t.sizes }}</h2>
-        <table class="data-table">
-          <thead><tr><th scope="col">{{ t.sku }}</th><th scope="col">{{ t.size }}</th></tr></thead>
-          <tbody>
-            {% for pair in sizes %}<tr><td>{{ pair[0] }}</td><td>{{ pair[1] }}</td></tr>{% endfor %}
-          </tbody>
-        </table>
+        <ul class="offers">
+          {% for pair in sizes %}
+            {% assign own = nil %}
+            {% for variant in shop.variants %}{% if variant.sku == pair[0] %}{% assign own = variant %}{% endif %}{% endfor %}
+            {% render "partials/offer", sku: pair[0], size: pair[1], variant: own %}
+          {% endfor %}
+          {% for variant in shop.variants %}
+            {% assign named = false %}
+            {% for pair in sizes %}{% if pair[0] == variant.sku %}{% assign named = true %}{% endif %}{% endfor %}
+            {% unless named %}{% render "partials/offer", sku: variant.sku, size: variant.label, variant: variant %}{% endunless %}
+          {% endfor %}
+        </ul>
       </section>
       {% endif %}
 

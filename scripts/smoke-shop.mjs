@@ -40,7 +40,11 @@ let failure = null;
 
 async function page(path) {
   const response = await fetch(`${base}${path}`, { signal: timeout() });
-  return { status: response.status, html: await response.text() };
+  return {
+    status: response.status,
+    html: await response.text(),
+    tags: (response.headers.get('cache-tag') ?? '').split(','),
+  };
 }
 
 /**
@@ -123,8 +127,56 @@ try {
     'the product page does not show the product',
   );
   expect(
-    product.html.includes('<td>TI-SHC-M5-20</td>'),
+    product.html.includes(
+      '<span class="offer-sku">TI-SHC-M5-20</span><span class="offer-size">20 mm</span>',
+    ),
     'the product page does not list the SKU of a size it offers',
+  );
+  // What the shop plugin read for the page while Mallok rendered it: the
+  // seeded variant's price, its minimum order and its state, in the row of
+  // the size that carries its SKU.
+  const offered =
+    /<li class="offer">(?:(?!<\/li>)[\s\S])*TI-SHC-M5-20[\s\S]*?<\/li>/.exec(
+      product.html,
+    )?.[0] ?? '';
+  expect(
+    offered.includes('<span class="price">$2.20</span>') &&
+      offered.includes('<dd>100</dd>') &&
+      offered.includes('<span class="avail avail-in_stock">In stock</span>') &&
+      offered.includes('<dd>5–10 business days</dd>'),
+    'the product page does not show the price, minimum order, availability and lead time of a size',
+  );
+  // The same prices, and no others, in the page's structured data.
+  const structured = JSON.parse(
+    /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(
+      product.html,
+    )?.[1] ?? '{}',
+  );
+  expect(
+    structured['@type'] === 'Product' &&
+      structured.offers?.['@type'] === 'AggregateOffer' &&
+      structured.offers.priceCurrency === 'USD' &&
+      structured.offers.lowPrice === '1.85' &&
+      structured.offers.highPrice === '2.45' &&
+      structured.offers.offerCount === 4,
+    `the product page's structured data does not offer its four sizes: ${JSON.stringify(structured.offers)}`,
+  );
+  // And the page says what it depends on, for a price change to purge.
+  expect(
+    product.tags.includes('p:shop:50b0633f-18e5-5dd3-8079-19659453e7c6'),
+    'the product page does not carry its product\u2019s cache tag',
+  );
+
+  // A part that is made when it is ordered says so, with how long it takes.
+  const shoulder = await page('/products/titanium-shoulder-screw-m6');
+  expect(
+    shoulder.status === 200 &&
+      shoulder.html.includes(
+        '<span class="avail avail-made_to_order">Made to order</span>',
+      ) &&
+      shoulder.html.includes('<dd>20–30 business days</dd>') &&
+      shoulder.html.includes('<span class="price">$12.50</span>'),
+    'the made-to-order part does not say it is made to order, at what price and how soon',
   );
   // The cards under the text are built from the references other pages
   // declare. The same addresses are also written in this page's body, so
@@ -163,6 +215,14 @@ try {
   expect(
     german.status === 200,
     `the German product page returned ${german.status}`,
+  );
+  expect(
+    german.html.includes('<dt>Stückpreis</dt>') &&
+      german.html.includes(
+        '<span class="avail avail-in_stock">Auf Lager</span>',
+      ) &&
+      german.html.includes('5–10 Werktage'),
+    'the German product page does not show its sizes’ terms in German',
   );
   expect(
     german.html.includes(
@@ -219,6 +279,13 @@ try {
     home.status === 200 &&
       (finder?.match(/<tr role="row">/g) ?? []).length === 7,
     'the home page’s specification finder should hold a header and six products',
+  );
+  // Under each product's name, what it starts at and whether it can be had.
+  expect(
+    (finder?.match(/<p class="finder-offer">/g) ?? []).length === 6 &&
+      finder.includes('<span class="price">from $1.85</span>') &&
+      finder.includes('<span class="price">from $12.50</span>'),
+    'the home page’s finder does not show what each product starts at',
   );
 
   const questions = await page('/faq');

@@ -25,6 +25,12 @@
   page without the script is the whole table, as it is without `filters`.
   The layout that asks for filters also loads that script.
 
+  Under a product's name goes what the shop plugin says of it, when it says
+  anything: the lowest price it can be ordered at and whether it can be had.
+  The plugin is told which products a list or the home page shows; it is not
+  told which ones a content page lists, so the same table on a collection's
+  page, or under a product, has names and no prices.
+
   Called as {% render "partials/spec-table", items: recent.product %}.
 {%- endcomment -%}
 {% assign lead = nil %}
@@ -52,9 +58,13 @@
       {% for item in items %}
       <tr role="row">
         <td role="cell">
+          {% assign offer = plugins.shop.products[item.id] %}
           <div class="finder-product">
             {% if item.cover != blank %}<span class="finder-thumb"><img src="{{ item.cover }}" alt="" width="104" height="80" loading="lazy" decoding="async"></span>{% endif %}
-            <a href="{{ item.path }}">{{ item.title }}</a>
+            <div class="finder-name">
+              <a href="{{ item.path }}">{{ item.title }}</a>
+              {% if offer %}{% assign state = "avail_" | append: offer.availability %}<p class="finder-offer">{% if offer.price_from != blank %}<span class="price">{{ t.price_from }} {{ offer.price_from }}</span>{% endif %}<span class="avail avail-{{ offer.availability }}">{{ t[state] }}</span></p>{% endif %}
+            </div>
           </div>
         </td>
         {% for pair in lead.frontmatter.facets %}{% assign name = pair[0] %}{% assign value = "" %}{% for own in item.frontmatter.facets %}{% if own[0] == name %}{% assign value = own[1] %}{% endif %}{% endfor %}<td class="facet" role="cell" data-label="{{ name }}">{{ value }}</td>{% endfor %}

@@ -1196,6 +1196,24 @@ p {
   color: var(--accent-strong);
 }
 
+/* The name, and under it what the shop says of the product: the price it
+   starts at and whether it can be had. No column of its own — the table is
+   as wide as its longest language allows already. */
+.finder-name {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.finder-offer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.125rem 0.625rem;
+  margin: 0;
+  font-size: 0.75rem;
+}
+
 .finder-table td.facet {
   color: var(--slate-700);
   font-family: var(--font-mono);
@@ -1767,6 +1785,98 @@ p {
 .more h2 {
   font-size: 1.125rem;
   font-weight: 700;
+}
+
+/* One row for each size on offer. A list and not a table: a row holds a
+   name, up to four facts and — once there is a cart — a form, and no column
+   layout carries those from a phone to the half of a wide screen this sits
+   in. Each fact names itself, so a row reads the same at any width. */
+.offers {
+  margin: 0.75rem 0 0;
+  padding: 0;
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-lg);
+  background: var(--white);
+  list-style: none;
+  overflow: hidden;
+}
+
+.offer {
+  padding: 0.75rem 0.875rem;
+  border-top: 1px solid var(--slate-100);
+}
+
+.offer:first-child {
+  border-top: 0;
+}
+
+.offer-what {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.125rem 0.75rem;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.78125rem;
+}
+
+/* A SKU is one word however long it is, and has to break somewhere. */
+.offer-sku {
+  color: var(--slate-900);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.offer-size {
+  color: var(--slate-600);
+}
+
+/* As many facts to a line as fit at a readable width: four in a wide box,
+   two on a phone. A label that is one long word in some language is
+   hyphenated rather than let out of its column — which is why the packs
+   keep these four labels short. */
+.offer-terms {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(6.75rem, 1fr));
+  gap: 0.5rem 1rem;
+  margin: 0.625rem 0 0;
+}
+
+.offer-terms dt {
+  color: var(--slate-500);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  hyphens: auto;
+  overflow-wrap: anywhere;
+}
+
+.offer-terms dd {
+  margin: 0.125rem 0 0;
+  color: var(--slate-900);
+  font-size: 0.8125rem;
+}
+
+/* An amount is never split from its currency sign. */
+.price {
+  color: var(--slate-900);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.avail {
+  color: var(--slate-700);
+  font-weight: 600;
+}
+
+.avail-in_stock {
+  color: #15803d;
+}
+
+.avail-out_of_stock {
+  color: var(--slate-500);
 }
 
 /* The columns take the widths they are given, not the widths their longest

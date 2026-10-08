@@ -49,19 +49,22 @@ Mallok decides the contracts on both sides. Its documentation is the reference: 
 
 - **Tables** are `p_shop_*`, language-independent, keyed by `product_group` — the product content's `translation_group` — so one set of variants serves every language. Timestamps are ISO text, as in Mallok.
 - **Data access is raw D1 SQL, no ORM.** Read with one `db.batch`, write with one statement where possible: lists travel as a single JSON parameter through `json_each` (`lib/rates.ts`, `lib/cart-pricing.ts`). D1's Free plan allows 50 queries per invocation, and a tick of Mallok's cron shares its CPU budget across all plugins.
+- **What a page shows of the shop** is `plugins.shop`, built by `lib/storefront.ts` from rows alone and read by the `renderData` hook in `lib/render-data.ts`. That file's header is the contract a theme is written against. Mallok gives the hook one database call, a read: one batch of two statements serves a product page and a list alike, and a cold product page is three round trips in all (`test/theme/prices.test.ts` counts them). Every value arrives ready to print — a plugin cannot give a template a filter. The stock is read to decide a state and goes no further.
+- **A page says which products it depends on**: the hook returns each product's translation group as a cache tag, which the page carries as `p:shop:<group>` — a product page its own, a list or the home page every product's it shows, a product with no variants too, so that its first one reaches the page.
 - **`lib/scheduled.ts`** does one small piece of work per minute tick: a repricing chunk in progress, else a rate fetch if due, else clearing expired carts. State between ticks is in `p_shop_state`.
 - **Migrations**: additive and idempotent. Mallok's migrator drops whole-line `--` comments, then splits on `;` — a comment must have a line to itself. They run on the Worker's first request, not from a CLI.
 - **The cart route** (`routes/cart.ts`, `POST /_mallok/p/shop/cart`) takes a plain form POST and answers 303. The cart cookie is scoped to `/_mallok/p/shop`: Mallok bypasses its edge cache for any public request that carries a cookie.
 - **Orders and payment are built but not reachable** (design §14). `lib/orders.ts` places an order and confirms its payment, `lib/order-fulfilment.ts` ships, cancels and refunds, `lib/outbox.ts` records what each change still owes, `lib/stripe-webhook.ts` decides what a Stripe delivery means and which status to answer, `lib/stripe-signature.ts` and `lib/stripe-client.ts` talk to Stripe over `fetch`, `lib/order-email.ts` builds the buyer's emails. No route, page or admin screen calls them, and nothing drains the outbox: those wait for Mallok. Do not add a route that works around that.
 - **A change to an order is conditional on the status it was read in** (`ORDER_STILL_IN_STATUS` in `lib/order-guard.ts`), and the statement that changes the status comes last in its batch. That is what makes a racing second call write nothing.
 - **A change to an order writes its outbox row in the same batch** (`orderChangedOutbox`). What follows the change — an email, a purge — is owed from that row. Never send from a function's return value: it is lost whenever the Worker stops after the batch. Rows are read back by `seq`, the order they were committed in, never by `created_at`, which is whatever time the caller passed.
-- Pure logic (`money`, `pricing`, `ecb`, `order-state`, `currency`, `availability`, `stripe-signature`) takes no database; DB functions take a `D1Database` and, where time matters, a `now`.
+- Pure logic (`money`, `pricing`, `ecb`, `order-state`, `currency`, `availability`, `storefront`, `stripe-signature`) takes no database; DB functions take a `D1Database` and, where time matters, a `now`.
 
 ### The theme and content
 
 - Templates are restricted Liquid. Output is escaped; only `content.html` and `page.head` are emitted verbatim. `page.head` carries hreflang and structured data from Mallok and must stay in `layouts/base.liquid`.
 - Interface strings are in `locales/*.json` (flat maps, the default locale is the fallback). Site-specific copy — the home page's headline and sections, the footer, the links behind the buttons — is a theme option, never a string in a template; per-language option values go under `themeOptions.$locales` in `site.json`, and `test/project.test.ts` fails when a language is left without one. The tagline is not an option: it is Mallok's own setting, a map of language to text in `site.json`. It follows the site's name in the home page's title, and describes that page unless the `home_description` option gives the language a fuller text.
 - **Kinds**: `product`, `collection`, `application` (the sample's industry pages, at `/industries`), `case`, `faq`, `tool`, `article`, `page`. Every kind with a `base` has a `listLayout` here, because each list is a page worth having; a kind without one has no list page — its base path answers 404 — and no entry in `site.kinds`. A template links to a kind's list only through `site.kinds.<kind>`, inside `{% if %}`: the breadcrumb (`partials/crumbs.liquid`) and the home page's link to the catalogue do, and `test/theme/unlisted.test.ts` holds both on a site that serves products without a list.
+- **`plugins.shop` is optional everywhere.** It is absent when the plugin is off, when its read failed, in `mallok build` and in the admin's preview, and a product may have no variants. A template wraps what it prints from it in `{% if %}`, and the page is whole without it: the sizes with their SKUs, and no prices. A variant is found by walking `plugins.shop.variants`, never by `variants[sku]`: Liquid answers `size`, `first` and `last` on any collection itself. The words around a value — "Unit price", "In stock", "business days" — are the theme's, in its packs; `avail_<state>` names the three states.
 - **A product is one page with its sizes on it**, not a page per size. `facets` are the attributes a buyer filters by; `sizes` maps each SKU to what distinguishes it; `specs` is the full table. `partials/spec-table.liquid` (the specification finder, the catalogue, a collection's products, a product's neighbours) takes its columns from the first product that has `facets` and fills every row by attribute name, so every product in a language must use the same names. Below 72rem the same table is laid out as cards, two to a row on a tablet: seven columns need about 1100px in German.
 - **References resolve by slug within the same language.** An `application` and a `case` name their `product`; the product page lists them through `content.backrefs.application` and `content.backrefs.case`. A `product` names its `collection`; the collection page lists `content.backrefs.product`. Mallok resolves `reference` only, not `reference[]`.
 - **A link in a Markdown body is plain text to Mallok**: it is not rewritten per language and nothing reports a dead one. Write the path of the page in the same language (`/de/products/<german slug>`); `test/content.test.ts` checks every one.
@@ -76,7 +79,8 @@ Mallok decides the contracts on both sides. Its documentation is the reference: 
 
 `mallok@0.1.0-rc.11` allows each of these; the code here does not use it yet.
 
-- No `renderData` hook, so prices and variants are not on pages.
+- No currency switch: a page shows its language's currency, or the base currency while a variant on it has no price in that one.
+- No add-to-cart form on a product page, because there is no cart page to send a buyer to.
 - No page route and no `pluginLayouts` in the theme, so there is no cart page.
 - The variants panel is a read-only table; variants are seeded from `seed/shop-sample.sql`.
 - No raw-body route, so no Stripe webhook, and so no checkout.
@@ -86,6 +90,7 @@ When one is built, take it off this list and prove the behaviour with a test or 
 
 ### Known limits of mallok 0.1.0-rc.11 that shape the code
 
+- `renderData` is told the items a list or the home page shows, and nothing of what a content page lists through a reference. So the products on a collection's page, and a product's neighbours, have no prices; `test/theme/prices.test.ts` holds that, and fails the day Mallok passes them.
 - Switching a plugin on or off, or changing a setting, can leave cached pages as they were — and the admin's "Clear cached pages" can report success without clearing anything. So the plugins are switched on before the first publish (`scripts/lib/local-shop.mjs`, the README), and `test/shop/helpers.ts` deletes the cached home page by hand after changing settings. Keep both until a Mallok release says the purge can be trusted.
 
 ## Testing
@@ -102,6 +107,9 @@ When one is built, take it off this list and prove the behaviour with a test or 
 ## Commerce invariants (do not "simplify" them away)
 
 - Money is integer minor units (`lib/money.ts`), never a float.
+- A page never prints how many are left: availability is a state (`lib/availability.ts`). A count would have to be purged from the edge cache on every sale.
+- A page is in one currency. A currency is offered only when every priced variant on the page has a price in it (`currenciesFor`), the rule `priceCart` settles an order by.
+- The structured data offers what the page prints and nothing else: the same variants, the same amounts, the same states (`offersFor`; the test compares the two digit for digit).
 - A cart line is a variant and a quantity, never a price; `priceCart` recomputes from the database and reports every problem at once.
 - MOQ and stock are enforced server-side in `quantityIssue`, shared by add-to-cart and cart pricing.
 - `stock` carries `CHECK (stock >= 0)`. `test/shop/schema.test.ts` proves a failing decrement rolls back its whole D1 batch, and that `WHERE stock >= qty` does not — the payment write relies on the constraint.

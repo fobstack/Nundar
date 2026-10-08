@@ -383,8 +383,17 @@ describe('the commerce theme', () => {
     it('shows each size with the SKU a buyer quotes', async () => {
       const { html } = await page(CAP_SCREW);
 
-      expect(html).toContain('<tr><td>TI-SHC-M5-10</td><td>10 mm</td></tr>');
-      expect(html).toContain('<tr><td>TI-SHC-M5-16</td><td>16 mm</td></tr>');
+      expect(html).toContain(
+        '<p class="offer-what"><span class="offer-sku">TI-SHC-M5-10</span><span class="offer-size">10 mm</span></p>',
+      );
+      expect(html).toContain(
+        '<p class="offer-what"><span class="offer-sku">TI-SHC-M5-16</span><span class="offer-size">16 mm</span></p>',
+      );
+      // The shop has no variants for this product: a row is the size and no
+      // more. What the plugin adds to one is in `prices.test.ts`.
+      expect(between(html, '<ul class="offers">', '</ul>')).not.toContain(
+        'offer-terms',
+      );
     });
 
     it('shows the specification as a table', async () => {

@@ -56,7 +56,7 @@ Nundar builds on `mallok@0.1.0-rc.11`, the first release with the plugin API the
 
 | | Works today | Not built yet |
 |---|---|---|
-| **Pages** | A home page with a specification finder; product pages with their sizes and SKUs; collection, industry, case study, question, engineering reference and contact pages — all in English, German, French and Spanish, with `hreflang`, canonicals, sitemap and FAQ structured data; self-hosted fonts; no client JavaScript except two small scripts, each added to a page that is complete without it: filters for the finder, and calculators on the engineering reference page | Prices, variants and availability on the page; `Offer` structured data |
+| **Pages** | A home page with a specification finder; product pages with their sizes and SKUs, and for each size its price, minimum order, availability and lead time, read from the shop while the page is rendered and cached with it; the same offers in the page's `Product` structured data; a starting price under each product in the finder and the catalogue; collection, industry, case study, question, engineering reference and contact pages — all in English, German, French and Spanish, with `hreflang`, canonicals, sitemap and FAQ structured data; self-hosted fonts; no client JavaScript except two small scripts, each added to a page that is complete without it: filters for the finder, and calculators on the engineering reference page | A currency switch; prices beside the products a collection page lists (Mallok does not yet tell a plugin which products a content page shows) |
 | **Catalogue data** | Variants, prices as integer minor units, stock, MOQ, lead time, a made-to-order policy | Editing them in the admin (read-only for now; the sample data is loaded from SQL) |
 | **Pricing** | USD base price; EUR and GBP derived from ECB rates with a buffer, rounding to a price point and a drift threshold; manual prices never overwritten | |
 | **Cart** | Add, set and remove through a plain form POST, with MOQ and stock enforced server-side | The cart page; submitting a cart as one inquiry |
@@ -67,6 +67,8 @@ The reasoning and the plan are in [`docs/superpowers/specs/2026-09-30-nundar-on-
 ### Commerce rules that are easy to get wrong, and are tested
 
 - Money is always integer minor units. Never a float, anywhere.
+- A page says whether a size can be had, never how many are left: a count would be wrong after the next sale, a state rarely is.
+- The structured data offers exactly the prices the page prints. A test compares the two digit for digit.
 - The cart stores variants and quantities only — never a price.
 - MOQ is enforced by the form *and* by the server, because a form can be bypassed.
 - Stock carries a database constraint, so a payment's decrement cannot go negative: a test proves the whole D1 batch rolls back.

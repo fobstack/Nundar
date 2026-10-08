@@ -34,6 +34,7 @@ import crumbsLiquid from './partials/crumbs.liquid';
 import footerLiquid from './partials/footer.liquid';
 import headerLiquid from './partials/header.liquid';
 import iconLiquid from './partials/icon.liquid';
+import offerLiquid from './partials/offer.liquid';
 import specTableLiquid from './partials/spec-table.liquid';
 import manifest from './theme.json';
 
@@ -58,6 +59,7 @@ export const nundarTheme = defineTheme(manifest, {
   'partials/closing.liquid': closingLiquid,
   'partials/crumbs.liquid': crumbsLiquid,
   'partials/icon.liquid': iconLiquid,
+  'partials/offer.liquid': offerLiquid,
   'partials/spec-table.liquid': specTableLiquid,
   'locales/en.json': JSON.stringify(enJson),
   'locales/de.json': JSON.stringify(deJson),

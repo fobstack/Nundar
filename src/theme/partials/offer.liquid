@@ -1,0 +1,24 @@
+{%- comment -%}
+  One size of a product: the SKU a buyer quotes, what distinguishes it, and —
+  when the shop plugin has a variant under that SKU — what it costs, the
+  least that can be ordered, whether it can be had and how soon.
+
+  `variant` is an entry of `plugins.shop.variants`, or nothing: a size the
+  shop does not sell yet, or a page rendered without the plugin, is the SKU
+  and the size alone. Its values arrive ready to print; the words around
+  them are this theme's.
+
+  Called as {% render "partials/offer", sku: …, size: …, variant: … %}.
+{%- endcomment -%}
+<li class="offer">
+  <p class="offer-what"><span class="offer-sku">{{ sku }}</span>{% if size != blank %}<span class="offer-size">{{ size }}</span>{% endif %}</p>
+  {% if variant %}
+  {% assign state = "avail_" | append: variant.availability %}
+  <dl class="offer-terms">
+    <div><dt>{{ t.unit_price }}</dt><dd>{% if variant.price != blank %}<span class="price">{{ variant.price }}</span>{% else %}{{ t.price_on_request }}{% endif %}</dd></div>
+    <div><dt>{{ t.moq }}</dt><dd>{{ variant.moq }}</dd></div>
+    <div><dt>{{ t.availability }}</dt><dd><span class="avail avail-{{ variant.availability }}">{{ t[state] }}</span></dd></div>
+    {% if variant.lead_time != blank %}<div><dt>{{ t.lead_time }}</dt><dd>{{ variant.lead_time }} {{ t.business_days }}</dd></div>{% endif %}
+  </dl>
+  {% endif %}
+</li>

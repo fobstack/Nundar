@@ -3,8 +3,8 @@
   "name": "Shop",
   "version": "0.1.0",
   "description": "Variants, prices in several currencies, stock, minimum order quantities and a cart for a Mallok site.",
-  "pluginApi": 1,
-  "hooks": ["scheduled"],
+  "pluginApi": 2,
+  "hooks": ["scheduled", "renderData"],
   "routes": [
     {
       "path": "cart",

@@ -230,22 +230,32 @@ export async function createVariant(input: {
   readonly stock?: number;
   readonly stockPolicy?: 'track' | 'made_to_order';
   readonly status?: 'active' | 'archived';
+  /** Option name to value, as the admin stores it: `{ length: '10 mm' }`. */
+  readonly optionValues?: Readonly<Record<string, string>>;
+  /** Business days, both ends or neither. */
+  readonly leadTime?: readonly [number, number];
+  readonly sortOrder?: number;
 }): Promise<void> {
   await db()
     .prepare(
       `INSERT INTO p_shop_variant
-         (id, product_group, sku, moq, stock, stock_policy, status,
+         (id, product_group, sku, option_values, moq, lead_time_min,
+          lead_time_max, stock, stock_policy, status, sort_order,
           created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       input.id,
       input.productGroup,
       input.sku ?? `SKU-${input.id}`,
+      JSON.stringify(input.optionValues ?? {}),
       input.moq ?? 1,
+      input.leadTime?.[0] ?? null,
+      input.leadTime?.[1] ?? null,
       input.stock ?? 100,
       input.stockPolicy ?? 'track',
       input.status ?? 'active',
+      input.sortOrder ?? 0,
       NOW,
       NOW,
     )

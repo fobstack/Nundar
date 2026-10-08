@@ -10,6 +10,7 @@
  */
 
 import { definePlugin, type PluginContext } from 'mallok/worker';
+import { renderData } from './lib/render-data.js';
 import { runScheduledTick } from './lib/scheduled.js';
 import shopSql from './migrations/0001_shop.sql';
 import ordersSql from './migrations/0002_orders.sql';
@@ -31,6 +32,6 @@ export const shop = definePlugin({
     { id: 'plugin:shop:0001_shop', sql: shopSql },
     { id: 'plugin:shop:0002_orders', sql: ordersSql },
   ],
-  hooks: { scheduled },
+  hooks: { scheduled, renderData },
   routes: { cart },
 });
