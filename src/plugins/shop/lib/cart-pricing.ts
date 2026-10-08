@@ -8,7 +8,7 @@
  */
 
 import type { CartLine } from './cart.js';
-import { BASE_CURRENCY, CURRENCIES, type Currency } from './currency.js';
+import { CURRENCIES, type Currency, settleCurrency } from './currency.js';
 import { sumMinor } from './money.js';
 
 export interface PricedLine {
@@ -66,6 +66,7 @@ interface TitleRow {
   translation_group: string;
   locale: string;
   title: string;
+  path: string;
 }
 
 /**
@@ -109,6 +110,8 @@ export interface CartLineFacts {
   readonly sku: string;
   /** The product's name in the buyer's language; null when it cannot be bought. */
   readonly name: string | null;
+  /** The address of the product's page in that language; null with the name. */
+  readonly path: string | null;
   /** 1 when the variant is gone: nothing can be ordered of it anyway. */
   readonly moq: number;
   /** The unit price in the currency the cart settles in; null when there is none. */
@@ -140,9 +143,12 @@ export async function readCartFacts(
     readonly locale: string;
     readonly defaultLocale: string;
     readonly currency: Currency;
+    /** When "published" is judged; the present, unless a test says otherwise. */
+    readonly now?: Date;
   },
 ): Promise<CartFacts> {
   const { lines, locale, defaultLocale, currency } = input;
+  const now = (input.now ?? new Date()).toISOString();
   if (lines.length === 0) {
     return { currency, currencies: [], lines: [] };
   }
@@ -166,21 +172,23 @@ export async function readCartFacts(
          WHERE variant_id IN (SELECT value FROM json_each(?))`,
       )
       .bind(ids),
-    // Only a published product can be bought. The name comes from the buyer's
-    // language, falling back to the site's default language.
+    // Only a product a visitor can see can be bought: published, and not
+    // scheduled for later, which is Mallok's own test for showing a page.
+    // Every language it is out in, so that the same cart reads the same in
+    // whichever language its buyer looks at it.
     db
       .prepare(
         `SELECT c.translation_group AS translation_group, c.locale AS locale,
-                c.title AS title
+                c.title AS title, c.path AS path
          FROM content AS c
-         WHERE c.status = 'published'
-           AND c.locale IN (?, ?)
+         WHERE c.status = 'published' AND c.published_at <= ?
            AND c.translation_group IN (
              SELECT product_group FROM p_shop_variant
              WHERE id IN (SELECT value FROM json_each(?))
-           )`,
+           )
+         ORDER BY c.locale`,
       )
-      .bind(locale, defaultLocale, ids),
+      .bind(now, ids),
   ]);
 
   const variants = new Map(
@@ -197,33 +205,36 @@ export async function readCartFacts(
       (row) => row.variant_id === variantId && row.currency === wanted,
     )?.amount_minor ?? null;
 
-  const nameOf = (productGroup: string): string | null => {
+  // The product's page in the buyer's language, or in the site's default
+  // one, or in whichever it is out in: a product published only in German
+  // is still a product, and a cart that held it would otherwise call it gone
+  // the moment its buyer switched language.
+  const pageOf = (productGroup: string): TitleRow | null => {
     const own = titles.filter((row) => row.translation_group === productGroup);
     return (
-      own.find((row) => row.locale === locale)?.title ??
-      own.find((row) => row.locale === defaultLocale)?.title ??
+      own.find((row) => row.locale === locale) ??
+      own.find((row) => row.locale === defaultLocale) ??
+      own[0] ??
       null
     );
   };
 
-  // One currency settles the whole order. If any line lacks a price in the
-  // requested currency, every line falls back to the base currency: two
-  // currencies inside one order produce a meaningless total, and charging a
-  // dollar amount in euros is never acceptable.
+  // One currency settles the whole order: two currencies inside one order
+  // produce a meaningless total, and charging a dollar amount in euros is
+  // never acceptable. The rule is the one a page is shown by.
   const shared = CURRENCIES.filter((candidate) =>
     lines.every((line) => priceOf(line.variantId, candidate) !== null),
   );
-  const settleCurrency: Currency = shared.includes(currency)
-    ? currency
-    : BASE_CURRENCY;
+  const settled = settleCurrency(currency, shared);
 
   return {
-    currency: settleCurrency,
+    currency: settled,
     currencies: shared,
     lines: lines.map((line) => {
       const variant = variants.get(line.variantId);
-      const name = variant === undefined ? null : nameOf(variant.product_group);
-      const unitPriceMinor = priceOf(line.variantId, settleCurrency);
+      const page = variant === undefined ? null : pageOf(variant.product_group);
+      const name = page?.title ?? null;
+      const unitPriceMinor = priceOf(line.variantId, settled);
       const issue: CartIssue | null =
         variant === undefined || name === null
           ? { kind: 'unavailable', variantId: line.variantId }
@@ -236,6 +247,7 @@ export async function readCartFacts(
         quantity: line.quantity,
         sku: variant?.sku ?? '',
         name,
+        path: page?.path ?? null,
         moq: variant?.moq ?? 1,
         unitPriceMinor,
         issue,

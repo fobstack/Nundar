@@ -10,7 +10,7 @@
  *   empty         nothing in it
  *   orderable     every line can be ordered as it stands
  *   subtotal      the sum of the lines; '' unless the cart is orderable
- *   lines[]       variant_id, sku, name, quantity, moq, unit_price,
+ *   lines[]       variant_id, sku, name, path, quantity, moq, unit_price,
  *                 line_total, problem, available
  *
  * A line's `problem` is '' or the reason it cannot be ordered: `unavailable`,
@@ -32,6 +32,8 @@ export interface CartLineView {
   readonly sku: string;
   /** The product's name; '' when it can no longer be bought. */
   readonly name: string;
+  /** Its page, in the cart's language where it has one; '' with the name. */
+  readonly path: string;
   readonly quantity: number;
   readonly moq: number;
   /** '' when the line has no price in the cart's currency. */
@@ -58,6 +60,7 @@ export function cartView(facts: CartFacts, locale: string): CartView {
       variant_id: line.variantId,
       sku: line.sku,
       name: line.name ?? '',
+      path: line.path ?? '',
       quantity: line.quantity,
       moq: line.moq,
       unit_price:

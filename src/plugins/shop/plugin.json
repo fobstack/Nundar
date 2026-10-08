@@ -16,8 +16,6 @@
     {
       "path": "cart/update",
       "method": "POST",
-      "render": "page",
-      "layout": "shop/cart",
       "rateLimit": "relaxed"
     }
   ],

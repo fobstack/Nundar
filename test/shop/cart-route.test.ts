@@ -38,21 +38,23 @@ function post(
 }
 
 /**
- * What a refused change is answered with: the cart page, saying what was
- * refused. The reason is in the page as an attribute, so that these tests
- * read the plugin's answer and not one language's words for it.
+ * What a refused change is answered with: a redirect to the cart page, with
+ * the reason and the variant it was about in the address. The page reads the
+ * figures from the database and says them; `test/theme/cart.test.ts` reads
+ * that page.
  */
-async function refusal(
-  response: Response,
-): Promise<{ kind: string | undefined; text: string }> {
-  const html = await response.text();
-  const box =
-    /<div class="cart-problem"[^>]*data-problem="([^"]*)"[^>]*>([\s\S]*?)<\/div>/.exec(
-      html,
-    );
+function refusal(response: Response): {
+  status: number;
+  path: string;
+  kind: string | null;
+  variant: string | null;
+} {
+  const location = new URL(response.headers.get('location') ?? '/', ORIGIN);
   return {
-    kind: box?.[1],
-    text: (box?.[2] ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '),
+    status: response.status,
+    path: location.pathname,
+    kind: location.searchParams.get('refused'),
+    variant: location.searchParams.get('variant'),
   };
 }
 
@@ -156,12 +158,14 @@ describe('POST /_mallok/p/shop/cart/update', () => {
     // skips that, so the server has to say no itself.
     const response = await post({ variant: 'dn50', quantity: '9' });
 
-    expect(response.status).toBe(422);
-    // Told on the cart page: the SKU that was asked for, and its minimum.
-    const { kind, text } = await refusal(response);
-    expect(kind).toBe('below_moq');
-    expect(text).toContain('SKU-dn50');
-    expect(text).toMatch(/\b10\b/);
+    // Sent to the cart page, which says why; nothing in the address but
+    // the reason and the variant.
+    expect(refusal(response)).toEqual({
+      status: 303,
+      path: CART,
+      kind: 'below_moq',
+      variant: 'dn50',
+    });
     expect(await lines()).toEqual([]);
     // A refused request must not leave an empty cart behind either.
     expect(await cartCount()).toBe(0);
@@ -189,8 +193,7 @@ describe('POST /_mallok/p/shop/cart/update', () => {
       { action: 'set', variant: 'dn50', quantity: '3' },
       cookie,
     );
-    expect(tooFew.status).toBe(422);
-    expect((await refusal(tooFew)).kind).toBe('below_moq');
+    expect(refusal(tooFew)).toMatchObject({ status: 303, kind: 'below_moq' });
     expect(await lines()).toMatchObject([{ quantity: 40 }]);
   });
 
@@ -215,13 +218,13 @@ describe('POST /_mallok/p/shop/cart/update', () => {
   it('refuses more than the stock of a tracked variant', async () => {
     const response = await post({ variant: 'dn50', quantity: '101' });
 
-    expect(response.status).toBe(422);
-    const { kind, text } = await refusal(response);
-    expect(kind).toBe('insufficient_stock');
-    // How many can be had: said to the one buyer asking, on a page that is
-    // theirs alone and never cached.
-    expect(text).toMatch(/\b100\b/);
+    expect(refusal(response)).toMatchObject({
+      status: 303,
+      kind: 'insufficient_stock',
+      variant: 'dn50',
+    });
     expect(await lines()).toEqual([]);
+    expect(response.headers.get('set-cookie')).toBeNull();
   });
 
   it('counts what is already in the cart against the stock', async () => {
@@ -232,8 +235,10 @@ describe('POST /_mallok/p/shop/cart/update', () => {
       cartCookie(first),
     );
 
-    expect(second.status).toBe(422);
-    expect((await refusal(second)).kind).toBe('insufficient_stock');
+    expect(refusal(second)).toMatchObject({
+      status: 303,
+      kind: 'insufficient_stock',
+    });
     expect(await lines()).toMatchObject([{ quantity: 60 }]);
   });
 
@@ -263,8 +268,11 @@ describe('POST /_mallok/p/shop/cart/update', () => {
 
     for (const variant of ['ghost', 'old', 'secret']) {
       const response = await post({ variant, quantity: '1' });
-      expect(response.status).toBe(409);
-      expect((await refusal(response)).kind).toBe('unavailable');
+      expect(refusal(response)).toMatchObject({
+        status: 303,
+        kind: 'unavailable',
+        variant,
+      });
     }
     expect(await lines()).toEqual([]);
     expect(await cartCount()).toBe(0);
@@ -279,10 +287,11 @@ describe('POST /_mallok/p/shop/cart/update', () => {
 
     const response = await post({ variant: 'bulk', quantity: '10001' });
 
-    expect(response.status).toBe(422);
-    const { kind, text } = await refusal(response);
-    expect(kind).toBe('quantity_too_large');
-    expect(text).toMatch(/\b10000\b/);
+    expect(refusal(response)).toMatchObject({
+      status: 303,
+      kind: 'quantity_too_large',
+    });
+    expect(await lines()).toEqual([]);
   });
 
   it('refuses one more kind of part than a cart may hold', async () => {
@@ -304,8 +313,7 @@ describe('POST /_mallok/p/shop/cart/update', () => {
 
     const response = await post({ variant: 'extra', quantity: '1' }, cookie);
 
-    expect(response.status).toBe(422);
-    expect((await refusal(response)).kind).toBe('cart_full');
+    expect(refusal(response)).toMatchObject({ status: 303, kind: 'cart_full' });
     // A part already in the cart can still be given another quantity.
     const more = await post(
       { action: 'set', variant: 'dn50', quantity: '20' },
@@ -423,6 +431,8 @@ describe('POST /_mallok/p/shop/cart/update', () => {
 
     expect(response.status).toBe(303);
     expect(await cartCount()).toBe(0);
+    // And the made-up id is not confirmed by handing it back.
+    expect(response.headers.get('set-cookie')).toBeNull();
   });
 
   it('is not there under a language the site does not have', async () => {
@@ -436,6 +446,79 @@ describe('POST /_mallok/p/shop/cart/update', () => {
     expect(await cartCount()).toBe(0);
   });
 
+  it('sends a refusal to the cart in the language of the page the form was on', async () => {
+    const response = await post(
+      { variant: 'dn50', quantity: '1' },
+      undefined,
+      'de',
+    );
+
+    expect(refusal(response)).toMatchObject({
+      status: 303,
+      path: '/_mallok/p/shop/de/cart',
+      kind: 'below_moq',
+    });
+  });
+
+  it('does not sell a product that is published for later', async () => {
+    // Mallok shows a page only once its time has come; a cart must not be
+    // a way round that.
+    const later = await createProduct({
+      title: 'Not out yet',
+      slug: 'route-not-out-yet',
+    });
+    await db()
+      .prepare(
+        "UPDATE content SET published_at = '2999-01-01T00:00:00.000Z' WHERE id = ?",
+      )
+      .bind(later.id)
+      .run();
+    await createVariant({ id: 'early', productGroup: later.translationGroup });
+
+    const response = await post({ variant: 'early', quantity: '1' });
+
+    expect(refusal(response)).toMatchObject({ kind: 'unavailable' });
+    expect(await lines()).toEqual([]);
+  });
+
+  it('does not bring an expired cart back with the next thing added', async () => {
+    const first = await post({ variant: 'dn50', quantity: '10' });
+    const old = cartCookie(first);
+    await createVariant({ id: 'dn80', productGroup: valve.translationGroup });
+    // Nobody touched it for a month, and the hourly clean-up has not come
+    // round yet: the rows are still there.
+    await db()
+      .prepare("UPDATE p_shop_cart SET expires_at = '2020-01-01T00:00:00.000Z'")
+      .run();
+
+    const again = await post({ variant: 'dn80', quantity: '1' }, old);
+
+    expect(again.status).toBe(303);
+    // A new cart, under a new id; the old one's line is not in it.
+    const fresh = cartCookie(again);
+    expect(fresh).toMatch(/^nundar_cart=[0-9a-f]{32}$/);
+    expect(fresh).not.toBe(old);
+    const mine = (await lines()).filter(
+      (line) => `nundar_cart=${line.cart_id}` === fresh,
+    );
+    expect(mine).toMatchObject([{ variant_id: 'dn80', quantity: 1 }]);
+  });
+
+  it('issues its own id rather than take up one the visitor chose', async () => {
+    // The id is all that protects a cart. One a visitor could pick, somebody
+    // else could have picked for them.
+    const chosen = 'nundar_cart=0123456789abcdef0123456789abcdef';
+
+    const response = await post({ variant: 'dn50', quantity: '10' }, chosen);
+
+    expect(response.status).toBe(303);
+    expect(cartCookie(response)).toMatch(/^nundar_cart=[0-9a-f]{32}$/);
+    expect(cartCookie(response)).not.toBe(chosen);
+    expect((await lines()).map((line) => line.cart_id)).not.toContain(
+      '0123456789abcdef0123456789abcdef',
+    );
+  });
+
   it('only ever redirects to a path on this site', async () => {
     for (const target of [
       'https://evil.example/',
@@ -443,6 +526,13 @@ describe('POST /_mallok/p/shop/cart/update', () => {
       '/\\evil.example',
       'javascript:alert(1)',
       'evil',
+      // One slash as sent, two once the dot segment is resolved — and two
+      // slashes at the start of a path are another site.
+      '/.//evil.example/x',
+      '/..//evil.example',
+      '/a/..//evil.example',
+      '/%2e//evil.example',
+      '/./\\evil.example',
     ]) {
       const response = await post({
         variant: 'dn50',

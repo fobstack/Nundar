@@ -19,8 +19,9 @@
 
   {%- comment -%}
     A change that was refused: said here, above the cart as it still is. The
-    reason is a kind the plugin names; the words for it are in the pack, and
-    the number it is about follows them.
+    buyer was sent to this page with the reason in its address; the plugin
+    read the figures from the database and names the reason as a kind. The
+    words for it are in the pack, and the number it is about follows them.
   {%- endcomment -%}
   {% if cart.problem %}
   {% assign reason = "problem_" | append: cart.problem.kind %}
@@ -38,7 +39,7 @@
     {% for line in cart.lines %}
     <li class="cart-line">
       <div class="cart-what">
-        {% if line.name != blank %}<p class="cart-name">{{ line.name }}</p>{% endif %}
+        {% if line.name != blank %}<p class="cart-name">{% if line.path != blank %}<a href="{{ line.path }}">{{ line.name }}</a>{% else %}{{ line.name }}{% endif %}</p>{% endif %}
         {% if line.sku != blank %}<p class="offer-sku">{{ line.sku }}</p>{% endif %}
         {%- comment -%}
           What stands in the way of ordering this line as it is. A line whose
@@ -61,7 +62,7 @@
           <input type="hidden" name="action" value="set">
           <input type="hidden" name="variant" value="{{ line.variant_id }}">
           <label class="offer-qty"><span>{{ t.quantity }}</span><input type="number" name="quantity" min="{{ line.moq }}" step="{{ line.moq }}" value="{{ line.quantity }}" required inputmode="numeric"></label>
-          <button class="btn btn-outline btn-sm" type="submit">{{ t.update }}</button>
+          <button class="btn btn-outline btn-sm" type="submit">{{ t.update }}{% if line.sku != blank %}<span class="visually-hidden"> {{ line.sku }}</span>{% endif %}</button>
         </form>
         {% endif %}
         <form method="post" action="{{ cart.action }}">

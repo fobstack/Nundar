@@ -116,6 +116,8 @@ function cartCookie(response: Response): string {
 /** One line of the cart page, as plain facts. */
 interface Line {
   readonly name: string;
+  /** Where the name links to; '' when it is not a link. */
+  readonly href: string;
   readonly sku: string;
   readonly problem: string;
   readonly note: string;
@@ -127,7 +129,10 @@ function cartLines(html: string): Line[] {
   const list = between(html, '<ul class="cart-lines">', '</ul>');
   return [...list.matchAll(/<li class="cart-line">([\s\S]*?)<\/li>/g)].map(
     ([, line = '']) => ({
-      name: /<p class="cart-name">([^<]*)<\/p>/.exec(line)?.[1] ?? '',
+      name: (
+        /<p class="cart-name">([\s\S]*?)<\/p>/.exec(line)?.[1] ?? ''
+      ).replace(/<[^>]+>/g, ''),
+      href: /<p class="cart-name"><a href="([^"]*)">/.exec(line)?.[1] ?? '',
       sku: /<p class="offer-sku">([^<]*)<\/p>/.exec(line)?.[1] ?? '',
       problem: /data-problem="([^"]*)"/.exec(line)?.[1] ?? '',
       note: (
@@ -484,6 +489,17 @@ describe('the cart', () => {
       );
     });
 
+    it('links each line to its product, in the language the cart is read in', async () => {
+      const cookie = await add(screw.path, 'CS-10');
+
+      expect(
+        cartLines((await get(`${SHOP}/cart`, cookie)).html)[0],
+      ).toMatchObject({ name: 'Cap screw', href: screw.path });
+      expect(
+        cartLines((await get(`${SHOP}/de/cart`, cookie)).html)[0],
+      ).toMatchObject({ name: 'Zylinderschraube', href: screwDe.path });
+    });
+
     it('prices from the database on every request, never from the cart', async () => {
       const cookie = await add(screw.path, 'CS-10');
       await setPrice({
@@ -518,7 +534,9 @@ describe('the cart', () => {
             value: '150',
             inputmode: 'numeric',
           },
-          button: 'Update',
+          // Named for its line: a page of buttons all called "Update" tells
+          // someone who cannot see them nothing.
+          button: 'Update CS-16',
         },
         {
           action: `${SHOP}/cart/update`,
@@ -740,6 +758,7 @@ describe('the cart', () => {
       });
       expect(deleted?.forms).toHaveLength(1);
       expect(deleted?.forms[0]?.button).toBe('Remove');
+      expect(deleted?.href).toBe('');
       expect(html).not.toContain('<p class="cart-name"></p>');
       expect(html).not.toContain('<p class="offer-sku"></p>');
     });
@@ -759,6 +778,108 @@ describe('the cart', () => {
       );
       expect(line?.terms).toEqual([]);
       expect(subtotal(html)).toBeNull();
+    });
+
+    it('keeps a part whose product is out in another language only', async () => {
+      // Published in German and nowhere else. It can be added from its
+      // German page, and is the same part when the cart is read in English.
+      const german = await createContent({
+        kind: 'product',
+        title: 'Nur auf Deutsch',
+        slug: 'nur-auf-deutsch',
+        locale: 'de',
+        frontmatter: ['sizes:', '  ND-1: 1 mm'].join('\n'),
+      });
+      await createVariant({
+        id: 'nd-1',
+        productGroup: german.translationGroup,
+        sku: 'ND-1',
+      });
+      await setPrice({
+        variantId: 'nd-1',
+        currency: 'USD',
+        amountMinor: 100,
+        source: 'base',
+      });
+      const cookie = await add(german.path, 'ND-1');
+
+      for (const path of [
+        `${SHOP}/cart`,
+        `${SHOP}/fr/cart`,
+        `${SHOP}/de/cart`,
+      ]) {
+        const [line] = cartLines((await get(path, cookie)).html);
+
+        expect(line, path).toMatchObject({
+          name: 'Nur auf Deutsch',
+          href: german.path,
+          sku: 'ND-1',
+          problem: '',
+        });
+      }
+    });
+
+    it('says a part is gone when its product is published for later', async () => {
+      // In a cart already, and then rescheduled: Mallok stops showing the
+      // page until its time comes, and the cart stops selling the part.
+      const held = await createContent({
+        kind: 'product',
+        title: 'Held back',
+        slug: 'held-back',
+        frontmatter: ['sizes:', '  HB-1: 1 mm'].join('\n'),
+      });
+      await createVariant({
+        id: 'hb-1',
+        productGroup: held.translationGroup,
+        sku: 'HB-1',
+      });
+      await setPrice({
+        variantId: 'hb-1',
+        currency: 'USD',
+        amountMinor: 100,
+        source: 'base',
+      });
+      const cookie = await add(held.path, 'HB-1');
+      await db()
+        .prepare(
+          "UPDATE content SET published_at = '2999-01-01T00:00:00.000Z' WHERE id = ?",
+        )
+        .bind(held.id)
+        .run();
+
+      const [line] = cartLines((await get(`${SHOP}/cart`, cookie)).html);
+
+      expect(line).toMatchObject({
+        name: '',
+        href: '',
+        sku: 'HB-1',
+        problem: 'unavailable',
+      });
+    });
+
+    it('shows a cart in a currency every line has, when the one chosen is not one', async () => {
+      // A part priced in euros only, added from a German page; then one from
+      // an English page, which asks for dollars. Dollars would leave the
+      // first without a price and the buyer with no way back.
+      await db()
+        .prepare(
+          "DELETE FROM p_shop_price WHERE variant_id = 'cs-16' AND currency = 'USD'",
+        )
+        .run();
+      const cookie = await add(screwDe.path, 'CS-16');
+      await add(screw.path, 'CS-10', undefined, cookie);
+
+      const { html } = await get(`${SHOP}/cart`, cookie);
+
+      expect(cartLines(html).map((line) => [line.sku, line.problem])).toEqual([
+        ['CS-10', ''],
+        ['CS-16', ''],
+      ]);
+      expect(cartLines(html).map((line) => line.terms[0]?.[1])).toEqual([
+        '€0.39',
+        '€0.51',
+      ]);
+      expect(subtotal(html)).toBe('Subtotal €64.50');
     });
 
     it('shows the whole cart in the base currency when one line lacks the one chosen', async () => {
@@ -783,25 +904,130 @@ describe('the cart', () => {
   });
 
   describe('a change the shop refuses', () => {
-    it('is answered with the cart as it still is, and what was refused, in the buyer’s language', async () => {
+    /** The refusal box of a cart page: the reason, and its words. */
+    function refusal(html: string): { kind: string; text: string } | null {
+      const box = /<div class="cart-problem"([^>]*)>([\s\S]*?)<\/div>/.exec(
+        html,
+      );
+      return box === null
+        ? null
+        : {
+            kind: /data-problem="([^"]*)"/.exec(box[1] ?? '')?.[1] ?? '',
+            text: (box[2] ?? '')
+              .replace(/<[^>]+>/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim(),
+          };
+    }
+
+    it('sends the buyer to the cart page, which says what was refused in their language', async () => {
       const cookie = await add(screwDe.path, 'CS-10');
       const form = await offerForm(screwDe.path, 'CS-16');
 
       // The quantity field would not allow it; a request can skip the field.
       const response = await submit(form as Form, cookie, { quantity: '7' });
-      const html = await response.text();
+      expect(response.status).toBe(303);
+      const location = response.headers.get('location') ?? '';
+      expect(location).toBe(`${SHOP}/de/cart?refused=below_moq&variant=cs-16`);
 
-      expect(response.status).toBe(422);
+      const { status, html, headers } = await get(location, cookie);
+      expect(status).toBe(200);
       expect(html).toMatch(/<html lang="de"[ >]/);
-      const box = between(html, '<div class="cart-problem"', '</div>');
-      expect(box).toContain('role="alert"');
-      expect(box).toContain('data-problem="below_moq"');
-      expect(box.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')).toContain(
-        'Diese Änderung wurde nicht übernommen. CS-16 Die Mindestmenge beträgt 50',
-      );
+      expect(html).toContain('<div class="cart-problem" role="alert"');
+      expect(refusal(html)).toEqual({
+        kind: 'below_moq',
+        text: 'Diese Änderung wurde nicht übernommen. CS-16 Die Mindestmenge beträgt 50',
+      });
       // The cart below it is unchanged.
       expect(cartLines(html).map((line) => line.sku)).toEqual(['CS-10']);
-      expect(response.headers.get('cache-control')).toBe('private, no-store');
+      expect(headers.get('cache-control')).toBe('private, no-store');
+    });
+
+    it('lands on a page whose language can be changed', async () => {
+      // The page a POST renders is listed, in every language, at the POST's
+      // own address — which answers a link with "method not allowed".
+      const { html } = await get(
+        `${SHOP}/de/cart?refused=below_moq&variant=cs-16`,
+      );
+      const switcher = between(html, '<details class="langs">', '</details>');
+      const links = [...switcher.matchAll(/href="([^"]*)"/g)].map(
+        ([, href = '']) => href,
+      );
+
+      expect(links).toEqual([
+        `${ORIGIN}${SHOP}/cart`,
+        `${ORIGIN}${SHOP}/de/cart`,
+        `${ORIGIN}${SHOP}/fr/cart`,
+        `${ORIGIN}${SHOP}/es/cart`,
+      ]);
+      for (const href of links) {
+        expect((await SELF.fetch(href)).status, href).toBe(200);
+      }
+    });
+
+    it.each([
+      ['insufficient_stock', 'cs-10', 'CS-10 Available from stock: 500'],
+      [
+        'quantity_too_large',
+        'cs-10',
+        'CS-10 The most that can be ordered at once is 10000',
+      ],
+      [
+        'cart_full',
+        'cs-10',
+        'CS-10 The cart cannot hold more different parts.',
+      ],
+      ['unavailable', 'cs-10', 'CS-10 This part can no longer be ordered.'],
+    ])(
+      'says %s with the figure the shop has, not one from the address',
+      async (kind, variantId, words) => {
+        const { html } = await get(
+          `${SHOP}/cart?refused=${kind}&variant=${variantId}&moq=1&available=99999&max=7&sku=EVIL`,
+        );
+
+        expect(refusal(html)).toEqual({
+          kind,
+          text: `That change was not made. ${words}`,
+        });
+        expect(html).not.toContain('99999');
+        expect(html).not.toContain('EVIL');
+      },
+    );
+
+    it('puts nothing of a made-up link on the page', async () => {
+      // Only which reason and which variant are read from the address, and
+      // both only to look something up.
+      const unknownVariant = await get(
+        `${SHOP}/cart?refused=below_moq&variant=${encodeURIComponent('<b>call 555-0100</b>')}`,
+      );
+      expect(refusal(unknownVariant.html)).toEqual({
+        kind: 'unavailable',
+        text: 'That change was not made. This part can no longer be ordered.',
+      });
+      expect(unknownVariant.html).not.toContain('555-0100');
+
+      for (const reason of ['', 'nonsense', '<script>', 'below_moq ']) {
+        const { status, html } = await get(
+          `${SHOP}/cart?refused=${encodeURIComponent(reason)}&variant=cs-10`,
+        );
+
+        expect(status, reason).toBe(200);
+        expect(refusal(html), reason).toBeNull();
+      }
+    });
+
+    it('explains a refusal without a third round trip to D1', async () => {
+      const cookie = await add(screw.path, 'CS-10');
+      let status = 0;
+      const calls = await countD1Calls(async () => {
+        status = (
+          await get(`${SHOP}/cart?refused=below_moq&variant=cs-16`, cookie)
+        ).status;
+      });
+
+      expect(status).toBe(200);
+      // One of Mallok's, two of the shop's: the variant rides with the cart.
+      expect(calls).toBe(3);
     });
 
     it('refuses a form posted from another site', async () => {

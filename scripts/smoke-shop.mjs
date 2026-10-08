@@ -496,19 +496,27 @@ try {
     'the quantity field does not start at the minimum order and step by it',
   );
 
-  // A request can skip the field: the server says no itself, on the cart
-  // page, and nothing is put in a cart.
+  // A request can skip the field: the server says no itself. It sends the
+  // buyer to the cart page, which says why, and nothing is put in a cart.
   const refused = await submit(form, { quantity: '3' });
-  const refusedPage = await refused.text();
+  const refusedTo = refused.headers.get('location') ?? '';
   expect(
-    refused.status === 422 &&
-      refusedPage.includes('data-problem="below_moq"') &&
-      refusedPage.includes('The minimum order is 100'),
-    `a quantity below the minimum order returned ${refused.status} without saying why`,
+    refused.status === 303 &&
+      refusedTo ===
+        '/_mallok/p/shop/cart?refused=below_moq&variant=sample-ti-shc-m5-20',
+    `a quantity below the minimum order returned ${refused.status} to ${refusedTo}`,
   );
   expect(
     refused.headers.get('set-cookie') === null,
     'a refused request was given a cart',
+  );
+  const refusedPage = await page(refusedTo);
+  expect(
+    refusedPage.status === 200 &&
+      refusedPage.html.includes('data-problem="below_moq"') &&
+      refusedPage.html.includes('The minimum order is 100') &&
+      refusedPage.html.includes('<p class="empty">Your cart is empty.</p>'),
+    'the cart page does not say why a quantity below the minimum order was refused',
   );
 
   const added = await submit(form);
@@ -536,7 +544,7 @@ try {
       cart.includes('<header class="topbar">') &&
       cart.includes('<p class="offer-sku">TI-SHC-M5-20</p>') &&
       cart.includes(
-        '<p class="cart-name">M5 × 0.8 Titanium Socket Head Cap Screw</p>',
+        `<p class="cart-name"><a href="${capScrew}">M5 × 0.8 Titanium Socket Head Cap Screw</a></p>`,
       ),
     `the cart page does not show the part that was added (${cartPage.status})`,
   );
@@ -578,7 +586,7 @@ try {
   expect(
     germanCart.includes('<h1 class="detail-title">Ihr Warenkorb</h1>') &&
       germanCart.includes(
-        '<p class="cart-name">Titan-Zylinderschraube mit Innensechskant M5 × 0,8</p>',
+        '<p class="cart-name"><a href="/de/products/titan-zylinderschraube-innensechskant-m5">Titan-Zylinderschraube mit Innensechskant M5 × 0,8</a></p>',
       ) &&
       />210,00\s€<\/span>/.test(germanCart),
     'the German cart page does not show the same cart in German and in euros',
