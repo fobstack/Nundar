@@ -284,7 +284,7 @@ The Next.js application stays in maintenance mode, with security and correctness
 
 ## 9. Phases
 
-The phases follow Mallok's own roadmap (`mallok: docs/PRODUCT_VISION.md §9`: 0.2 inquiry cart, 0.3 payment, 1.0 storefront). Nundar was started on the published `mallok@0.1.0-rc.7`, is on `0.1.0-rc.9` now (§12), and moves to the Mallok release that carries the P0 extension points once the owner publishes it (§11 decision 8).
+The phases follow Mallok's own roadmap (`mallok: docs/PRODUCT_VISION.md §9`: 0.2 inquiry cart, 0.3 payment, 1.0 storefront). Nundar was started on the published `mallok@0.1.0-rc.7`, moved to `0.1.0-rc.9` (§12), and is on `0.1.0-rc.11` now — the release that carries the extension points of §7 (§16).
 
 **Phase 0: decisions, no code**
 - §11 is answered (2026-10-01).
@@ -504,3 +504,46 @@ Nothing here is commerce logic, and none of it needs a Mallok change: all of it 
 **What review found.** An independent review of the finished theme confirmed twenty-three defects, none of them in what a crawler indexes, most of them in what happens off the path the sample walks: a language whose words are longer, a width between a phone and a laptop, an option left empty, a field left out. The plan lists them. Two rules came out of it that now have tests behind them: a template prints a wrapper only when it has something to put in it, and a layout is not finished until it has been measured in the longest language at every width.
 
 **Left open.** The sample's own contradictions, inherited from the template and listed in the plan; whether the images may be published under this repository's licences; a browser test for what only a browser shows; a pass with a screen reader; measurements on a deployed site.
+
+## 16. What the move to `mallok@0.1.0-rc.11` changed or found (2026-10-08)
+
+Mallok published plugin API 2 in two releases: `0.1.0-rc.10` with what phase 1 needs, and `0.1.0-rc.11` with what phases 2 and 3 need. Nundar pins `0.1.0-rc.11` exactly. It is published under npm's `next` tag only; `latest` is still rc.10, so a range or a tag would not select it.
+
+**The upgrade itself changed no code.** `npx mallok upgrade --to 0.1.0-rc.11` rewrote the version in `package.json` and the lockfile, and the lint, the type check, both test suites, the build, both smoke runs and `npm run preview -- --check` passed as they were. The shop plugin declares `"pluginApi": 1` and is routed exactly as before.
+
+**One thing the upgrade notes ask of every site.** `wrangler.jsonc` gains a second rate-limit binding, `RATE_LIMITER_RELAXED`, for routes a visitor repeats in normal use. `mallok upgrade` does not edit that file. Its namespace is the strict tier's number plus one, which is what a new site gets; the two must differ, and `test/project.test.ts` holds them apart. Until a route asks for the relaxed tier, nothing uses it.
+
+**§7, row by row.** Every row of that table is in the release. What each became, where it differs from what this document asked for:
+
+| §7 | In `mallok@0.1.0-rc.11` | Differs from the request |
+|---|---|---|
+| API-1 | The `renderData` hook; templates read `plugins.shop` | One database call per hook, a single `SELECT` checked by keyword, at most two plugins per page. A failing hook costs the page its place in the cache, not the page |
+| API-2 | `cacheTags` from `renderData`; `ctx.purgeTags` | A plugin purges only its own tags and `site` |
+| API-3 | Routes with `"render": "page"`, drawn by a layout the theme lists in `pluginLayouts` | Layout files are flat (`layouts/shop-cart.liquid`); the layout's *name* keeps the `shop/cart` form. The locale is a segment after the plugin id: `/_mallok/p/shop/de/cart` |
+| API-4 | Several segments, `:parameters`, `input.json` | The first segment may not look like a locale code |
+| API-5 | `"body": "raw"` | Capped at 256 KiB, or up to 1 MiB with `maxBytes` — Mallok's judgement: Stripe documents no maximum |
+| API-6 | `records` panels with `money` and `rows` fields, attached to a content kind; action `params`; `related` child tables | An action handler is `(ids, ctx, params)`. A list of references has no picker in the admin |
+| API-7 | `onContentSave` is called; `onContentDelete` exists | The delete hook runs after the row is gone and cannot refuse |
+| API-8 | Each plugin's `scheduled` is isolated; `jobs`, `ctx.enqueue`, and `ctx.enqueueStatement` for the plugin's own batch | Five plugin jobs a tick, five attempts. A job runs a minute or more later, so order, payment and stock state never depend on one |
+| API-10 | `createMallok({ starters })`, and a starter may carry `records` for a plugin's panel | |
+| Structured data | `renderData` returns `structuredData: { offers }`, merged into the core's `Product` node | `offers` only, on `Product` only |
+| Script check | Every template is scanned whether or not the theme declares scripts | |
+| `reference[]` | Resolved in `content.refs` and `content.backrefs` | At most 24 |
+| Rate limits (§5.2) | Two tiers, `strict` and `relaxed`, counted per route | Cloudflare's binding takes a period of 10 or 60 seconds only, so "ten per ten minutes" for checkout is not expressible; a longer window is the plugin's own count |
+| Email (§14, item 11) | The Resend key and the sender are site settings; `ctx.sendEmail` uses them for every plugin | The shop declares neither |
+
+**The five behaviours of §15.** Four are answered in this release. Each stand-in here was removed in its own commit, and each answer was seen in this repository rather than taken from the changelog:
+
+| §15 found | In `mallok@0.1.0-rc.11` | Here |
+|---|---|---|
+| The inquiry form's labels are English on a German page | The plugin reads six `inquiry_*` keys from the theme's language pack, one at a time, and keeps its own English and Chinese as the fallback | The keys are in the German, French and Spanish packs, and deliberately not in the English one: a pack falls back to the default pack, so English keys would replace the plugin's own text in every language this theme has no pack for. `test/theme/inquiry.test.ts` holds each label in its place in the form, and holds the default pack empty of them |
+| The tagline is one string for all languages | `tagline` is a string or a map of language to text, and Mallok describes each language's home page with it | The `tagline` theme option is gone and `site.json` carries four taglines. `home_description` stays, as an option and no longer as a stand-in: Mallok's description of the home page *is* the tagline, and a site may want a sentence there rather than five words |
+| A kind with an address and no list layout answers 500 | 404, with the theme's not-found page in the address's language | Nothing to remove: every kind with an address has a list layout because each list is a page worth having. Checked by taking one kind's list layout away for a single run: `/tools`, `/de/tools` and `/tools/page/2` answered 404, in English and in German |
+| A template cannot link to its kind's list page | `site.kinds.<kind>`, with `path` and `label`, present exactly when the list page exists | The `catalogue_href` option is gone. One breadcrumb partial serves every layout — home, the list of the kind, a product's collection, the page — and `test/theme/unlisted.test.ts` holds it, and the home page's link to the catalogue, on a site that serves products without a list |
+| Toggling a plugin or changing settings leaves cached pages as they were | The first-run half is fixed: nothing a site serves before its administrator exists is stored | **The rest stands**, by Mallok's own check on a deployed site: a plugin switch did not evict a cached page, and neither did the admin's "Clear cached pages", which reported success all the same. So the plugins are still switched on before the first publish, the README still says so, and `test/shop/helpers.ts` still deletes the cached home page by hand |
+
+The theme is `0.5.0`: two options were removed. The longer breadcrumb was measured the way §15's review asked — all 156 pages of the sample at nine widths from 320 to 1440 px, none scrolling sideways and no breadcrumb running past its box.
+
+**Two things noticed on the way, both written up for the Mallok side and neither worked around.** A content page's structured data is its own node and nothing else: there is no `BreadcrumbList`, and a theme cannot add one, since no template may carry a JSON-LD block. And the admin has no field for a home page description apart from the tagline, which is why `home_description` remains a theme option.
+
+**Not measured by anyone yet.** Mallok has no CPU figure for a cold render with `renderData` active, and no plugin has used API 2 on a deployed site. The measurements §9 asks for before each phase ships are still owed, on a real account.
