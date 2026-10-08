@@ -547,3 +547,56 @@ The theme is `0.5.0`: two options were removed. The longer breadcrumb was measur
 **Two things noticed on the way, both written up for the Mallok side and neither worked around.** A content page's structured data is its own node and nothing else: there is no `BreadcrumbList`, and a theme cannot add one, since no template may carry a JSON-LD block. And the admin has no field for a home page description apart from the tagline, which is why `home_description` remains a theme option.
 
 **Not measured by anyone yet.** Mallok has no CPU figure for a cold render with `renderData` active, and no plugin has used API 2 on a deployed site. The measurements §9 asks for before each phase ships are still owed, on a real account.
+
+## 17. What phase 1B changed or found (2026-10-08)
+
+Phase 1B is the part of phase 1 that waited for Mallok (§12): prices on pages, the cart page, editing variants in the admin, and the inquiry cart. With `mallok@0.1.0-rc.11` in place (§16) the first three are built, on the plugin contract as it shipped and with nothing worked around. The fourth is not, and waits for a decision (below).
+
+**Prices on pages (§5.1).** Built as designed. The shop declares `"pluginApi": 2` and a `renderData` hook: one batch of two statements reads the variants and prices of the products a page shows, and the theme prints them — on a product page a row for each size with its price, minimum order, state and lead time; in the finder and the catalogue, what each product starts at. A cold product page is three D1 round trips, counted in workerd.
+
+Where the build is more specific than §5.1:
+
+- *A page is in one currency.* A currency is offered only when every priced variant on the page has a price in it; the language's own comes first when it is among them, the base currency otherwise. It is the rule `priceCart` already settled an order by, and for the same reason: amounts in two currencies cannot be compared or added.
+- *The structured data.* One priced variant is an `Offer`; several are an `AggregateOffer` holding them, the form Google documents a price range for. A made-to-order variant is `BackOrder`: schema.org has `MadeToOrder`, but Google's documented values for `Offer.availability` do not include it (product structured data, read 2026-10-08), and `BackOrder` says the same to a buyer — it can be ordered now and ships later. `eligibleQuantity` carries a minimum order above one and `deliveryLeadTime` a lead time the page states (2026-09-03 §4.5.2). A test compares every offered price with the price its row prints, digit for digit.
+- *Sizes.* A product page lists the sizes its front matter names, in its own order and words, and gives each the variant that carries its SKU; a variant the page does not name follows them, named by its option values. So nothing that can be bought is left off a page, and a page is whole without the plugin.
+- *Collection pages have no prices.* The hook is told the items a list or the home page shows, and nothing of what a content page lists through a reference. The products on a collection's page, and a product's neighbours, therefore have names and no prices. This is a gap in Mallok, written up for it; a test here holds the state and fails the day it changes.
+
+**The currency switch (§5.1).** Built as designed: every price carries its amount in each other currency the page offers, a third declared script swaps them, and the choice is kept in `localStorage`. The switch and the attributes are in a page only when there is more than one currency to show.
+
+**The cart (§5.2).** Built, with three differences from the design:
+
+- *The forms post to `/_mallok/p/shop/cart/update`, not to `/cart`.* Mallok keys a route's handler by its path, so the page (`GET cart`) and the form cannot share one.
+- *The language is a segment after the plugin's id* (`/_mallok/p/shop/de/cart`), which is how Mallok built API-3. The cookie's scope, `/_mallok/p/shop`, covers every language.
+- *A refused change is answered with the cart page*, at 422 or 409, saying what was refused and leaving the cart as it was — not with a redirect and not with JSON. The buyer is told in the place they can put it right, in their language; the plugin sends the reason as a kind and the theme has the words.
+
+The quantity field starts at the minimum order and steps by it, as 2026-09-03 §4.5.1 asks; the server enforces the minimum and does not enforce the step. The cart page and an order are built from one reading of the cart (`readCartFacts`), so the two cannot disagree. The page costs two D1 round trips beyond Mallok's own, whatever the number of lines.
+
+**Variants in the admin (§5.6).** A `records` panel attached to the `product` kind, with the fields declared in `plugin.json` and three handlers. A base price derives the other currencies at the stored rate; a price entered by hand is `manual` and never recomputed; a derived price is recomputed on a save only when the base price changed, so that saving for another reason does not move a price inside the drift threshold. Stock is set to a figure and the ledger records the difference, measured in the same batch as the write. A variant that has been ordered is archived, never deleted — which also settles §14's open item 14 for the admin: nothing here deletes a variant an order names.
+
+**Purging (§5.1, §5.5).** A page carries `p:shop:<product group>` for every product it prices. A save or a delete in the admin purges that product's tag; a repricing chunk purges, in one call, the products whose prices it moved and no others. A purge that fails leaves pages to expire.
+
+**The sample.** The seeded variants gained a euro and a sterling price, entered by hand, so that a German page is in euros and the switch has something to switch.
+
+**Phase 1's exit criteria (§9), one by one.**
+
+| Criterion | State |
+|---|---|
+| Add-to-cart works with JavaScript disabled | Met. The forms are plain POSTs; the cart page carries no script at all. Tests and the smoke run submit the forms a page offers and never run one |
+| MOQ enforced server-side, with a test that bypasses the form | Met, in workerd and in the smoke run on a real local Worker |
+| `Offer` JSON-LD equals the rendered price | Met: compared digit for digit, in both currencies a page can be in |
+| A price change purges exactly the affected pages | Met as far as a test without a zone can see: the tags asked for are exactly the products whose prices moved, and the pages carry those tags. **Whether Cloudflare then evicts them is not verified** — it needs a deployed site, and Mallok's own check on one found purges failing for a reason not yet known (§16) |
+| Cold product render p50/p95 CPU and D1 round trips on a real Free account | **Not met.** Round trips are counted locally: three. CPU has not been measured by anyone |
+| The cart submitted as one inquiry | **Not built.** See below |
+
+**How it was verified.** 52 file tests and 596 tests inside workerd, 147 of the latter new. 171 deliberate breakages of the new code — the hook, the views, the routes, the handlers, every template and all three scripts — of which 166 turned a test red, four change nothing a caller can observe, and one showed a check that could never fire, which was removed. The smoke run walks the whole path on a real local Worker: the sample published, a product page's form posted as it stands, the cart page read in English and in German, a variant added and removed the way the admin's form does. In a browser: a buyer's path clicked through by hand, the admin's form opened and saved, and every page of the sample measured at thirteen widths from 320 to 1920 px, the cart pages with three lines in them.
+
+The measuring found one regression before it was committed: with the cart's link in it, the header's one line ran past the page's edge at 1280 px in three of four languages. The gap between its links is now tightest where that line begins and opens out from there; Spanish, the longest, has about a dozen pixels to spare. It also showed that Spanish had been twelve pixels over since the theme was ported — inside the bar's own padding, so the page never scrolled and the earlier measurement, which looked for scrolling, did not see it.
+
+**Left open.**
+
+1. *The inquiry cart.* Phase 1 ends with "submitting the cart as one inquiry, which is Mallok 0.2's inquiry cart" (§9). Whether that is the shop plugin's to build — a table of its own, a form on the cart page, an email to the seller — or Mallok's inquiry plugin's, which the shop would hand a cart to, is the owner's decision; building it here would be a second inquiry store beside Mallok's. Until then the cart page ends on the link to the quote page.
+2. *Measurements on a real account*, and whether purges evict (the table above).
+3. *The rounding rule and unit prices.* A derived price is rounded up to the next `.99` or whole unit (2026-09-03 §4.4). For a part priced at two dollars that turns $1.60, $1.85 and $2.05 alike into €1.99. The rule is the owner's and is unchanged; a catalogue of small parts wants a third strategy that rounds to the cent, or hand-entered prices, which is what the sample uses.
+4. *Stock set in the admin is a figure, not a difference.* A payment that lands between opening the form and saving it is overwritten by the figure the seller typed. The ledger stays true — it records the difference from the stock as it was when the write landed — but the seller is not told.
+5. *A cart line does not link to its product*, and *the not-found page has no cart link*: both wait for Mallok (written up for it).
+6. *The cart page's forms are not rate-limited beyond Mallok's relaxed tier* (120 a minute per visitor per route), which is best-effort by Cloudflare's own description.
