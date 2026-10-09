@@ -41,6 +41,60 @@ describe('calls made at the same moment', () => {
     ).rejects.toThrow(/did not overlap/);
   });
 
+  it('are refused when none of them wrote: there was nothing to race for', async () => {
+    // Two calls of one statement each, one after the other, look the same
+    // as two side by side. Neither is a race.
+    const once = async (database: D1Database): Promise<void> => {
+      await database.prepare('SELECT 1').first();
+    };
+
+    await expect(atTheSameMoment([once, once])).rejects.toThrow(
+      /no write to race for.*0\.0 1\.0/,
+    );
+  });
+
+  it('take a function that reads twice before it writes, when told so', async () => {
+    // Both readings sent together: the second trip of each is a reading
+    // still, and comes after the other's first.
+    const readsTwice = async (database: D1Database): Promise<string> => {
+      await Promise.all([
+        database.prepare('SELECT 1').first(),
+        database.prepare('SELECT 2').first(),
+      ]);
+      await database.batch([database.prepare('SELECT 3')]);
+      return 'done';
+    };
+
+    await expect(atTheSameMoment([readsTwice, readsTwice])).rejects.toThrow(
+      /did not overlap/,
+    );
+    expect(
+      fulfilledValues(
+        await atTheSameMoment([readsTwice, readsTwice], { readings: 2 }),
+      ),
+    ).toEqual(['done', 'done']);
+  });
+
+  it('wait for the others when one throws before it has begun', async () => {
+    let finished = false;
+    const settled = await atTheSameMoment<string>([
+      async (database) => {
+        const answer = await readThenWrite(database);
+        finished = true;
+        return answer;
+      },
+      (() => {
+        throw new Error('at once');
+      }) as unknown as (database: D1Database) => Promise<string>,
+      readThenWrite,
+    ]).catch((error: unknown) => error);
+
+    // The one that never went to the database is said to be late; what
+    // matters here is that the first had finished by the time that was said.
+    expect(String(settled)).toMatch(/did not overlap/);
+    expect(finished).toBe(true);
+  });
+
   it('hand back a call that failed as failed, and say so when none may', async () => {
     const settled = await atTheSameMoment<string>([
       readThenWrite,

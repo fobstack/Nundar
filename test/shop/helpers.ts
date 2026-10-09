@@ -602,8 +602,17 @@ function notingDatabase(call: number, order: NotedCall[]): D1Database {
 
 /**
  * Runs calls at the same moment, and fails unless they really overlapped:
- * every call had gone to the database for the first time — its reading —
- * before any of them went a second time — its write.
+ * every call had made its readings before any of them made its write.
+ *
+ * What it sees is the order in which the calls went to the database, each
+ * through the database it was handed. A call is taken to read `readings`
+ * times — once, unless said otherwise — and then to write; so the check is
+ * that the first `readings` trips of every call came before the trip
+ * numbered `readings` of any. It is only as good as that description of the
+ * calls: say how many readings a function makes, and have it use the
+ * database it is given and no other. A reading made through another handle
+ * is not seen, and a race between calls that never write is not a race —
+ * that is refused as well.
  *
  * Functions called side by side in one test do overlap that way, every
  * time: each runs as far as its first wait, which is its reading, before
@@ -613,29 +622,35 @@ function notingDatabase(call: number, order: NotedCall[]): D1Database {
  * test would never be reached, and the test would go on passing. This says
  * so instead.
  *
- * Each call is given a database of its own to use. For requests through
- * `SELF.fetch`, which do not overlap of themselves, see {@link holdWrites}.
+ * For requests through `SELF.fetch`, which do not overlap of themselves,
+ * see {@link holdWrites}.
  */
 export async function atTheSameMoment<T>(
   calls: readonly ((database: D1Database) => Promise<T>)[],
+  options: { readonly readings?: number } = {},
 ): Promise<PromiseSettledResult<T>[]> {
+  const readings = options.readings ?? 1;
   const order: NotedCall[] = [];
   const settled = await Promise.allSettled(
-    calls.map((call, index) => call(notingDatabase(index, order))),
+    // An async wrapper, so that a call which throws before its first wait
+    // is one that failed, and the others are still waited for.
+    calls.map(async (call, index) => call(notingDatabase(index, order))),
   );
-  const firstSecond = order.findIndex((noted) => noted.nth === 1);
-  const late = calls
-    .map((_, index) =>
-      order.findIndex((noted) => noted.call === index && noted.nth === 0),
-    )
-    .some(
-      (first) => first === -1 || (firstSecond !== -1 && first > firstSecond),
+  const went = order.map((noted) => `${noted.call}.${noted.nth}`).join(' ');
+  const firstWrite = order.findIndex((noted) => noted.nth === readings);
+  if (firstWrite === -1) {
+    throw new Error(
+      `No call went to the database after its ${readings === 1 ? 'reading' : `${readings} readings`}, so there was no write to race for. They went in this order (call.nth): ${went}`,
     );
+  }
+  const late = calls.some((_, index) =>
+    Array.from({ length: readings }, (_unused, nth) =>
+      order.findIndex((noted) => noted.call === index && noted.nth === nth),
+    ).some((at) => at === -1 || at > firstWrite),
+  );
   if (late) {
     throw new Error(
-      `The calls did not overlap. They went to the database in this order (call.nth): ${order
-        .map((noted) => `${noted.call}.${noted.nth}`)
-        .join(' ')}`,
+      `The calls did not overlap. They went to the database in this order (call.nth): ${went}`,
     );
   }
   return settled;
