@@ -378,6 +378,9 @@ Decided later:
    - It is a rule of the shop now, so it is judged where the minimum order is — `quantityIssue`, which add-to-cart and cart pricing share — and a quantity field carries it as `max`. A line above it that is already in a cart cannot be ordered and says so.
    - A minimum order above 500 is refused in the admin, and a variant that has one from a seed or by hand is offered no form.
    - The sample's largest minimum order is 200.
+10. **The inquiry cart (2026-10-09).**
+   - Decision: the shop plugin builds it — a table of its own, a form on the cart page, an email to the seller (§17, left open, item 1; built in §18).
+   - Mallok's inquiry plugin stays what it is: the form on a content page. The two are separate stores, read in separate panels of the admin.
 
 ## 12. What phase 1A changed or found
 
@@ -594,7 +597,7 @@ The quantity field starts at the minimum order and steps by it, as 2026-09-03 §
 | `Offer` JSON-LD equals the rendered price | Met: compared digit for digit, in both currencies a page can be in |
 | A price change purges exactly the affected pages | Met as far as a test without a zone can see: the tags asked for are exactly the products whose prices moved, and the pages carry those tags. **Whether Cloudflare then evicts them is not verified** — it needs a deployed site, and Mallok's own check on one found purges failing for a reason not yet known (§16) |
 | Cold product render p50/p95 CPU and D1 round trips on a real Free account | **Not met.** Round trips are counted locally: three. CPU has not been measured by anyone |
-| The cart submitted as one inquiry | **Not built.** See below |
+| The cart submitted as one inquiry | Met since 2026-10-09 (§18): the smoke run fills a cart, sends it through the page's own form, and finds it in the admin with its lines |
 
 **How it was verified.** 52 file tests and 633 tests inside workerd, 184 of the latter new. 209 deliberate breakages of the new code — the hook, the views, the routes, the handlers, every template and all three scripts — of which 202 turned a test red, five change nothing a caller can observe, and two showed checks that could never fire, which were removed. The smoke run walks the whole path on a real local Worker: the sample published, a product page's form posted as it stands, a refused quantity followed to the page that explains it, the cart page read in English and in German, a variant added and removed the way the admin's form does. In a browser: a buyer's path clicked through by hand, the admin's form opened and saved, and every page of the sample measured at thirteen widths from 320 to 1920 px, the cart pages with three lines in them.
 
@@ -620,7 +623,7 @@ Along the way the review's reading of the cart turned up a column: Mallok's `con
 
 **Left open.**
 
-1. *The inquiry cart.* Phase 1 ends with "submitting the cart as one inquiry, which is Mallok 0.2's inquiry cart" (§9). Whether that is the shop plugin's to build — a table of its own, a form on the cart page, an email to the seller — or Mallok's inquiry plugin's, which the shop would hand a cart to, is the owner's decision; building it here would be a second inquiry store beside Mallok's. Until then the cart page ends on the link to the quote page.
+1. *The inquiry cart.* Decided on 2026-10-09: the shop plugin's (§11, decision 10), and built (§18).
 2. *Measurements on a real account*, and whether purges evict (the table above).
 3. *The rounding rule and unit prices.* A derived price is rounded up to the next `.99` or whole unit (2026-09-03 §4.4). For a part priced at two dollars that turns $1.60, $1.85 and $2.05 alike into €1.99. The rule is the owner's and is unchanged; a catalogue of small parts wants a third strategy that rounds to the cent, or hand-entered prices, which is what the sample uses.
 4. *Stock set in the admin is a figure, not a difference.* When the seller types one, a payment that lands between opening the form and saving it is overwritten by it. The ledger stays true — it records the difference from the stock as it was when the write landed — but the seller is not told. A save that names no figure touches no stock.
@@ -630,3 +633,46 @@ Along the way the review's reading of the cart turned up a column: Mallok's `con
 8. *The step is the browser's.* A quantity field moves in steps of the minimum order (2026-09-03 §4.5.1); the server enforces the minimum and accepts any quantity above it. Whether multiples are a rule or a convenience is not written down.
 9. *A price of nothing.* The admin refuses one; a row with one, from a seed or by hand, is shown and can go in a cart, where it totals zero — which meets §14's open item 4 when checkout is built.
 10. *Deletions the plugin missed.* If the delete hook fails, or the plugin is off when a product is deleted, its variants stay: on no page and in no order, with their SKUs taken. Nothing tells a plugin afterwards.
+
+## 18. What the inquiry cart changed or found (2026-10-09)
+
+Phase 1's last piece (§9): the cart, submitted as one inquiry. The owner decided it is the shop plugin's to build (§11, decision 10). It is built on `mallok@0.1.0-rc.11` as it shipped, with nothing worked around; what Mallok lacks for it is written up and listed at the end.
+
+**What a buyer does.** Fills a cart, and on the cart page says who to answer — a name and an email address, and if they like a company, a phone number and a message — and sends it. They land on the cart page again, now empty, with the inquiry's number (`RFQ-261009-7K3M9QXA`) to quote. Nothing is charged and no stock is taken.
+
+**What a seller gets.** An email naming the inquiry and who sent it, with every line, answerable straight to the buyer; and a panel in the admin that lists every inquiry with its lines, to mark as answered or as spam, export as CSV, or delete for good.
+
+**How it is built.**
+
+- *Tables* `p_shop_inquiry` and `p_shop_inquiry_line` (`migrations/0003_inquiries.sql`). A line is a snapshot, as an order's is: SKU, name, quantity and the unit price as they were, so that nothing later done to a product changes what was asked. An amount is stored twice — as minor units, and as the text the buyer saw — because the admin lists a column as it is stored and has no way to format one.
+- *What can be sent* is decided by the reading the cart page shows (`readCartFacts`): a cart that is not empty and whose every line is in order, or has no price. **A part with no price can be asked about though it cannot be ordered** — that is what an inquiry is for — so a product page now offers a form for a size without a price (`addable` in the page's view, which was `orderable` and required one). Any other problem on a line has to be put right first: the page says which, and the form is not offered until then.
+- *The route* `POST cart/inquiry`, at Mallok's strict rate-limit tier. Like the cart's other form it never renders: it answers 303 to the cart page with the inquiry's number, or the kind of reason none was made. Three round trips of its own: the cart, what its lines depend on, the write.
+- *The write is one batch*: the inquiry, its lines, the job that owes the emails, the cart emptied. The inquiry is written only while the cart still has lines and the visitor is under their limit, both asked inside the statement; everything after is conditional on the inquiry being there. So the same form arriving twice at the same moment stores one inquiry, and a refused one leaves the cart as it was. A request that wrote nothing reads why from the tables — this cart was sent a moment ago, or the visitor is at their limit — and a form sent twice is answered both times with the one number.
+- *The emails are a job* (`ctx.enqueueStatement`, queued in that batch), not a call made on the strength of the write's answer: a Worker stopped after the batch still owes them. The job marks each email on the inquiry once it has handed it to Mallok, and a second run sends only what is not marked. A test runs Mallok's own scheduled handler and finds the plugin's job done and the seller's email in Mallok's queue.
+- *The admin* is a `table` panel with a related table for the lines and five actions. Nothing here draws it.
+- *The theme* draws the form, the confirmation and the refusal in `layouts/shop-cart.liquid`, in the four languages, with no script. Each field carries the server's own rule — `required`, the length the plugin allows, the pattern an address is held to — and a test holds the page's attributes to the plugin's constants.
+
+**Choices made here, which the owner may reverse.**
+
+1. *A size without a price can go in the cart.* It was offered no form before. Without this an inquiry could only ask about what already has a price.
+2. *A line with any other problem stops the cart being sent*, stock included: a buyer who wants more than there is writes that in the message. The cart refuses that quantity already, so a cart that holds one got it by the stock falling afterwards.
+3. *The email confirming to the buyer is built and off by default* (`inquiry_acknowledge`). The form has no challenge in front of it (below), and an email sent to whatever address is typed into a public form is how a shop comes to send mail to people who asked for nothing. It repeats nothing the buyer typed about themselves.
+4. *Five inquiries an hour from one visitor*, counted exactly in the plugin's own table. Mallok's rate limit is, in Cloudflare's words, permissive and eventually consistent; this one is for the seller's inbox.
+5. *An inquiry's number begins `RFQ-`* and is otherwise an order's: the date and eight characters. `lib/reference.ts` now makes both.
+6. *Deleting is offered, behind a box to tick.* It is how what a person typed about themselves is erased when they ask, and how spam is cleared. Mallok's own inquiry panel has no delete.
+7. *A refused form comes back empty.* Nothing a person typed may travel in an address, and a page cannot be rendered from the `POST` (§17). The fields' own rules keep a person using a browser from meeting it for validation.
+8. *The cart page's link to the quote page is gone*: the form is on the page.
+
+**How it was verified.** 52 file tests and 748 tests inside workerd, 110 of the latter new since the ceiling of §11's decision 9: the route and its races (two forms at once from one cart; two carts of one visitor at once, one short of the limit), the emails and the job, the panel through Mallok's own API, and the page — the form's attributes, the confirmation shown only to the browser whose cart it was, nothing from an address reaching the page. 54 deliberate breakages of the new code: 52 turned a test red, and two showed tests that were not sharp enough — a made-up field name that borrows another of the pack's words, a number under a prefix of the same length — which were made so. The smoke run sends a cart through the page's own form on a real local Worker, in German, and reads the inquiry back the way the admin does. In a browser: the form at ten widths from 320 to 1920 px in the four languages, with no sideways scroll and nothing outside its box; the keyboard's order, which passes over the field no person fills in; the address field refusing what the server would; and one cart sent by hand.
+
+**Not verified.** Nothing was deployed, so no email was ever delivered: the tests end where Mallok's queue takes the message. The panel was read through Mallok's API and not looked at in the admin's own screens. The form was not tried with a screen reader. The German, French and Spanish strings, and the three translated emails, were not read by a native speaker.
+
+**Left open.**
+
+1. *No challenge in front of the form.* Mallok verifies a Turnstile token for a route and has nowhere to draw the widget on a plugin's page. Written up for Mallok. Until then the limits above are what there is, and `SECURITY.md` says what they do not stop.
+2. *No retention period.* An inquiry stays until an administrator deletes it.
+3. *The shop's data is not in Mallok's export.* The plugin implements no `exportFiles`, for inquiries or for anything else it holds — variants, prices, the stock ledger. That is a gap of its own, older than this work, and is not closed here.
+4. *A job is queued beside a conditional write that stored nothing* in a true race, and finds nothing to send. Mallok's statement takes no condition. Written up.
+5. *An amount is stored twice* because a table panel has no money column. Written up.
+6. *Whether a quantity must be a multiple of the minimum order* (§17, left open, item 8) and *the rounding of a derived price* (item 3) were put to the owner with this work and are not settled in it.
+

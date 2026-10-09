@@ -5,7 +5,7 @@
 [![CI](https://github.com/fobstack/Nundar/actions/workflows/ci.yml/badge.svg)](https://github.com/fobstack/Nundar/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](LICENSE)
 
-> **Status: in development.** Nundar is being rebuilt on Mallok. The catalogue side works today. Prices and a cart are on the pages; checkout is not there yet — see [What works today](#what-works-today). It is not ready to run a real shop.
+> **Status: in development.** Nundar is being rebuilt on Mallok. The catalogue side works today. Prices and a cart are on the pages, and a cart can be sent as a request for a quote; checkout is not there yet — see [What works today](#what-works-today). It is not ready to run a real shop.
 
 ---
 
@@ -42,7 +42,7 @@ Nundar is not a second application beside Mallok. A shop is a Mallok site with t
 
 | Part | Where | What it owns |
 |---|---|---|
-| **Shop plugin** | `src/plugins/shop/` | Variants, prices per currency, stock, minimum order quantities, the cart, exchange-rate repricing |
+| **Shop plugin** | `src/plugins/shop/` | Variants, prices per currency, stock, minimum order quantities, the cart, the cart sent as an inquiry, exchange-rate repricing |
 | **Commerce theme** | `src/theme/` | How the home page, the specification finder and the product, application, collection, case study, question and reference pages look, in four languages |
 | **Sample content** | `content/`, `seed/`, `site.json` | A titanium fastener catalogue in four languages: six products in five collections, five industry pages, four case studies, questions and answers, reference pages, and the site's own copy |
 
@@ -59,7 +59,8 @@ Nundar builds on `mallok@0.1.0-rc.11`, the first release with the plugin API the
 | **Pages** | A home page with a specification finder; product pages with their sizes and SKUs, and for each size its price, minimum order, availability and lead time, read from the shop while the page is rendered and cached with it; the same offers in the page's `Product` structured data; a starting price under each product in the finder and the catalogue; collection, industry, case study, question, engineering reference and contact pages — all in English, German, French and Spanish, with `hreflang`, canonicals, sitemap and FAQ structured data; self-hosted fonts; prices in US dollars on English pages and in euros on the others, with a switch to any currency the shop prices in; no client JavaScript except three small scripts, each added to a page that is complete without it: filters for the finder, the currency switch, and calculators on the engineering reference page | Prices beside the products a collection page lists (Mallok does not yet tell a plugin which products a content page shows) |
 | **Catalogue data** | Variants, prices as integer minor units, stock, MOQ, lead time, a made-to-order policy — edited in the admin, in a form under each product's editor; every change of stock goes into a ledger; a deleted product takes its variants with it | |
 | **Pricing** | USD base price; EUR and GBP derived from ECB rates with a buffer, rounding to a price point and a drift threshold; manual prices never overwritten; the pages of a product are purged from the cache when one of its prices moves | |
-| **Cart** | A form beside each size on a product page, and a cart page in the site's own design and language: set a quantity, remove a line, choose a currency. No script anywhere in it. MOQ and stock are enforced by the server, which says what it refused on the cart page | Submitting a cart as one inquiry; checkout |
+| **Cart** | A form beside each size on a product page, and a cart page in the site's own design and language: set a quantity, remove a line, choose a currency. No script anywhere in it. MOQ, stock and the most a line may hold (500) are enforced by the server, which says what it refused on the cart page | Checkout |
+| **Inquiries** | The cart sent as one request for a quote, from a form on the cart page: who to answer, and a message. A size with no price can go in the cart to be asked about. The buyer lands on the inquiry's number; the seller is told by email, answerable straight to the buyer, and finds every inquiry in the admin with its lines — to mark, export as CSV, or delete | A challenge in front of the form (it waits for Mallok), which is why the email confirming to the buyer is off unless switched on |
 | **Orders and payment** | The logic, tested and not yet reachable: orders with line snapshots, a payment that takes stock exactly once however often Stripe reports it, oversold orders, refunds that return stock, Stripe signature checks, order emails in four languages | The checkout and order pages, the webhook route, and order handling in the admin |
 
 The reasoning and the plan are in [`docs/superpowers/specs/2026-09-30-nundar-on-mallok-design.md`](docs/superpowers/specs/2026-09-30-nundar-on-mallok-design.md).
@@ -70,7 +71,9 @@ The reasoning and the plan are in [`docs/superpowers/specs/2026-09-30-nundar-on-
 - A page says whether a size can be had, never how many are left: a count would be wrong after the next sale, a state rarely is.
 - The structured data offers exactly the prices the page prints. A test compares the two digit for digit.
 - The cart stores variants and quantities only — never a price.
-- MOQ is enforced by the form *and* by the server, because a form can be bypassed.
+- MOQ, and the most a cart line may hold, are enforced by the form *and* by the server, because a form can be bypassed.
+- An inquiry is a snapshot of the cart it was sent from, stored once however often the form arrives: tests send the same cart twice at the same moment.
+- Nothing a buyer typed comes back through an address, becomes markup in an email, or runs as a formula in an exported spreadsheet.
 - A public page is the same for every visitor and stays in the cache: nothing about a cart is in it, and the cart's cookie is sent only to the shop's own routes.
 - Stock carries a database constraint, so a payment's decrement cannot go negative: a test proves the whole D1 batch rolls back.
 - Stock comes off when a payment is confirmed, never before, and once: tests deliver the same payment twice at the same moment.
@@ -145,7 +148,7 @@ The sample is a supplier of titanium fasteners that does not exist. Its products
 
 ## Deploying
 
-Not yet. A deployed shop today would show a catalogue with prices and a cart that leads nowhere: there is no checkout, and a cart cannot be sent as an inquiry. Nothing here has been measured on a real Cloudflare account either. When Nundar is ready, deployment is Mallok's own: `npx mallok create . --slug <slug>`, which creates the Worker, the D1 database and the R2 bucket on your own Cloudflare account. That path has not been run for this repository.
+Not yet. A deployed shop today would show a catalogue with prices and a cart that can be sent as a request for a quote and cannot be paid for: there is no checkout. Nothing here has been measured on a real Cloudflare account either. When Nundar is ready, deployment is Mallok's own: `npx mallok create . --slug <slug>`, which creates the Worker, the D1 database and the R2 bucket on your own Cloudflare account. That path has not been run for this repository.
 
 ## Languages and currencies
 
