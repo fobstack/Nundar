@@ -27,11 +27,12 @@
     The form that puts this size in the cart: a plain POST, no script. The
     quantity starts at the minimum order, moves in steps of it and stops at
     the most a cart line may hold — all three checked again by the server.
-    A size without a price, or that cannot be had, is offered no form. The
-    currency is the one the page shows; the currency switch changes this
-    field with the prices.
+    A size that cannot be had is offered no form. One without a price is:
+    it goes in the cart to be asked about, and the cart is sent as a request
+    for a quote. The currency is the one the page shows; the currency switch
+    changes this field with the prices.
   {%- endcomment -%}
-  {% if variant.orderable and plugins.shop.cart_action != blank %}
+  {% if variant.addable and plugins.shop.cart_action != blank %}
   <form class="offer-buy" method="post" action="{{ plugins.shop.cart_action }}">
     <input type="hidden" name="variant" value="{{ variant.id }}">
     <input type="hidden" name="currency" value="{{ plugins.shop.currency }}">

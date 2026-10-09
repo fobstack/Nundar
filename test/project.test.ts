@@ -345,6 +345,34 @@ describe('the theme’s client scripts', () => {
   });
 });
 
+describe('the form that sends a cart as a request for a quote', () => {
+  it('keeps the field no person fills in where nobody sees it', async () => {
+    // The field is in the page for whatever fills in every field it finds.
+    // It is the stylesheet, and nothing in the markup, that keeps it from a
+    // person's eyes: without this rule every buyer is shown a field that
+    // throws their request away when they fill it in.
+    const theme = join('src', 'theme');
+    const layout = await readFile(
+      join(theme, 'layouts', 'shop-cart.liquid'),
+      'utf8',
+    );
+    const styles = await readFile(join(theme, 'assets', 'style.css'), 'utf8');
+
+    assert.match(
+      layout,
+      /<p class="quote-form-trap" aria-hidden="true">[\s\S]*?name="website" tabindex="-1" autocomplete="off"/,
+    );
+    const rule = /\.quote-form-trap\s*\{([^}]*)\}/.exec(styles)?.[1] ?? '';
+    assert.match(rule, /position:\s*absolute/);
+    assert.match(
+      rule,
+      /left:\s*-\d{3,}/,
+      'the field is not moved off the page',
+    );
+    assert.match(rule, /overflow:\s*hidden/);
+  });
+});
+
 describe('content/', () => {
   it('gives every bundle a title', async () => {
     const roots = await readdir('content', { withFileTypes: true });

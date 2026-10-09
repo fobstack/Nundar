@@ -31,6 +31,8 @@ describe('the shop schema', () => {
     expect(results.map((row) => row.name)).toEqual([
       'p_shop_cart',
       'p_shop_cart_line',
+      'p_shop_inquiry',
+      'p_shop_inquiry_line',
       'p_shop_order',
       'p_shop_order_line',
       'p_shop_outbox',
@@ -50,6 +52,7 @@ describe('the shop schema', () => {
     expect(applied.results.map((row) => row.id)).toEqual([
       'plugin:shop:0001_shop',
       'plugin:shop:0002_orders',
+      'plugin:shop:0003_inquiries',
     ]);
   });
 

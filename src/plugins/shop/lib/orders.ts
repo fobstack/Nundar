@@ -33,6 +33,7 @@ import {
   type OrderStatus,
 } from './order-state.js';
 import { orderChangedOutbox, paymentRefusedOutbox } from './outbox.js';
+import { newReference } from './reference.js';
 
 /** Thrown by anything asked to act on an order that does not exist. */
 export class OrderNotFoundError extends Error {
@@ -62,28 +63,15 @@ type SuccessfulCart = Extract<PricedCart, { ok: true }>;
 /** The Stripe event that confirms a payment. */
 export const PAYMENT_EVENT_TYPE = 'payment_intent.succeeded';
 
-/**
- * Crockford's base 32: no I, L, O or U, so a number read over the phone or
- * copied from paper is not mistaken for another.
- */
-const ORDER_NO_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+/** What an order's number begins with. */
+const ORDER_NO_PREFIX = 'ND';
 
 /**
  * The number a buyer sees: the date and a random suffix, so it says nothing
  * about how many orders the shop takes.
- *
- * Eight characters are forty bits. Six hexadecimal ones, as before, are
- * twenty-four: at a thousand orders a day two of them would collide about
- * once a month, and a collision is a checkout that fails.
  */
 function newOrderNo(now: Date): string {
-  const date = now.toISOString().slice(2, 10).replace(/-/g, '');
-  let suffix = '';
-  for (const byte of crypto.getRandomValues(new Uint8Array(8))) {
-    // 256 is a multiple of 32, so the low five bits are uniform.
-    suffix += ORDER_NO_ALPHABET.charAt(byte & 31);
-  }
-  return `ND-${date}-${suffix}`;
+  return newReference(ORDER_NO_PREFIX, now);
 }
 
 /**

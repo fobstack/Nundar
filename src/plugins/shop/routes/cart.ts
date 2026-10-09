@@ -53,7 +53,24 @@ import {
   defaultCurrencyForLocale,
   isCurrency,
 } from '../lib/currency.js';
-import { CART_ROUTE, CART_UPDATE_ROUTE, shopPath } from '../lib/paths.js';
+import {
+  INQUIRY_FIELDS,
+  inquiryLinesOf,
+  isInquiryNo,
+  sentInquiryStatement,
+} from '../lib/inquiries.js';
+import {
+  CART_INQUIRY_ROUTE,
+  CART_ROUTE,
+  CART_UPDATE_ROUTE,
+  shopPath,
+} from '../lib/paths.js';
+import {
+  INQUIRY_FIELD_PARAM,
+  INQUIRY_PARAM,
+  INQUIRY_REFUSALS,
+  SENT_PARAM,
+} from './inquiry.js';
 
 const updateSchema = z.object({
   action: z.enum(['add', 'set', 'remove', 'currency']).default('add'),
@@ -127,11 +144,16 @@ function safeReturnPath(
   }
 }
 
-function paths(ctx: PluginRequestContext): { cart: string; update: string } {
+function paths(ctx: PluginRequestContext): {
+  cart: string;
+  update: string;
+  inquiry: string;
+} {
   const { defaultLocale } = ctx.site;
   return {
     cart: shopPath(CART_ROUTE, ctx.locale, defaultLocale),
     update: shopPath(CART_UPDATE_ROUTE, ctx.locale, defaultLocale),
+    inquiry: shopPath(CART_INQUIRY_ROUTE, ctx.locale, defaultLocale),
   };
 }
 
@@ -191,7 +213,8 @@ function refusalOf(
  * `GET cart`: the cart page. It reads and never writes.
  *
  * Two round trips: the cart's lines and its currency — and, after a refused
- * change, the variant it was about — then everything those lines depend on.
+ * change, the variant it was about, or after a cart was sent, the inquiry it
+ * became — then everything those lines depend on.
  * An unknown, expired or absent cart is an empty one.
  */
 export async function cartPage(
@@ -209,17 +232,37 @@ export async function cartPage(
       ? ''
       : (ctx.url.searchParams.get(VARIANT_PARAM) ?? '').slice(0, 100);
 
-  const [linesResult, currencyResult, variantResult] = await ctx.db.batch<
-    | { variant_id: string; quantity: number }
-    | { currency: string | null }
-    | VariantLookup
-  >([
-    readCartStatement(ctx.db, known, now),
-    readCartCurrencyStatement(ctx.db, known, now),
-    // The variant a refusal was about. With no refusal to explain it finds
-    // nothing; either way it rides in the same round trip.
-    variantStatement(ctx.db, refusedVariant, now),
-  ]);
+  // What became of a cart sent as an inquiry: the number of the one that
+  // was made, or the kind of reason none was. Only a number of the right
+  // shape is looked up, and only for the cart this browser holds.
+  const sentAsked = ctx.url.searchParams.get(SENT_PARAM) ?? '';
+  const sentNo = known !== '' && isInquiryNo(sentAsked) ? sentAsked : '';
+  const inquiryAsked = ctx.url.searchParams.get(INQUIRY_PARAM);
+  const inquiryKind = INQUIRY_REFUSALS.find((kind) => kind === inquiryAsked);
+  const fieldAsked = ctx.url.searchParams.get(INQUIRY_FIELD_PARAM);
+  const inquiryField =
+    inquiryKind === 'invalid'
+      ? (INQUIRY_FIELDS.find((field) => field === fieldAsked) ?? '')
+      : '';
+
+  const [linesResult, currencyResult, variantResult, sentResult] =
+    await ctx.db.batch<
+      | { variant_id: string; quantity: number }
+      | { currency: string | null }
+      | VariantLookup
+      | { inquiry_no: string }
+    >([
+      readCartStatement(ctx.db, known, now),
+      readCartCurrencyStatement(ctx.db, known, now),
+      // The variant a refusal was about. With no refusal to explain it finds
+      // nothing; either way it rides in the same round trip.
+      variantStatement(ctx.db, refusedVariant, now),
+      // And so does the inquiry a confirmation is about.
+      sentInquiryStatement(ctx.db, sentNo, known),
+    ]);
+  const sent = (sentResult?.results ?? [])[0] as
+    | { inquiry_no: string }
+    | undefined;
   const lines = (
     (linesResult?.results ?? []) as { variant_id: string; quantity: number }[]
   ).map((row) => ({ variantId: row.variant_id, quantity: row.quantity }));
@@ -238,12 +281,21 @@ export async function cartPage(
     currency,
     now,
   });
-  const { cart, update } = paths(ctx);
+  const { cart, update, inquiry } = paths(ctx);
   return {
     view: {
       ...cartView(facts, ctx.locale),
       action: update,
       cart_path: cart,
+      inquiry_action: inquiry,
+      // A cart with a part that has no price can be asked about though it
+      // cannot be ordered; one with any other problem has to be put right.
+      can_inquire: inquiryLinesOf(facts) !== null,
+      sent: sent === undefined ? null : { number: sent.inquiry_no },
+      inquiry_problem:
+        inquiryKind === undefined
+          ? null
+          : { kind: inquiryKind, field: inquiryField },
       problem:
         refusedKind === undefined
           ? null

@@ -10,6 +10,13 @@
 
 import { env, SELF } from 'cloudflare:test';
 import { vi } from 'vitest';
+import type { Currency } from '../../src/plugins/shop/lib/currency.js';
+import {
+  type InquiryLine,
+  inquiryFormSchema,
+  inquiryStatements,
+  newInquiryNo,
+} from '../../src/plugins/shop/lib/inquiries.js';
 
 export const ORIGIN = 'https://shop-test.example';
 
@@ -328,6 +335,8 @@ export async function setRate(
 export async function clearShopTables(): Promise<void> {
   await db().batch(
     [
+      'p_shop_inquiry_line',
+      'p_shop_inquiry',
       'p_shop_outbox',
       'p_shop_stock_adjustment',
       'p_shop_stripe_event',
@@ -469,3 +478,203 @@ export async function signStripePayload(
   );
   return [...mac].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
+
+/**
+ * Stores an inquiry the way the route does: a cart holding exactly the lines
+ * being sent, and the route's own statements. Answers with its number.
+ *
+ * The cart is written by hand because the lines here need no variant to
+ * exist: an inquiry is a snapshot, and reading one back depends on nothing
+ * else.
+ */
+export async function storeInquiry(input: {
+  readonly id: string;
+  readonly at?: string;
+  readonly form?: Readonly<Record<string, string>>;
+  readonly lines?: readonly InquiryLine[];
+  readonly locale?: string;
+  readonly currency?: Currency;
+  readonly country?: string;
+  readonly ipHash?: string | null;
+}): Promise<string> {
+  const at = input.at ?? '2026-10-09T08:00:00.000Z';
+  const lines = input.lines ?? [
+    {
+      variantId: 'cs-10',
+      sku: 'CS-10',
+      name: 'Cap screw M5',
+      quantity: 300,
+      unitPriceMinor: 185,
+    },
+    {
+      variantId: 'wa-5',
+      sku: 'WA-5',
+      name: 'Washer M5',
+      quantity: 50,
+      unitPriceMinor: null,
+    },
+  ];
+  const cartId = crypto.randomUUID().replace(/-/g, '');
+  await db().batch([
+    db()
+      .prepare(
+        `INSERT INTO p_shop_cart (id, created_at, updated_at, expires_at)
+         VALUES (?, ?, ?, '2999-01-01')`,
+      )
+      .bind(cartId, at, at),
+    db()
+      .prepare(
+        `INSERT INTO p_shop_cart_line (cart_id, variant_id, quantity)
+         SELECT ?, json_extract(value, '$.variantId'),
+                json_extract(value, '$.quantity')
+         FROM json_each(?)`,
+      )
+      .bind(cartId, JSON.stringify(lines)),
+  ]);
+  const inquiryNo = newInquiryNo(new Date(at));
+  const [stored] = await db().batch(
+    inquiryStatements(db(), {
+      id: input.id,
+      inquiryNo,
+      cartId,
+      form: inquiryFormSchema.parse({
+        name: 'Ada Lovelace',
+        email: 'ada@buyer.example',
+        ...input.form,
+      }),
+      locale: input.locale ?? 'en',
+      currency: input.currency ?? 'USD',
+      country: input.country ?? 'GB',
+      ipHash: input.ipHash === undefined ? null : input.ipHash,
+      lines,
+      now: new Date(at),
+    }),
+  );
+  if ((stored?.meta.changes ?? 0) !== 1) {
+    throw new Error(`The inquiry ${input.id} was not stored.`);
+  }
+  return inquiryNo;
+}
+
+/** What {@link holdWrites} gives a test to steer by. */
+export interface WriteGate {
+  /**
+   * Resolves once this many writes are being held. A write that never
+   * arrives — its request was refused earlier — opens the gate and fails.
+   */
+  readonly arrived: (count: number) => Promise<void>;
+  /** Lets every held write go, and any that comes after. */
+  readonly open: () => void;
+  /** Opens the gate and takes it away. Call it when the test is over. */
+  readonly restore: () => void;
+}
+
+/**
+ * Holds every batch whose first statement matches, until the test opens the
+ * gate: it is how a test puts two requests past their readings before
+ * either writes, or changes the data between one request's reading and its
+ * write.
+ *
+ * `Promise.all` over two requests does not make them interleave. In this
+ * harness they do about half the time; the other half one request finishes
+ * before the other begins, and a guard inside the write is never reached,
+ * because an earlier reading of the second request already sees what the
+ * first one did. A test of a race has to hold both at the write, every
+ * time — or breaking the guard turns it red only sometimes, which proves
+ * nothing.
+ *
+ * `atMost` holds that many and no more, for a test that makes writes of the
+ * same kind itself while a request is held.
+ *
+ * A held write and the test wait by looking at a flag between short sleeps,
+ * each on its own timer. A promise settled by one request for another is
+ * something the Workers runtime refuses: it stops the Worker.
+ */
+export function holdWrites(
+  isTheWrite: (sql: string) => boolean,
+  /** How many matching batches to hold; those after them pass. */
+  atMost = Number.POSITIVE_INFINITY,
+): WriteGate {
+  const databasePrototype = Object.getPrototypeOf(db()) as D1Database;
+  const statementPrototype = Object.getPrototypeOf(
+    db().prepare('SELECT 1'),
+  ) as D1PreparedStatement;
+  const realPrepare = databasePrototype.prepare;
+  const realBind = statementPrototype.bind;
+  const realBatch = databasePrototype.batch;
+  // A bound statement is a new object: the mark has to follow it.
+  const marked = new WeakSet<object>();
+  const pause = (): Promise<void> =>
+    new Promise((resolve) => {
+      setTimeout(resolve, 5);
+    });
+  let held = 0;
+  let opened = false;
+
+  const spies = [
+    vi.spyOn(databasePrototype, 'prepare').mockImplementation(function (
+      this: D1Database,
+      sql: string,
+    ) {
+      const statement = realPrepare.call(this, sql);
+      if (isTheWrite(sql)) {
+        marked.add(statement);
+      }
+      return statement;
+    }),
+    vi.spyOn(statementPrototype, 'bind').mockImplementation(function (
+      this: D1PreparedStatement,
+      ...values: unknown[]
+    ) {
+      const bound = realBind.apply(this, values);
+      if (marked.has(this)) {
+        marked.add(bound);
+      }
+      return bound;
+    }),
+    vi.spyOn(databasePrototype, 'batch').mockImplementation(async function (
+      this: D1Database,
+      statements: D1PreparedStatement[],
+    ) {
+      const first = statements[0];
+      if (first !== undefined && marked.has(first) && held < atMost) {
+        held += 1;
+        // Never for ever: a test that forgot to open the gate fails on
+        // what it expected, not on a request that did not come back.
+        const deadline = Date.now() + 5000;
+        while (!opened && Date.now() < deadline) {
+          await pause();
+        }
+      }
+      return realBatch.call(this, statements);
+    } as typeof databasePrototype.batch),
+  ];
+
+  return {
+    arrived: async (count) => {
+      const deadline = Date.now() + 3000;
+      while (held < count && Date.now() < deadline) {
+        await pause();
+      }
+      if (held < count) {
+        opened = true;
+        throw new Error(
+          `${held} of ${count} requests reached the write: the others were answered before it.`,
+        );
+      }
+    },
+    open: () => {
+      opened = true;
+    },
+    restore: () => {
+      opened = true;
+      for (const spy of spies) {
+        spy.mockRestore();
+      }
+    },
+  };
+}
+
+/** The batch that stores an inquiry, for {@link holdWrites}. */
+export const INQUIRY_WRITE = (sql: string): boolean =>
+  sql.includes('INSERT INTO p_shop_inquiry\n');

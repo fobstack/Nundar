@@ -21,7 +21,23 @@
  *
  * The route adds where its forms post (`action`), the cart's own address
  * (`cart_path`) and, after a change that was refused, what was refused
- * (`problem`).
+ * (`problem`). And for sending the cart as an inquiry:
+ *
+ *   inquiry_action   where the form that sends it posts
+ *   can_inquire      the cart can be sent as it stands: nothing in the way
+ *                    but, at most, a line without a price
+ *   sent             null, or `number`: the inquiry this cart has just
+ *                    become
+ *   inquiry_problem  null, or `kind` and `field`: why it was not sent —
+ *                    `invalid` (with the field: `name`, `email`, `company`,
+ *                    `phone`, `message`, or ''), `empty`, `cart_problem`,
+ *                    `too_many`
+ *
+ * The form's fields are `name`, `email`, `company`, `phone` and `message`,
+ * of which the first two are required, and `website`, which a person must
+ * not see: whatever fills it in is not one. `lib/inquiries.ts` has the
+ * length each may have and the pattern an address is held to; a form that
+ * carries the same in `maxlength` and `pattern` is never refused for them.
  */
 
 import { MAX_LINE_QUANTITY } from './cart.js';
