@@ -556,6 +556,103 @@ export async function storeInquiry(input: {
   return inquiryNo;
 }
 
+/** One call a database of {@link atTheSameMoment} saw: whose, and which. */
+interface NotedCall {
+  readonly call: number;
+  readonly nth: number;
+}
+
+/**
+ * A database for one of several calls made at the same moment: the real one,
+ * noting in `order` each time this call goes to it.
+ */
+function notingDatabase(call: number, order: NotedCall[]): D1Database {
+  const real = db();
+  let made = 0;
+  const note = <T>(work: () => Promise<T>): Promise<T> => {
+    order.push({ call, nth: made });
+    made += 1;
+    return work();
+  };
+  // A statement handed to `batch` has to be the real one again.
+  const reals = new WeakMap<object, D1PreparedStatement>();
+  const noting = (statement: D1PreparedStatement): D1PreparedStatement => {
+    const wrapped = {
+      bind: (...values: unknown[]) => noting(statement.bind(...values)),
+      first: (...columns: string[]) =>
+        note(() => statement.first(...(columns as [string]))),
+      all: () => note(() => statement.all()),
+      run: () => note(() => statement.run()),
+      raw: (...options: unknown[]) =>
+        note(() => statement.raw(...(options as []))),
+    } as unknown as D1PreparedStatement;
+    reals.set(wrapped, statement);
+    return wrapped;
+  };
+  return {
+    prepare: (sql: string) => noting(real.prepare(sql)),
+    batch: (statements: D1PreparedStatement[]) =>
+      note(() =>
+        real.batch(
+          statements.map((statement) => reals.get(statement) ?? statement),
+        ),
+      ),
+  } as unknown as D1Database;
+}
+
+/**
+ * Runs calls at the same moment, and fails unless they really overlapped:
+ * every call had gone to the database for the first time — its reading —
+ * before any of them went a second time — its write.
+ *
+ * Functions called side by side in one test do overlap that way, every
+ * time: each runs as far as its first wait, which is its reading, before
+ * the next begins. That is what makes a test of a race worth having, and it
+ * is taken on trust nowhere: a call that came to wait for something else
+ * before its reading would turn the race into a sequence, the guard under
+ * test would never be reached, and the test would go on passing. This says
+ * so instead.
+ *
+ * Each call is given a database of its own to use. For requests through
+ * `SELF.fetch`, which do not overlap of themselves, see {@link holdWrites}.
+ */
+export async function atTheSameMoment<T>(
+  calls: readonly ((database: D1Database) => Promise<T>)[],
+): Promise<PromiseSettledResult<T>[]> {
+  const order: NotedCall[] = [];
+  const settled = await Promise.allSettled(
+    calls.map((call, index) => call(notingDatabase(index, order))),
+  );
+  const firstSecond = order.findIndex((noted) => noted.nth === 1);
+  const late = calls
+    .map((_, index) =>
+      order.findIndex((noted) => noted.call === index && noted.nth === 0),
+    )
+    .some(
+      (first) => first === -1 || (firstSecond !== -1 && first > firstSecond),
+    );
+  if (late) {
+    throw new Error(
+      `The calls did not overlap. They went to the database in this order (call.nth): ${order
+        .map((noted) => `${noted.call}.${noted.nth}`)
+        .join(' ')}`,
+    );
+  }
+  return settled;
+}
+
+/** What calls made {@link atTheSameMoment} came to, when none may fail. */
+export function fulfilledValues<T>(
+  settled: readonly PromiseSettledResult<T>[],
+): T[] {
+  return settled.map((result) => {
+    if (result.status === 'rejected') {
+      throw result.reason;
+    }
+    return result.value;
+  });
+}
+
 /** What {@link holdWrites} gives a test to steer by. */
 export interface WriteGate {
   /**

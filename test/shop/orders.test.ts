@@ -13,12 +13,14 @@ import {
   type ShippingAddress,
 } from '../../src/plugins/shop/lib/orders.js';
 import {
+  atTheSameMoment,
   clearShopTables,
   countD1Calls,
   createProduct,
   createVariant,
   db,
   ensureSite,
+  fulfilledValues,
   interceptBatches,
   outboxRows,
   setPrice,
@@ -517,10 +519,12 @@ describe('markOrderPaid', () => {
     // order still being pending, so it finds nothing to do.
     const order = await pendingOrder();
 
-    const results = await Promise.all([
-      pay(order.id, 'evt_race'),
-      pay(order.id, 'evt_race'),
-    ]);
+    const results = fulfilledValues(
+      await atTheSameMoment([
+        (database) => pay(order.id, 'evt_race', 'pi_1', database),
+        (database) => pay(order.id, 'evt_race', 'pi_1', database),
+      ]),
+    );
 
     expect(results.map((result) => result.outcome).sort()).toEqual([
       'duplicate',
@@ -550,10 +554,12 @@ describe('markOrderPaid', () => {
   it('decrements once when two events for the same payment arrive at the same moment', async () => {
     const order = await pendingOrder();
 
-    const results = await Promise.all([
-      pay(order.id, 'evt_a', 'pi_same'),
-      pay(order.id, 'evt_b', 'pi_same'),
-    ]);
+    const results = fulfilledValues(
+      await atTheSameMoment([
+        (database) => pay(order.id, 'evt_a', 'pi_same', database),
+        (database) => pay(order.id, 'evt_b', 'pi_same', database),
+      ]),
+    );
 
     expect(results.map((result) => result.outcome).sort()).toEqual([
       'duplicate',
@@ -568,10 +574,12 @@ describe('markOrderPaid', () => {
     // not vanish — it is money to give back.
     const order = await pendingOrder();
 
-    const results = await Promise.all([
-      pay(order.id, 'evt_a', 'pi_first'),
-      pay(order.id, 'evt_b', 'pi_second'),
-    ]);
+    const results = fulfilledValues(
+      await atTheSameMoment([
+        (database) => pay(order.id, 'evt_a', 'pi_first', database),
+        (database) => pay(order.id, 'evt_b', 'pi_second', database),
+      ]),
+    );
 
     expect(results.map((result) => result.outcome).sort()).toEqual([
       'paid',
@@ -711,10 +719,12 @@ describe('markOrderPaid', () => {
     const first = await pendingOrder();
     const second = await pendingOrder();
 
-    const results = await Promise.all([
-      pay(first.id, 'evt_first', 'pi_first'),
-      pay(second.id, 'evt_second', 'pi_second'),
-    ]);
+    const results = fulfilledValues(
+      await atTheSameMoment([
+        (database) => pay(first.id, 'evt_first', 'pi_first', database),
+        (database) => pay(second.id, 'evt_second', 'pi_second', database),
+      ]),
+    );
 
     expect(results.map((result) => result.outcome).sort()).toEqual([
       'oversold',
@@ -785,11 +795,13 @@ describe('markOrderPaid', () => {
     const order = await pendingOrder();
     await cancelOrder(db(), { orderId: order.id, now: NOW });
 
-    const results = await Promise.all([
-      pay(order.id, 'evt_late', 'pi_3'),
-      pay(order.id, 'evt_late', 'pi_3'),
-      pay(order.id, 'evt_other', 'pi_3'),
-    ]);
+    const results = fulfilledValues(
+      await atTheSameMoment([
+        (database) => pay(order.id, 'evt_late', 'pi_3', database),
+        (database) => pay(order.id, 'evt_late', 'pi_3', database),
+        (database) => pay(order.id, 'evt_other', 'pi_3', database),
+      ]),
+    );
     const again = await pay(order.id, 'evt_late', 'pi_3');
 
     expect(
@@ -805,22 +817,22 @@ describe('markOrderPaid', () => {
   it('pays or cancels, never both, when the two happen at the same moment', async () => {
     const order = await pendingOrder();
 
-    const [payment, cancellation] = await Promise.allSettled([
-      pay(order.id),
-      cancelOrder(db(), { orderId: order.id, now: LATER }),
+    const [payment, cancellation] = await atTheSameMoment<unknown>([
+      (database) => pay(order.id, 'evt_1', 'pi_1', database),
+      (database) => cancelOrder(database, { orderId: order.id, now: LATER }),
     ]);
 
     const status = (await orderRow(order.id)).status;
     if (status === 'paid') {
       // The payment won: the cancellation found the order moved and refused.
       expect(payment).toMatchObject({ value: { outcome: 'paid' } });
-      expect(cancellation.status).toBe('rejected');
+      expect(cancellation?.status).toBe('rejected');
       expect(await stockOf('dn50')).toBe(90);
     } else {
       // The cancellation won: the payment is recorded for a refund.
       expect(status).toBe('cancelled');
       expect(payment).toMatchObject({ value: { outcome: 'refused' } });
-      expect(cancellation.status).toBe('fulfilled');
+      expect(cancellation?.status).toBe('fulfilled');
       expect(await stockOf('dn50')).toBe(100);
     }
   });
