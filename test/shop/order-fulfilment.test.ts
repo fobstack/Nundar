@@ -14,6 +14,7 @@ import {
   OrderNotFoundError,
 } from '../../src/plugins/shop/lib/orders.js';
 import {
+  atTheSameMoment,
   clearShopTables,
   countD1Calls,
   createProduct,
@@ -96,9 +97,10 @@ async function owed(orderId: string): Promise<string[]> {
 
 /** How many of several attempts went through, and why the rest did not. */
 async function settle(
-  attempts: readonly Promise<unknown>[],
+  attempts: readonly ((database: D1Database) => Promise<unknown>)[],
 ): Promise<{ fulfilled: number; reasons: string[] }> {
-  const settled = await Promise.allSettled(attempts);
+  // Made at the same moment, and seen to have overlapped.
+  const settled = await atTheSameMoment(attempts);
   return {
     fulfilled: settled.filter((result) => result.status === 'fulfilled').length,
     reasons: settled.flatMap((result) =>
@@ -276,8 +278,8 @@ describe('cancelOrder', () => {
     const order = await makeOrder();
 
     const outcome = await settle([
-      cancelOrder(db(), { orderId: order.id, now: LATER }),
-      cancelOrder(db(), { orderId: order.id, now: LATER }),
+      (database) => cancelOrder(database, { orderId: order.id, now: LATER }),
+      (database) => cancelOrder(database, { orderId: order.id, now: LATER }),
     ]);
 
     expect(outcome.fulfilled).toBe(1);
@@ -356,8 +358,8 @@ describe('refundOrder', () => {
     const order = await paidOrder();
 
     const outcome = await settle([
-      refundOrder(db(), { orderId: order.id, now: LATER }),
-      refundOrder(db(), { orderId: order.id, now: LATER }),
+      (database) => refundOrder(database, { orderId: order.id, now: LATER }),
+      (database) => refundOrder(database, { orderId: order.id, now: LATER }),
     ]);
 
     expect(outcome.fulfilled).toBe(1);
@@ -370,8 +372,13 @@ describe('refundOrder', () => {
     const order = await paidOrder();
 
     const outcome = await settle([
-      shipOrder(db(), { orderId: order.id, trackingNo: 'T-1', now: LATER }),
-      refundOrder(db(), { orderId: order.id, now: LATER }),
+      (database) =>
+        shipOrder(database, {
+          orderId: order.id,
+          trackingNo: 'T-1',
+          now: LATER,
+        }),
+      (database) => refundOrder(database, { orderId: order.id, now: LATER }),
     ]);
 
     expect(outcome.fulfilled).toBe(1);
