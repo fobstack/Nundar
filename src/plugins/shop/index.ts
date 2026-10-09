@@ -15,6 +15,7 @@ import {
   definePlugin,
   type PluginContext,
 } from 'mallok/worker';
+import { exportShopFiles } from './lib/export.js';
 import {
   deleteInquiries,
   exportInquiries,
@@ -65,6 +66,13 @@ export const shop = definePlugin({
       remove: (id, ctx) => removeVariant(id, ctx),
     },
   },
+  // What the shop holds travels with a site export: leaving Mallok must not
+  // mean leaving the catalogue, the orders or the inquiries behind.
+  exportFiles: (ctx: PluginContext) =>
+    exportShopFiles(ctx.db, {
+      defaultLocale: ctx.site.defaultLocale,
+      settings: ctx.settings,
+    }),
   routes: {
     cart: cartPage,
     'cart/update': cartUpdate,
