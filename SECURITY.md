@@ -90,8 +90,10 @@ These are deliberate and should not be "simplified" away:
   that names no live cart: a fresh id is issued. The id is the only thing
   that protects a cart, so the shop never takes up one a visitor chose, and
   an expired cart's lines do not come back with the next thing added.
-- **Cart size is bounded**: at most 100 lines and 10,000 units per line, so one
-  cart cannot be grown without limit.
+- **Cart size is bounded**: at most 100 lines and 500 units per line, so one
+  cart cannot be grown without limit. The 500 is a rule of the shop as well
+  as a bound: it is judged with the minimum order, so a line above it cannot
+  be ordered either, however it came to be in a cart.
 - **The cart's routes are rate limited** through Mallok's rate-limit bindings, each route with its own count per visitor, at the relaxed tier: a buyer changes a cart many times in ordinary use.
 - **Logs never contain personal data.** The scheduled work logs counts and a
   reference date.

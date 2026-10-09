@@ -7,7 +7,7 @@
  * time the buyer fixes something.
  */
 
-import type { CartLine } from './cart.js';
+import { type CartLine, MAX_LINE_QUANTITY } from './cart.js';
 import { CURRENCIES, type Currency, settleCurrency } from './currency.js';
 import { sumMinor } from './money.js';
 
@@ -28,6 +28,12 @@ export type CartIssue =
       readonly kind: 'below_moq';
       readonly variantId: string;
       readonly moq: number;
+      readonly requested: number;
+    }
+  | {
+      readonly kind: 'quantity_too_large';
+      readonly variantId: string;
+      readonly max: number;
       readonly requested: number;
     }
   | {
@@ -70,7 +76,9 @@ interface TitleRow {
 }
 
 /**
- * Whether a quantity of one variant can be ordered, ignoring price.
+ * Whether a quantity of one variant can be ordered, ignoring price: at least
+ * its minimum order, at most what a cart line may hold, and no more than
+ * there is.
  *
  * Shared by add-to-cart and by cart pricing so the two can never disagree
  * about what is orderable.
@@ -87,6 +95,16 @@ export function quantityIssue(
       kind: 'below_moq',
       variantId: variant.id,
       moq: variant.moq,
+      requested: quantity,
+    };
+  }
+  // Before the stock, because it is the same for every variant and no
+  // delivery changes it: "at most 500" is still true tomorrow.
+  if (quantity > MAX_LINE_QUANTITY) {
+    return {
+      kind: 'quantity_too_large',
+      variantId: variant.id,
+      max: MAX_LINE_QUANTITY,
       requested: quantity,
     };
   }

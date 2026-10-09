@@ -17,8 +17,9 @@
  * be switched: a page rendered by the POST itself would be listed, in every
  * language, at an address that only takes a POST.
  *
- * A quantity field's `min` and `step` enforce the minimum order in the
- * browser. This enforces it again, because a form can be bypassed.
+ * A quantity field's `min`, `step` and `max` enforce the minimum order and
+ * the most a line may hold in the browser. This enforces both again, because
+ * a form can be bypassed.
  *
  * The cart page is one visitor's own: Mallok serves it uncached and
  * unindexed, whatever is returned here.
@@ -364,13 +365,12 @@ export async function cartUpdate(
     if (variant === undefined || variant.product_published !== 1) {
       return refuse('unavailable');
     }
-    if (target > MAX_LINE_QUANTITY) {
-      return refuse('quantity_too_large');
-    }
     const issue = quantityIssue(variant, target);
     if (issue !== null) {
       return refuse(
-        issue.kind === 'below_moq' || issue.kind === 'insufficient_stock'
+        issue.kind === 'below_moq' ||
+          issue.kind === 'quantity_too_large' ||
+          issue.kind === 'insufficient_stock'
           ? issue.kind
           : 'unavailable',
       );

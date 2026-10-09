@@ -17,8 +17,13 @@ export interface CartLine {
 /** A cart that nobody touches for this long is deleted. */
 export const CART_TTL_SECONDS = 60 * 60 * 24 * 30;
 
-/** Real orders never reach this; anything above it is scripted abuse. */
-export const MAX_LINE_QUANTITY = 10_000;
+/**
+ * The most of one variant a cart line may hold: the owner's figure (design
+ * §11, 2026-10-09). It is a rule of the shop and not only a guard against a
+ * script, so it is judged where the minimum order is, in `quantityIssue`,
+ * and a page says it in the quantity field's `max`.
+ */
+export const MAX_LINE_QUANTITY = 500;
 
 /** A ceiling on lines, so one cart cannot be grown without bound. */
 export const MAX_CART_LINES = 100;

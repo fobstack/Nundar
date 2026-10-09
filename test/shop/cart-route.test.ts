@@ -278,20 +278,46 @@ describe('POST /_mallok/p/shop/cart/update', () => {
     expect(await cartCount()).toBe(0);
   });
 
-  it('refuses an absurd quantity', async () => {
+  it('refuses more of one part than a cart line may hold', async () => {
     await createVariant({
       id: 'bulk',
       productGroup: valve.translationGroup,
       stockPolicy: 'made_to_order',
     });
 
-    const response = await post({ variant: 'bulk', quantity: '10001' });
+    const over = await post({ variant: 'bulk', quantity: '501' });
 
-    expect(refusal(response)).toMatchObject({
+    expect(refusal(over)).toMatchObject({
       status: 303,
       kind: 'quantity_too_large',
+      variant: 'bulk',
     });
     expect(await lines()).toEqual([]);
+    expect(await cartCount()).toBe(0);
+
+    // Five hundred is the most, and can be had.
+    const atMost = await post({ variant: 'bulk', quantity: '500' });
+    expect(refusal(atMost).kind).toBeNull();
+    expect(await lines()).toMatchObject([
+      { variant_id: 'bulk', quantity: 500 },
+    ]);
+  });
+
+  it('counts what is already in the cart towards the most a line may hold', async () => {
+    await createVariant({
+      id: 'bulk',
+      productGroup: valve.translationGroup,
+      stockPolicy: 'made_to_order',
+    });
+    const first = await post({ variant: 'bulk', quantity: '300' });
+    const cookie = cartCookie(first);
+
+    const more = await post({ variant: 'bulk', quantity: '201' }, cookie);
+
+    expect(refusal(more)).toMatchObject({ kind: 'quantity_too_large' });
+    expect(await lines()).toMatchObject([
+      { variant_id: 'bulk', quantity: 300 },
+    ]);
   });
 
   it('refuses one more kind of part than a cart may hold', async () => {

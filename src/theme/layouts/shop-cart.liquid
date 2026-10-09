@@ -7,7 +7,8 @@
   The page is one visitor's own: Mallok serves it uncached and unindexed.
   Every control is a plain form posting to `plugin_page.action`, so the cart
   works without a script, and the quantity fields carry the minimum order in
-  `min` and `step` — which the server checks again.
+  `min` and `step` and the most a line may hold in `max` — which the server
+  checks again.
 {%- endcomment -%}
 {% block title %}{{ t.cart_title }} — {{ site.name }}{% endblock %}
 {% block content %}
@@ -47,7 +48,7 @@
         {%- endcomment -%}
         {% if line.problem != blank %}
         {% assign reason = "problem_" | append: line.problem %}
-        <p class="cart-line-note" data-problem="{{ line.problem }}">{{ t[reason] }}{% if line.problem == "below_moq" %} {{ line.moq }}{% elsif line.problem == "insufficient_stock" %} {{ line.available }}{% endif %}</p>
+        <p class="cart-line-note" data-problem="{{ line.problem }}">{{ t[reason] }}{% if line.problem == "below_moq" %} {{ line.moq }}{% elsif line.problem == "insufficient_stock" %} {{ line.available }}{% elsif line.problem == "quantity_too_large" %} {{ cart.max_quantity }}{% endif %}</p>
         {% endif %}
       </div>
       {% if line.unit_price != blank %}
@@ -61,7 +62,7 @@
         <form class="offer-buy" method="post" action="{{ cart.action }}">
           <input type="hidden" name="action" value="set">
           <input type="hidden" name="variant" value="{{ line.variant_id }}">
-          <label class="offer-qty"><span>{{ t.quantity }}</span><input type="number" name="quantity" min="{{ line.moq }}" step="{{ line.moq }}" value="{{ line.quantity }}" required inputmode="numeric"></label>
+          <label class="offer-qty"><span>{{ t.quantity }}</span><input type="number" name="quantity" min="{{ line.moq }}" step="{{ line.moq }}"{% if cart.max_quantity %} max="{{ cart.max_quantity }}"{% endif %} value="{{ line.quantity }}" required inputmode="numeric"></label>
           <button class="btn btn-outline btn-sm" type="submit">{{ t.update }}{% if line.sku != blank %}<span class="visually-hidden"> {{ line.sku }}</span>{% endif %}</button>
         </form>
         {% endif %}

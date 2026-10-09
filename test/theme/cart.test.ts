@@ -304,6 +304,8 @@ describe('the cart', () => {
           name: 'quantity',
           min: '100',
           step: '100',
+          // The most a cart line may hold.
+          max: '500',
           value: '100',
           inputmode: 'numeric',
         },
@@ -531,6 +533,7 @@ describe('the cart', () => {
             name: 'quantity',
             min: '50',
             step: '50',
+            max: '500',
             value: '150',
             inputmode: 'numeric',
           },
@@ -709,6 +712,28 @@ describe('the cart', () => {
         value: '100',
       });
       // A sum nobody can pay is not stated.
+      expect(subtotal(html)).toBeNull();
+    });
+
+    it('says the most a line may hold when the cart has more than that in it', async () => {
+      // No form puts this in a cart: it is a line from before the ceiling
+      // was what it is, or a row written by hand.
+      const cookie = await add(screw.path, 'CS-10', '400');
+      await db()
+        .prepare(
+          "UPDATE p_shop_cart_line SET quantity = 600 WHERE variant_id = 'cs-10'",
+        )
+        .run();
+
+      const { html } = await get(`${SHOP}/cart`, cookie);
+      const [line] = cartLines(html);
+
+      expect(line?.problem).toBe('quantity_too_large');
+      expect(line?.note).toBe('The most that can be ordered at once is 500');
+      expect(line?.forms[0]?.quantity).toMatchObject({
+        max: '500',
+        value: '600',
+      });
       expect(subtotal(html)).toBeNull();
     });
 
@@ -970,7 +995,7 @@ describe('the cart', () => {
       [
         'quantity_too_large',
         'cs-10',
-        'CS-10 The most that can be ordered at once is 10000',
+        'CS-10 The most that can be ordered at once is 500',
       ],
       [
         'cart_full',
