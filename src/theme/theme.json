@@ -2,7 +2,7 @@
   "id": "nundar",
   "name": "Nundar",
   "description": "A commerce theme for a technical catalogue: a specification finder, product pages built around a size table, landing pages for the applications a part is used in, collections by type, case studies and reference pages. With the shop plugin, each size carries its price, minimum order and availability, and the cart is a page of the site. HTML first: every page is complete without a script, and the three it declares only add to what is already there — filters for a table, a switch between the currencies a page has prices in, calculators beside the tables of an engineering reference.",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "themeApi": 1,
   "home": "layouts/home.liquid",
   "kinds": {

@@ -15,7 +15,7 @@
  *   prices_from   the same, once per currency
  *   max_quantity  the most of one variant a cart line may hold
  *   variants[]    id, sku, label, moq, availability, lead_time, price, prices,
- *                 orderable
+ *                 addable
  *
  * On every page, priced or not:
  *
@@ -81,8 +81,11 @@ export interface VariantView {
   readonly price: string;
   /** The unit price in every currency the page offers. */
   readonly prices: readonly DisplayPrice[];
-  /** Can go in the cart: it has a price and can be had. */
-  readonly orderable: boolean;
+  /**
+   * A form can put it in the cart. Not the same as "can be ordered": a size
+   * without a price goes in a cart to be asked about.
+   */
+  readonly addable: boolean;
 }
 
 export interface ProductView {
@@ -297,13 +300,13 @@ export function productView(
         lead_time: leadTime(variant),
         price,
         prices: own,
-        // A cart line without a price cannot be priced, one that is out of
-        // stock would be refused, and so would a minimum order above what a
-        // cart line may hold: none of them is offered a form.
-        orderable:
-          price !== '' &&
-          availability !== 'out_of_stock' &&
-          variant.moq <= MAX_LINE_QUANTITY,
+        // A size that is out of stock would be refused by the cart, and so
+        // would a minimum order above what a cart line may hold: neither is
+        // offered a form. A size without a price is. It cannot be ordered,
+        // and it can be asked about — which is what a cart sent as an
+        // inquiry is for.
+        addable:
+          availability !== 'out_of_stock' && variant.moq <= MAX_LINE_QUANTITY,
       };
     }),
   };

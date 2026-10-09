@@ -3,7 +3,8 @@
  *
  * Mallok provides the site: content, languages, SEO, the admin, the edge
  * cache. This plugin adds what makes it a shop: variants, prices in several
- * currencies, stock, minimum order quantities and a cart.
+ * currencies, stock, minimum order quantities, a cart, and the cart sent as
+ * an inquiry.
  *
  * Everything here is commerce logic. Nothing about pages or rendering belongs
  * in it — that is the theme's side of the boundary.
@@ -14,6 +15,12 @@ import {
   definePlugin,
   type PluginContext,
 } from 'mallok/worker';
+import {
+  deleteInquiries,
+  exportInquiries,
+  markInquiries,
+} from './lib/inquiry-admin.js';
+import { INQUIRY_EMAILS_JOB, sendInquiryEmails } from './lib/inquiry-jobs.js';
 import { renderData } from './lib/render-data.js';
 import { runScheduledTick } from './lib/scheduled.js';
 import {
@@ -24,8 +31,10 @@ import {
 } from './lib/variant-records.js';
 import shopSql from './migrations/0001_shop.sql';
 import ordersSql from './migrations/0002_orders.sql';
+import inquiriesSql from './migrations/0003_inquiries.sql';
 import manifest from './plugin.json';
 import { cartPage, cartUpdate } from './routes/cart.js';
+import { cartInquiry } from './routes/inquiry.js';
 
 async function scheduled(ctx: PluginContext): Promise<void> {
   const outcome = await runScheduledTick(ctx);
@@ -41,6 +50,7 @@ export const shop = definePlugin({
   migrations: [
     { id: 'plugin:shop:0001_shop', sql: shopSql },
     { id: 'plugin:shop:0002_orders', sql: ordersSql },
+    { id: 'plugin:shop:0003_inquiries', sql: inquiriesSql },
   ],
   hooks: {
     scheduled,
@@ -55,5 +65,19 @@ export const shop = definePlugin({
       remove: (id, ctx) => removeVariant(id, ctx),
     },
   },
-  routes: { cart: cartPage, 'cart/update': cartUpdate },
+  routes: {
+    cart: cartPage,
+    'cart/update': cartUpdate,
+    'cart/inquiry': cartInquiry,
+  },
+  jobs: {
+    [INQUIRY_EMAILS_JOB]: (payload, ctx) => sendInquiryEmails(payload, ctx),
+  },
+  actions: {
+    inquiry_mark_answered: (ids, ctx) => markInquiries(ids, ctx, 'answered'),
+    inquiry_mark_new: (ids, ctx) => markInquiries(ids, ctx, 'new'),
+    inquiry_mark_spam: (ids, ctx) => markInquiries(ids, ctx, 'spam'),
+    inquiry_export_csv: (ids, ctx) => exportInquiries(ids, ctx),
+    inquiry_delete: (ids, ctx, params) => deleteInquiries(ids, ctx, params),
+  },
 });

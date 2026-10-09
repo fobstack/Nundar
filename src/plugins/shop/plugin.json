@@ -2,7 +2,7 @@
   "id": "shop",
   "name": "Shop",
   "version": "0.1.0",
-  "description": "Variants, prices in several currencies, stock, minimum order quantities and a cart for a Mallok site.",
+  "description": "Variants, prices in several currencies, stock, minimum order quantities, a cart and the cart sent as an inquiry, for a Mallok site.",
   "pluginApi": 2,
   "hooks": ["scheduled", "renderData", "onContentDelete"],
   "routes": [
@@ -17,6 +17,11 @@
       "path": "cart/update",
       "method": "POST",
       "rateLimit": "relaxed"
+    },
+    {
+      "path": "cart/inquiry",
+      "method": "POST",
+      "rateLimit": "strict"
     }
   ],
   "settings": {
@@ -45,6 +50,19 @@
       "choices": ["ending99", "integer"],
       "default": "ending99",
       "group": "Pricing"
+    },
+    "inquiry_recipient": {
+      "type": "string",
+      "label": "Inquiry recipient",
+      "help": "The address that is told by email when a cart is sent as an inquiry. The email is sent from the site's own address (Settings → Email) and is answered straight to the buyer. Left empty, inquiries are only listed here in the admin.",
+      "group": "Inquiries"
+    },
+    "inquiry_acknowledge": {
+      "type": "boolean",
+      "label": "Confirm to the buyer by email",
+      "help": "Sends the buyer an email saying their request arrived, in their language. Off by default: the form has no challenge in front of it, so anyone can have that email sent to an address that is not theirs.",
+      "default": false,
+      "group": "Inquiries"
     }
   },
   "panels": [
@@ -174,6 +192,128 @@
           "help": "Lower comes first among the variants a product page does not name."
         }
       }
+    },
+    {
+      "id": "inquiries",
+      "label": "Inquiries",
+      "type": "table",
+      "table": "p_shop_inquiry",
+      "columns": [
+        {
+          "field": "inquiry_no",
+          "label": "Number",
+          "sortable": true
+        },
+        {
+          "field": "name",
+          "label": "Name",
+          "sortable": true
+        },
+        {
+          "field": "company",
+          "label": "Company"
+        },
+        {
+          "field": "email",
+          "label": "Email",
+          "type": "email"
+        },
+        {
+          "field": "country",
+          "label": "Country"
+        },
+        {
+          "field": "line_count",
+          "label": "Lines"
+        },
+        {
+          "field": "subtotal",
+          "label": "Subtotal"
+        },
+        {
+          "field": "status",
+          "label": "Status",
+          "type": "badge"
+        },
+        {
+          "field": "created_at",
+          "label": "Received",
+          "type": "datetime",
+          "sortable": true
+        }
+      ],
+      "filters": ["status"],
+      "search": ["inquiry_no", "name", "company", "email"],
+      "detail": [
+        "message",
+        "phone",
+        "locale",
+        "currency",
+        "notified_at",
+        "acknowledged_at"
+      ],
+      "orderBy": "created_at",
+      "related": [
+        {
+          "id": "lines",
+          "label": "Lines",
+          "table": "p_shop_inquiry_line",
+          "foreignKey": "inquiry_id",
+          "orderBy": "position",
+          "columns": [
+            {
+              "field": "sku",
+              "label": "SKU"
+            },
+            {
+              "field": "name",
+              "label": "Product"
+            },
+            {
+              "field": "quantity",
+              "label": "Quantity"
+            },
+            {
+              "field": "unit_price",
+              "label": "Unit price"
+            },
+            {
+              "field": "line_total",
+              "label": "Total"
+            }
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "id": "inquiry_mark_answered",
+          "label": "Mark answered"
+        },
+        {
+          "id": "inquiry_mark_new",
+          "label": "Mark new"
+        },
+        {
+          "id": "inquiry_mark_spam",
+          "label": "Mark spam"
+        },
+        {
+          "id": "inquiry_export_csv",
+          "label": "Export CSV",
+          "type": "download"
+        },
+        {
+          "id": "inquiry_delete",
+          "label": "Delete for good",
+          "params": {
+            "confirm": {
+              "type": "boolean",
+              "label": "Delete these inquiries and their lines. This cannot be undone.",
+              "required": true
+            }
+          }
+        }
+      ]
     }
   ]
 }

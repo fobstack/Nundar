@@ -203,8 +203,9 @@ export async function fillShop({ base, state, tokenName, step = () => {} }) {
     body: JSON.stringify({
       name: tokenName,
       // `media:write` because the sample bundles carry images, and publishing
-      // a bundle uploads them.
-      scopes: ['content:write', 'settings:write', 'media:write'],
+      // a bundle uploads them. `export` reads the rows of a plugin's panel,
+      // as the admin does: the smoke run reads an inquiry back through it.
+      scopes: ['content:write', 'settings:write', 'media:write', 'export'],
     }),
     signal: timeout(),
   });

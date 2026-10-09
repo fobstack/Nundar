@@ -184,7 +184,7 @@ describe('a product page’s view', () => {
     expect(view?.price_from).toBe('$0.42');
   });
 
-  it('marks as orderable only a variant with a price that can be had, in a quantity a cart can hold', () => {
+  it('offers the cart a variant that can be had, in a quantity a cart can hold, priced or not', () => {
     const view = productView(
       [
         variant('ok', { moq: 100 }),
@@ -208,11 +208,12 @@ describe('a product page’s view', () => {
 
     expect(
       Object.fromEntries(
-        (view?.variants ?? []).map((entry) => [entry.id, entry.orderable]),
+        (view?.variants ?? []).map((entry) => [entry.id, entry.addable]),
       ),
     ).toEqual({
       ok: true,
-      unpriced: false,
+      // No price: it cannot be ordered, and it can be asked about.
+      unpriced: true,
       gone: false,
       custom: true,
       vast: false,

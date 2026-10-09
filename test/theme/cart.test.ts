@@ -1,6 +1,10 @@
 import { SELF } from 'cloudflare:test';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
+  EMAIL_PATTERN,
+  INQUIRY_LIMITS,
+} from '../../src/plugins/shop/lib/inquiries.js';
+import {
   countD1Calls,
   createContent,
   createVariant,
@@ -201,9 +205,14 @@ describe('the cart', () => {
   // changed, is not the next one's.
   beforeEach(async () => {
     await db().batch(
-      ['p_shop_cart_line', 'p_shop_cart', 'p_shop_price', 'p_shop_variant'].map(
-        (table) => db().prepare(`DELETE FROM ${table}`),
-      ),
+      [
+        'p_shop_inquiry_line',
+        'p_shop_inquiry',
+        'p_shop_cart_line',
+        'p_shop_cart',
+        'p_shop_price',
+        'p_shop_variant',
+      ].map((table) => db().prepare(`DELETE FROM ${table}`)),
     );
     const group = screw.translationGroup;
     await createVariant({
@@ -325,11 +334,17 @@ describe('the cart', () => {
       expect(form?.button).toBe('In den Warenkorb CS-16');
     });
 
-    it('offers no form for a size that is out of stock, has no price, or is not sold', async () => {
+    it('offers no form for a size that is out of stock or is not sold', async () => {
       expect(await offerForm(screw.path, 'CS-25')).toBeNull();
-      expect(await offerForm(screw.path, 'CS-30')).toBeNull();
       expect(await offerForm(screw.path, 'CS-99')).toBeNull();
       expect(await offerForm(washer.path, 'WA-5')).toBeNull();
+    });
+
+    it('offers one for a size without a price: it goes in the cart to be asked about', async () => {
+      const form = await offerForm(screw.path, 'CS-30');
+
+      expect(form?.fields).toMatchObject({ variant: 'cs-30' });
+      expect(form?.button).toBe('Add to cart CS-30');
     });
 
     it('carries no script for it', async () => {
@@ -799,7 +814,7 @@ describe('the cart', () => {
 
       expect(line?.problem).toBe('no_price');
       expect(line?.note).toBe(
-        'This part has no price here. Please ask for a quote.',
+        'No price is listed for this part. It will be quoted when you send this cart as a request.',
       );
       expect(line?.terms).toEqual([]);
       expect(subtotal(html)).toBeNull();
@@ -1073,6 +1088,404 @@ describe('the cart', () => {
         .prepare('SELECT COUNT(*) AS n FROM p_shop_cart')
         .first<{ n: number }>();
       expect(rows?.n).toBe(0);
+    });
+  });
+
+  describe('the cart, sent as a request for a quote', () => {
+    /** One control of the form, by its attributes. */
+    type Control = Readonly<Record<string, string>>;
+
+    interface QuoteForm {
+      readonly action: string;
+      readonly method: string;
+      readonly title: string;
+      readonly labels: readonly string[];
+      readonly controls: Readonly<Record<string, Control>>;
+      readonly button: string;
+      readonly html: string;
+    }
+
+    function quoteForm(html: string): QuoteForm | null {
+      const found = /<form class="quote-form"([^>]*)>([\s\S]*?)<\/form>/.exec(
+        html,
+      );
+      if (found === null) {
+        return null;
+      }
+      const [, attributes = '', inside = ''] = found;
+      const controls: Record<string, Control> = {};
+      for (const [, tag = '', rest = ''] of inside.matchAll(
+        /<(input|textarea)\b([^>]*)>/g,
+      )) {
+        const control: Record<string, string> = { tag };
+        for (const [, name = '', , value] of rest.matchAll(
+          /\b([a-z-]+)(="([^"]*)")?/g,
+        )) {
+          control[name] = value ?? '';
+        }
+        controls[control.name ?? ''] = control;
+      }
+      return {
+        action: /\baction="([^"]*)"/.exec(attributes)?.[1] ?? '',
+        method: /\bmethod="([^"]*)"/.exec(attributes)?.[1] ?? '',
+        title: /<h2[^>]*>([^<]*)<\/h2>/.exec(inside)?.[1] ?? '',
+        labels: [
+          ...inside.matchAll(/<label>([\s\S]*?)<(?:input|textarea)/g),
+        ].map(([, label = '']) =>
+          label
+            .replace(/<[^>]+>/g, '')
+            .replace(/\s+/g, ' ')
+            .trim(),
+        ),
+        controls,
+        button: /<button\b[^>]*>([^<]*)<\/button>/.exec(inside)?.[1] ?? '',
+        html: inside,
+      };
+    }
+
+    const BUYER = {
+      name: 'Ada Lovelace',
+      email: 'ada@buyer.example',
+      company: 'Analytical Engines Ltd',
+      phone: '+44 20 7946 0000',
+      message: 'Delivered prices, please.',
+      website: '',
+    };
+
+    /** What the page says became of a cart that was sent. */
+    function sentBox(html: string): string | null {
+      const box = /<div class="cart-sent" role="status">([\s\S]*?)<\/div>/.exec(
+        html,
+      )?.[1];
+      return box === undefined
+        ? null
+        : box
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    /** Why the page says a cart was not sent. */
+    function notSentBox(html: string): { kind: string; text: string } | null {
+      const found =
+        /<div class="cart-problem" role="alert" data-problem="inquiry_([a-z_]*)">([\s\S]*?)<\/div>/.exec(
+          html,
+        );
+      return found === null
+        ? null
+        : {
+            kind: found[1] ?? '',
+            text: (found[2] ?? '')
+              .replace(/<[^>]+>/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim(),
+          };
+    }
+
+    it('is a form below the cart, whose fields carry the plugin’s own rules', async () => {
+      const cookie = await add(screw.path, 'CS-10');
+      const form = quoteForm((await get(`${SHOP}/cart`, cookie)).html);
+
+      expect(form).toMatchObject({
+        action: `${SHOP}/cart/inquiry`,
+        method: 'post',
+        title: 'Send this cart as a request for a quote',
+        labels: [
+          'Your name',
+          'Email',
+          'Company (optional)',
+          'Phone (optional)',
+          'Message (optional)',
+          'Leave this field empty',
+        ],
+        button: 'Send request',
+      });
+      // What a browser checks is what the server checks: a person using one
+      // is never sent back to a form the server emptied.
+      expect(form?.controls.name).toMatchObject({
+        type: 'text',
+        required: '',
+        maxlength: String(INQUIRY_LIMITS.name),
+        autocomplete: 'name',
+      });
+      expect(form?.controls.email).toMatchObject({
+        type: 'email',
+        required: '',
+        maxlength: String(INQUIRY_LIMITS.email),
+        // A pattern is anchored at both ends by the browser.
+        pattern: EMAIL_PATTERN.source.replace(/^\^|\$$/g, ''),
+        autocomplete: 'email',
+      });
+      expect(form?.controls.company).toMatchObject({
+        maxlength: String(INQUIRY_LIMITS.company),
+        autocomplete: 'organization',
+      });
+      expect(form?.controls.company).not.toHaveProperty('required');
+      expect(form?.controls.phone).toMatchObject({
+        type: 'tel',
+        maxlength: String(INQUIRY_LIMITS.phone),
+        autocomplete: 'tel',
+      });
+      expect(form?.controls.message).toMatchObject({
+        tag: 'textarea',
+        maxlength: String(INQUIRY_LIMITS.message),
+      });
+      expect(form?.controls.message).not.toHaveProperty('required');
+    });
+
+    it('keeps the field no person fills in out of sight and out of reach', async () => {
+      const cookie = await add(screw.path, 'CS-10');
+      const form = quoteForm((await get(`${SHOP}/cart`, cookie)).html);
+
+      expect(form?.controls.website).toMatchObject({
+        tabindex: '-1',
+        autocomplete: 'off',
+      });
+      expect(form?.html).toMatch(
+        /<p class="quote-form-trap" aria-hidden="true"><label>[^<]*<input type="text" name="website"/,
+      );
+    });
+
+    it('speaks the page’s language and posts to it', async () => {
+      const cookie = await add(screwDe.path, 'CS-10');
+      const form = quoteForm((await get(`${SHOP}/de/cart`, cookie)).html);
+
+      expect(form).toMatchObject({
+        action: `${SHOP}/de/cart/inquiry`,
+        title: 'Diesen Warenkorb als Angebotsanfrage senden',
+        labels: [
+          'Ihr Name',
+          'E-Mail',
+          'Unternehmen (optional)',
+          'Telefon (optional)',
+          'Nachricht (optional)',
+          'Dieses Feld bitte leer lassen',
+        ],
+        button: 'Anfrage senden',
+      });
+    });
+
+    it('sends the cart as a browser would, and lands on the number it became', async () => {
+      const cookie = await add(screw.path, 'CS-10', '300');
+      const form = quoteForm((await get(`${SHOP}/cart`, cookie)).html);
+
+      const response = await submit(
+        { action: form?.action ?? '', fields: BUYER },
+        cookie,
+      );
+
+      expect(response.status).toBe(303);
+      const location = response.headers.get('location') ?? '';
+      const stored = await db()
+        .prepare('SELECT inquiry_no, name, line_count FROM p_shop_inquiry')
+        .first<{ inquiry_no: string; name: string; line_count: number }>();
+      expect(stored).toMatchObject({ name: 'Ada Lovelace', line_count: 1 });
+      expect(location).toBe(`${SHOP}/cart?sent=${stored?.inquiry_no}`);
+
+      const { status, html, headers } = await get(location, cookie);
+      expect(status).toBe(200);
+      expect(sentBox(html)).toBe(
+        `Your request has been sent. ${stored?.inquiry_no} We will answer by email. Please quote this number if you write to us.`,
+      );
+      // The cart has gone into the inquiry.
+      expect(html).toContain('<p class="empty">Your cart is empty.</p>');
+      expect(cartLines(html)).toEqual([]);
+      expect(quoteForm(html)).toBeNull();
+      expect(headers.get('cache-control')).toBe('private, no-store');
+      // Nothing that was typed is on the page it lands on.
+      expect(html).not.toContain('Ada');
+      expect(html).not.toContain('buyer.example');
+    });
+
+    it('says so in the page’s language', async () => {
+      const cookie = await add(screwDe.path, 'CS-10');
+      const form = quoteForm((await get(`${SHOP}/de/cart`, cookie)).html);
+      const response = await submit(
+        { action: form?.action ?? '', fields: BUYER },
+        cookie,
+      );
+
+      const { html } = await get(
+        response.headers.get('location') ?? '',
+        cookie,
+      );
+
+      expect(sentBox(html)).toMatch(
+        /^Ihre Anfrage wurde gesendet\. RFQ-\d{6}-[0-9A-Z]{8} Wir antworten Ihnen per E-Mail\./,
+      );
+    });
+
+    it('confirms an inquiry only to the browser whose cart it was', async () => {
+      const cookie = await add(screw.path, 'CS-10');
+      const form = quoteForm((await get(`${SHOP}/cart`, cookie)).html);
+      const response = await submit(
+        { action: form?.action ?? '', fields: BUYER },
+        cookie,
+      );
+      const location = response.headers.get('location') ?? '';
+      const stranger = await add(screw.path, 'CS-16');
+
+      // The number alone, in a link somebody passed on or made up.
+      expect(sentBox((await get(location)).html)).toBeNull();
+      expect(sentBox((await get(location, stranger)).html)).toBeNull();
+      expect(
+        sentBox(
+          (await get(`${SHOP}/cart?sent=RFQ-261009-00000000`, cookie)).html,
+        ),
+      ).toBeNull();
+      expect(
+        sentBox((await get(`${SHOP}/cart?sent=<b>sent</b>`, cookie)).html),
+      ).toBeNull();
+      // And to the one whose it was, however often it looks.
+      expect(sentBox((await get(location, cookie)).html)).not.toBeNull();
+    });
+
+    it('offers the form for a part with no price, and states no sum', async () => {
+      const cookie = await add(screw.path, 'CS-30', '10');
+      const { html } = await get(`${SHOP}/cart`, cookie);
+
+      expect(cartLines(html)[0]).toMatchObject({
+        sku: 'CS-30',
+        problem: 'no_price',
+        note: 'No price is listed for this part. It will be quoted when you send this cart as a request.',
+      });
+      expect(subtotal(html)).toBeNull();
+      expect(quoteForm(html)).not.toBeNull();
+    });
+
+    it('offers no form, and says why, while a line has to be put right', async () => {
+      const cookie = await add(screw.path, 'CS-10');
+      await db()
+        .prepare("UPDATE p_shop_variant SET moq = 200 WHERE id = 'cs-10'")
+        .run();
+
+      const { html } = await get(`${SHOP}/cart`, cookie);
+
+      expect(quoteForm(html)).toBeNull();
+      expect(html).toContain(
+        '<p class="cart-note quote-form-blocked">Once the lines marked above are put right, the cart can be sent as a request for a quote.</p>',
+      );
+    });
+
+    it('offers neither for an empty cart', async () => {
+      const { html } = await get(`${SHOP}/cart`);
+
+      expect(quoteForm(html)).toBeNull();
+      expect(html).not.toContain('quote-form-blocked');
+    });
+
+    it.each([
+      [
+        'inquiry=invalid&field=email',
+        'invalid',
+        'Your request was not sent. Please check this field: Email',
+      ],
+      [
+        'inquiry=invalid&field=name',
+        'invalid',
+        'Your request was not sent. Please check this field: Your name',
+      ],
+      [
+        'inquiry=invalid',
+        'invalid',
+        'Your request was not sent. Please check this field:',
+      ],
+      [
+        'inquiry=empty',
+        'empty',
+        'Your request was not sent. There is nothing in the cart to send.',
+      ],
+      [
+        'inquiry=cart_problem',
+        'cart_problem',
+        'Your request was not sent. Please put right the lines marked below first.',
+      ],
+      [
+        'inquiry=too_many',
+        'too_many',
+        'Your request was not sent. Too many requests have been sent from here in the last hour. Please try again later.',
+      ],
+    ])('says why a cart was not sent: %s', async (query, kind, text) => {
+      const cookie = await add(screw.path, 'CS-10');
+
+      const { html } = await get(`${SHOP}/cart?${query}`, cookie);
+
+      expect(notSentBox(html)).toEqual({ kind, text });
+      // The cart is still there to be sent.
+      expect(cartLines(html)).toHaveLength(1);
+      expect(quoteForm(html)).not.toBeNull();
+    });
+
+    it('says it in the page’s language', async () => {
+      const cookie = await add(screwDe.path, 'CS-10');
+
+      const { html } = await get(
+        `${SHOP}/de/cart?inquiry=invalid&field=email`,
+        cookie,
+      );
+
+      expect(notSentBox(html)?.text).toBe(
+        'Ihre Anfrage wurde nicht gesendet. Bitte prüfen Sie dieses Feld: E-Mail',
+      );
+    });
+
+    it('puts on the page nothing a link made up', async () => {
+      const cookie = await add(screw.path, 'CS-10');
+
+      const unknown = await get(`${SHOP}/cart?inquiry=EVIL`, cookie);
+      const field = await get(
+        `${SHOP}/cart?inquiry=invalid&field=EVIL`,
+        cookie,
+      );
+      // A field is named only beside the reason that has one.
+      const misplaced = await get(
+        `${SHOP}/cart?inquiry=too_many&field=email`,
+        cookie,
+      );
+
+      expect(notSentBox(unknown.html)).toBeNull();
+      expect(unknown.html).not.toContain('EVIL');
+      expect(notSentBox(field.html)?.text).toBe(
+        'Your request was not sent. Please check this field:',
+      );
+      expect(field.html).not.toContain('EVIL');
+      // Nor may it pick words of the pack's that are not a field's: the
+      // label is looked up as `quote_<field>`, and `quote_send` is the
+      // button's.
+      const borrowed = await get(
+        `${SHOP}/cart?inquiry=invalid&field=send`,
+        cookie,
+      );
+      expect(notSentBox(borrowed.html)?.text).toBe(
+        'Your request was not sent. Please check this field:',
+      );
+      expect(notSentBox(misplaced.html)?.text).not.toContain('Email');
+    });
+
+    it('needs no script', async () => {
+      const cookie = await add(screw.path, 'CS-10');
+
+      const { html } = await get(`${SHOP}/cart`, cookie);
+
+      expect(html).not.toMatch(/<script\b/);
+    });
+
+    it('costs the cart page no round trip more', async () => {
+      const cookie = await add(screw.path, 'CS-10');
+      const form = quoteForm((await get(`${SHOP}/cart`, cookie)).html);
+      const response = await submit(
+        { action: form?.action ?? '', fields: BUYER },
+        cookie,
+      );
+      const location = response.headers.get('location') ?? '';
+
+      const calls = await countD1Calls(async () => {
+        await get(location, cookie);
+      });
+
+      // One of Mallok's, and the shop's one: the cart is empty, so there is
+      // nothing its lines depend on to read. The inquiry rides with the cart.
+      expect(calls).toBe(2);
     });
   });
 });

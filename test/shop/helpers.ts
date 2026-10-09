@@ -328,6 +328,8 @@ export async function setRate(
 export async function clearShopTables(): Promise<void> {
   await db().batch(
     [
+      'p_shop_inquiry_line',
+      'p_shop_inquiry',
       'p_shop_outbox',
       'p_shop_stock_adjustment',
       'p_shop_stripe_event',

@@ -15,6 +15,9 @@ export const CART_ROUTE = 'cart';
 /** Where every form that changes the cart posts. */
 export const CART_UPDATE_ROUTE = 'cart/update';
 
+/** Where the cart page's form posts to send the cart as an inquiry. */
+export const CART_INQUIRY_ROUTE = 'cart/inquiry';
+
 export function shopPath(
   route: string,
   locale: string,

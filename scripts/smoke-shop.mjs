@@ -676,8 +676,125 @@ try {
     `the cart should hold one line of 100; it holds ${JSON.stringify(lines)}`,
   );
 
+  // 7. The cart, sent as a request for a quote: through the form the cart
+  //    page itself offers, in German, and read back the way the admin reads
+  //    it. The cart was last shown in euros.
+  const quoteForm =
+    /<form class="quote-form" method="post" action="([^"]*)"/.exec(germanCart);
+  expect(
+    quoteForm !== null &&
+      quoteForm[1] === '/_mallok/p/shop/de/cart/inquiry' &&
+      germanCart.includes(
+        '<h2 class="quote-form-title" id="quote-form-title">Diesen Warenkorb als Angebotsanfrage senden</h2>',
+      ),
+    'the German cart page offers no form to send the cart as a request for a quote',
+  );
+  const buyer = {
+    name: 'Smoke Buyer',
+    email: 'buyer@smoke.example',
+    company: 'Smoke GmbH',
+    phone: '',
+    message: 'Bitte mit Lieferzeit.',
+    website: '',
+  };
+  const sendInquiry = () =>
+    submit({ action: quoteForm[1], fields: buyer }, {}, cartCookie);
+  const sent = await sendInquiry();
+  const sentTo = sent.headers.get('location') ?? '';
+  const inquiries = await query(
+    `SELECT i.id, i.inquiry_no, i.name, i.locale, i.currency, i.subtotal,
+            l.sku, l.name AS product, l.quantity, l.unit_price
+     FROM p_shop_inquiry AS i
+     JOIN p_shop_inquiry_line AS l ON l.inquiry_id = i.id`,
+  );
+  expect(
+    inquiries.length === 1 &&
+      inquiries[0].name === 'Smoke Buyer' &&
+      inquiries[0].locale === 'de' &&
+      inquiries[0].currency === 'EUR' &&
+      inquiries[0].sku === 'TI-SHC-M5-20' &&
+      inquiries[0].product ===
+        'Titan-Zylinderschraube mit Innensechskant M5 × 0,8' &&
+      inquiries[0].quantity === 100 &&
+      /^2,10\s€$/.test(inquiries[0].unit_price) &&
+      /^210,00\s€$/.test(inquiries[0].subtotal),
+    `the cart was stored as ${JSON.stringify(inquiries)}`,
+  );
+  const inquiry = inquiries[0];
+  expect(
+    sent.status === 303 &&
+      sentTo === `/_mallok/p/shop/de/cart?sent=${inquiry.inquiry_no}`,
+    `sending the cart returned ${sent.status} to ${sentTo}`,
+  );
+  const confirmation = await (
+    await fetch(`${base}${sentTo}`, {
+      headers: { cookie: cartCookie },
+      signal: timeout(),
+    })
+  ).text();
+  expect(
+    confirmation.includes('<div class="cart-sent" role="status">') &&
+      confirmation.includes(inquiry.inquiry_no) &&
+      confirmation.includes('Ihre Anfrage wurde gesendet.') &&
+      confirmation.includes('<p class="empty">Ihr Warenkorb ist leer.</p>') &&
+      !confirmation.includes('Smoke Buyer'),
+    'the cart page does not confirm the inquiry it was sent as, on an empty cart',
+  );
+  // Somebody else, following the same link, is told nothing.
+  const strangers = await page(sentTo);
+  expect(
+    strangers.status === 200 && !strangers.html.includes('cart-sent'),
+    'the cart page confirms an inquiry to a browser that did not send it',
+  );
+  // The same form again — a button pressed twice — is the same inquiry.
+  const again = await sendInquiry();
+  const stillOne = await query('SELECT COUNT(*) AS n FROM p_shop_inquiry');
+  expect(
+    again.headers.get('location') === sentTo && stillOne[0].n === 1,
+    `sending the same cart again returned ${again.headers.get('location')} and left ${stillOne[0].n} inquiries`,
+  );
+  const emptied = await query('SELECT COUNT(*) AS n FROM p_shop_cart_line');
+  expect(emptied[0].n === 0, 'the cart was not emptied into its inquiry');
+
+  // The admin's side of it: the panel's list, and the lines of the row.
+  const panel = `${base}/_mallok/api/plugins/shop/panels/inquiries`;
+  const listed = await (
+    await fetch(panel, { headers: authorised, signal: timeout() })
+  ).json();
+  const linesOf = await (
+    await fetch(`${panel}/related/lines?parent=${inquiry.id}`, {
+      headers: authorised,
+      signal: timeout(),
+    })
+  ).json();
+  expect(
+    listed.rows?.length === 1 &&
+      listed.rows[0].inquiry_no === inquiry.inquiry_no &&
+      listed.rows[0].email === 'buyer@smoke.example' &&
+      listed.rows[0].status === 'new' &&
+      linesOf.rows?.length === 1 &&
+      linesOf.rows[0].sku === 'TI-SHC-M5-20' &&
+      linesOf.rows[0].quantity === 100,
+    `the admin lists the inquiry as ${JSON.stringify(listed)} with ${JSON.stringify(linesOf)}`,
+  );
+  const exported = await fetch(`${panel}/actions/inquiry_export_csv`, {
+    method: 'POST',
+    headers: authorised,
+    body: JSON.stringify({ ids: [] }),
+    signal: timeout(),
+  });
+  const csv = await exported.text();
+  expect(
+    exported.ok &&
+      (exported.headers.get('content-type') ?? '').startsWith('text/csv') &&
+      csv.includes(`${inquiry.inquiry_no},`) &&
+      csv.includes(',TI-SHC-M5-20,') &&
+      csv.includes(',100,2.10,210.00,'),
+    `exporting the inquiries returned ${exported.status}: ${csv.slice(0, 300)}`,
+  );
+
   process.stdout.write(
-    `smoke:shop: ok (settings, publish, seed, every kind of page, ${followed} navigation links in ${site.locales.length} languages, ${shipped.length} theme files, cart, variants in the admin) on ${base}\n`,
+    `smoke:shop: ok (settings, publish, seed, every kind of page, ${followed} navigation links in ${site.locales.length} languages, ${shipped.length} theme files, cart, variants in the admin, a cart sent as an inquiry) on ${base}\n`,
   );
 } catch (error) {
   failure = error;

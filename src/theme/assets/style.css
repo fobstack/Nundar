@@ -2126,6 +2126,33 @@ p {
   font-size: 0.8125rem;
 }
 
+/* A cart that was sent as a request for a quote: its number, to quote. */
+.cart-sent {
+  margin-bottom: 1.5rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid #bbf7d0;
+  border-left: 0.25rem solid #15803d;
+  border-radius: var(--radius-lg);
+  background: #f0fdf4;
+  color: #14532d;
+  font-size: 0.875rem;
+}
+
+.cart-sent p {
+  margin: 0;
+}
+
+.cart-sent p + p {
+  margin-top: 0.25rem;
+}
+
+.cart-sent .offer-sku {
+  color: inherit;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
 .cart-back {
   margin-top: 1.5rem;
   text-align: center;
@@ -2257,6 +2284,71 @@ p {
 .cart-foot .buy-actions {
   justify-content: flex-end;
   margin-top: 0.5rem;
+}
+
+/* The form that sends the cart as a request for a quote. Its fields are
+   those of Mallok's inquiry form, further down, and are styled with them. */
+.quote-form {
+  position: relative;
+  display: grid;
+  gap: 1rem;
+  margin-top: 2.5rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-2xl);
+  background: var(--white);
+  box-shadow: var(--shadow-sm);
+}
+
+.quote-form-title {
+  margin: 0;
+  color: var(--slate-900);
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.quote-form-intro {
+  margin: -0.5rem 0 0;
+  color: var(--slate-600);
+  font-size: 0.875rem;
+}
+
+.quote-form-pair {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 40rem) {
+  .quote-form-pair {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.quote-form-optional {
+  color: var(--slate-500);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.quote-form .btn {
+  justify-self: start;
+}
+
+/* Out of sight and out of reach: a person never meets this field. */
+.quote-form-trap {
+  position: absolute;
+  left: -624.9375rem;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+}
+
+.quote-form-blocked {
+  margin-top: 1.5rem;
+  text-align: right;
 }
 
 .spec-card {
@@ -2809,7 +2901,8 @@ p {
   margin: 0;
 }
 
-.mallok-inquiry label {
+.mallok-inquiry label,
+.quote-form label {
   display: block;
   color: var(--slate-700);
   font-size: 0.6875rem;
@@ -2824,7 +2917,9 @@ p {
 }
 
 .mallok-inquiry input:not([type="hidden"]),
-.mallok-inquiry textarea {
+.mallok-inquiry textarea,
+.quote-form input:not([type="hidden"]),
+.quote-form textarea {
   display: block;
   width: 100%;
   margin-top: 0.375rem;
@@ -2841,13 +2936,16 @@ p {
 }
 
 .mallok-inquiry input:focus,
-.mallok-inquiry textarea:focus {
+.mallok-inquiry textarea:focus,
+.quote-form input:focus,
+.quote-form textarea:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 1px var(--accent);
 }
 
-.mallok-inquiry textarea {
+.mallok-inquiry textarea,
+.quote-form textarea {
   resize: vertical;
 }
 

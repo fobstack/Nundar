@@ -8,7 +8,7 @@
   Every control is a plain form posting to `plugin_page.action`, so the cart
   works without a script, and the quantity fields carry the minimum order in
   `min` and `step` and the most a line may hold in `max` — which the server
-  checks again.
+  checks again. The last of them sends the cart as a request for a quote.
 {%- endcomment -%}
 {% block title %}{{ t.cart_title }} — {{ site.name }}{% endblock %}
 {% block content %}
@@ -29,6 +29,26 @@
   <div class="cart-problem" role="alert" data-problem="{{ cart.problem.kind }}">
     <p><strong>{{ t.cart_refused }}</strong>{% if cart.problem.sku != blank %} <span class="offer-sku">{{ cart.problem.sku }}</span>{% endif %}</p>
     <p>{{ t[reason] }}{% if cart.problem.kind == "below_moq" %} {{ cart.problem.moq }}{% elsif cart.problem.kind == "insufficient_stock" %} {{ cart.problem.available }}{% elsif cart.problem.kind == "quantity_too_large" %} {{ cart.problem.max }}{% endif %}</p>
+  </div>
+  {% endif %}
+
+  {%- comment -%}
+    What became of the cart when it was sent as a request for a quote. The
+    plugin names the inquiry it became, which it looked up for this visitor's
+    own cart, or the kind of reason none was made; nothing a person typed
+    comes back through the address, so the form below is empty again.
+  {%- endcomment -%}
+  {% if cart.sent %}
+  <div class="cart-sent" role="status">
+    <p><strong>{{ t.quote_sent }}</strong> <span class="offer-sku">{{ cart.sent.number }}</span></p>
+    <p>{{ t.quote_sent_note }}</p>
+  </div>
+  {% endif %}
+  {% if cart.inquiry_problem %}
+  {% assign reason = "quote_problem_" | append: cart.inquiry_problem.kind %}
+  <div class="cart-problem" role="alert" data-problem="inquiry_{{ cart.inquiry_problem.kind }}">
+    <p><strong>{{ t.quote_refused }}</strong></p>
+    <p>{{ t[reason] }}{% if cart.inquiry_problem.field != blank %}{% assign label = "quote_" | append: cart.inquiry_problem.field %} {{ t[label] }}{% endif %}</p>
   </div>
   {% endif %}
 
@@ -89,13 +109,48 @@
     {% endif %}
     {% if cart.subtotal != blank %}<p class="cart-subtotal"><span>{{ t.subtotal }}</span> <span class="price">{{ cart.subtotal }}</span></p>{% endif %}
     <p class="cart-note">{{ t.cart_note }}</p>
-    {% if theme.options.quote_href != blank or site.kinds.product %}
+    {% if site.kinds.product %}
     <div class="buy-actions">
-      {% if theme.options.quote_href != blank %}<a class="btn btn-solid" href="{{ theme.options.quote_href }}">{{ t.request_quote }}</a>{% endif %}
-      {% if site.kinds.product %}<a class="btn btn-outline" href="{{ site.kinds.product.path }}">{{ t.back_to_catalogue }}</a>{% endif %}
+      <a class="btn btn-outline" href="{{ site.kinds.product.path }}">{{ t.back_to_catalogue }}</a>
     </div>
     {% endif %}
   </div>
+
+  {%- comment -%}
+    The cart, sent as one request for a quote: a plain form, like every
+    other control here. A line without a price does not stand in its way —
+    that is what a quote is for — and any other problem does, so the form is
+    offered only when the plugin says the cart can go as it stands.
+
+    Each field carries the server's own rule: `required`, the length the
+    plugin allows, and for the address the pattern it is held to. A browser
+    then refuses what the server would, and the server's refusal — which
+    comes back with the fields empty — is not something a person meets.
+
+    The last field is one no person sees or reaches: whatever fills it in is
+    not one, and the plugin stores nothing for it.
+  {%- endcomment -%}
+  {% if cart.inquiry_action != blank %}
+  {% if cart.can_inquire %}
+  <form class="quote-form" method="post" action="{{ cart.inquiry_action }}" aria-labelledby="quote-form-title">
+    <h2 class="quote-form-title" id="quote-form-title">{{ t.quote_form_title }}</h2>
+    <p class="quote-form-intro">{{ t.quote_form_intro }}</p>
+    <div class="quote-form-pair">
+      <label>{{ t.quote_name }}<input type="text" name="name" required maxlength="200" autocomplete="name"></label>
+      <label>{{ t.quote_email }}<input type="email" name="email" required maxlength="320" pattern="[^\s@]+@[^\s@]+\.[^\s@]+" autocomplete="email"></label>
+    </div>
+    <div class="quote-form-pair">
+      <label>{{ t.quote_company }} <span class="quote-form-optional">{{ t.optional }}</span><input type="text" name="company" maxlength="200" autocomplete="organization"></label>
+      <label>{{ t.quote_phone }} <span class="quote-form-optional">{{ t.optional }}</span><input type="tel" name="phone" maxlength="60" autocomplete="tel"></label>
+    </div>
+    <label>{{ t.quote_message }} <span class="quote-form-optional">{{ t.optional }}</span><textarea name="message" rows="5" maxlength="5000"></textarea></label>
+    <p class="quote-form-trap" aria-hidden="true"><label>{{ t.quote_leave_empty }}<input type="text" name="website" tabindex="-1" autocomplete="off"></label></p>
+    <button class="btn btn-solid" type="submit">{{ t.quote_send }}</button>
+  </form>
+  {% else %}
+  <p class="cart-note quote-form-blocked">{{ t.quote_fix_first }}</p>
+  {% endif %}
+  {% endif %}
   {% endif %}
 </section>
 {% endblock %}
