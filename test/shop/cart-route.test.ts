@@ -172,6 +172,24 @@ describe('POST /_mallok/p/shop/cart/update', () => {
     expect(response.headers.get('set-cookie')).toBeNull();
   });
 
+  it('takes any whole number from the minimum order up, not only its multiples', async () => {
+    // The minimum order is a floor, not a pack size: with a minimum of ten,
+    // seventeen is an order like any other.
+    const added = await post({ variant: 'dn50', quantity: '17' });
+
+    expect(refusal(added).kind).toBeNull();
+    expect(await lines()).toMatchObject([{ variant_id: 'dn50', quantity: 17 }]);
+
+    const cookie = cartCookie(added);
+    const set = await post(
+      { action: 'set', variant: 'dn50', quantity: '23' },
+      cookie,
+    );
+
+    expect(refusal(set).kind).toBeNull();
+    expect(await lines()).toMatchObject([{ variant_id: 'dn50', quantity: 23 }]);
+  });
+
   it('adds to the quantity already in the cart', async () => {
     const first = await post({ variant: 'dn50', quantity: '10' });
     const cookie = cartCookie(first);

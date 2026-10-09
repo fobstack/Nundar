@@ -57,7 +57,7 @@ These are deliberate and should not be "simplified" away:
 
 - **Prices are never accepted from a client.** The cart stores quantities only;
   every amount is recomputed from the database when the cart is priced.
-- **MOQ and stock are enforced on the server.** The form's `min` and `step` are
+- **MOQ and stock are enforced on the server.** The form's `min` and `max` are
   a convenience. A direct POST is refused with the same rules, and a test posts
   one.
 - **Stock cannot go negative.** The column carries `CHECK (stock >= 0)`, and a

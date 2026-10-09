@@ -154,7 +154,7 @@
           "required": true,
           "default": 1,
           "min": 1,
-          "help": "The least that can be ordered. On a page the quantity starts here and goes up in steps of it. At most 500, which is the most one cart line may hold.",
+          "help": "The least that can be ordered. On a page the quantity starts here, and any whole number from it up to 500 can be ordered. At most 500, which is the most one cart line may hold.",
           "max": 500
         },
         "stock_policy": {
