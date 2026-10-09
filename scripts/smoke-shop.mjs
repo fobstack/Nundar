@@ -810,8 +810,44 @@ try {
     `exporting the inquiries returned ${exported.status}: ${csv.slice(0, 300)}`,
   );
 
+  // 8. The site's export, which is what `mallok export` writes to disk:
+  //    the shop's files are in it beside the content, and no plugin failed —
+  //    Mallok refuses to call an export a backup otherwise. Both plugins
+  //    export inquiries, each under a name of its own.
+  const siteExport = await (
+    await fetch(`${base}/_mallok/api/export`, {
+      headers: authorised,
+      signal: timeout(),
+    })
+  ).json();
+  const exportedFile = (path) =>
+    (siteExport.files ?? []).find((file) => file.path === path);
+  const exportedRows = (path) => JSON.parse(exportedFile(path)?.text ?? 'null');
+  expect(
+    Array.isArray(siteExport.pluginExportFailures) &&
+      siteExport.pluginExportFailures.length === 0,
+    `the export reports a plugin that failed: ${JSON.stringify(siteExport.pluginExportFailures)}`,
+  );
+  expect(
+    exportedFile('inquiries.csv') !== undefined &&
+      exportedRows('shop/manifest.json')?.format === 1 &&
+      exportedRows('shop/variants.json')?.length === 9 &&
+      exportedRows('shop/variants.json').every(
+        (variant) =>
+          typeof variant.product_slug === 'string' &&
+          variant.product_slug !== '',
+      ) &&
+      exportedRows('shop/prices.json')?.length === 27 &&
+      exportedRows('shop/inquiries.json')?.length === 1 &&
+      exportedRows('shop/inquiries.json')[0].inquiry_no ===
+        inquiry.inquiry_no &&
+      exportedRows('shop/inquiries.json')[0].cart_id === undefined &&
+      exportedRows('shop/inquiry-lines.json')?.length === 1,
+    `the export does not carry the shop as it is: ${JSON.stringify(exportedRows('shop/manifest.json'))}`,
+  );
+
   process.stdout.write(
-    `smoke:shop: ok (settings, publish, seed, every kind of page, ${followed} navigation links in ${site.locales.length} languages, ${shipped.length} theme files, cart, variants in the admin, a cart sent as an inquiry) on ${base}\n`,
+    `smoke:shop: ok (settings, publish, seed, every kind of page, ${followed} navigation links in ${site.locales.length} languages, ${shipped.length} theme files, cart, variants in the admin, a cart sent as an inquiry, the shop in the site's export) on ${base}\n`,
   );
 } catch (error) {
   failure = error;
