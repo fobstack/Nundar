@@ -46,6 +46,7 @@ security document describes each. Nundar implements none of them again.
 | Stripe keys and the webhook signing secret | Not stored yet | They will be plugin secrets, which Mallok encrypts. No code path reads them today. |
 | What a buyer says of themselves in an inquiry: name, email address, company, phone, message | D1, on the inquiry | Written when a cart is sent as a request for a quote. It is the first personal data the shop holds. Read in the admin by a signed-in administrator, or a token with `export`; deleted there. Never written to a log or put in an address, and the job the plugin queues carries an id only. **The email is another matter**: once handed to Mallok it sits, whole, in Mallok's own queue — see the residual risks. |
 | A mark of the visitor who sent an inquiry | D1, on the inquiry | Mallok's one-way hash of the connecting address, which is what the limit per visitor counts by. The address itself is never stored, and the admin's list does not show the mark. |
+| The shop's part of a site export | Not stored: built when asked | Mallok's export, which needs a signed-in administrator or a token with `export`, includes every order and inquiry — names, email addresses, shipping addresses, messages — as files under `shop/`. Whoever holds an export holds that. It leaves out a cart's id and the mark of an inquiry's sender. |
 | Cart contents | D1, keyed by an unguessable 128-bit id | Variant ids and quantities only — **never prices**. A test asserts the table has no price column. |
 | The cart cookie | `HttpOnly`, `SameSite=Lax`, `Secure` on HTTPS, scoped to `/_mallok/p/shop` | It identifies a cart and nothing else. It is not a session and grants nothing in the admin. |
 | Prices, stock, variants | D1 | Changed only through the admin's variant form — which needs a signed-in administrator, or a token with `content:write` — or the plugin's own scheduled repricing. Every change of stock is a row in a ledger. |
@@ -291,6 +292,14 @@ Stated plainly rather than left for an auditor to find:
   how they can. Whether a browser's autofill ever fills the field no person
   sees — which would drop a real request without a word — has not been
   tried.
+- **An export is as private as the database.** It carries orders and
+  inquiries as they are stored. Keep an exported directory where the
+  database's own backups would be kept, and do not commit one.
+- **A shop can outgrow its export.** The export is built in one request; a
+  table with more rows than `EXPORT_ROW_LIMIT` fails it rather than be cut
+  short, and Mallok then produces no backup of the site at all. The limit is
+  a guard that has not been measured on a real account, and nothing prunes
+  the stock ledger or the orders. It is written up for Mallok.
 - **Sample content and sample variants are public test data.** Do not load
   `seed/shop-sample.sql` into a production database. The sample catalogue
   describes a supplier that does not exist: its certifications, test figures

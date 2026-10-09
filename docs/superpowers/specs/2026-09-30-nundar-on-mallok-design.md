@@ -689,10 +689,35 @@ Not changed: the export still takes up to a thousand inquiries, as Mallok's own 
 
 1. *No challenge in front of the form.* Mallok verifies a Turnstile token for a route and has nowhere to draw the widget on a plugin's page. Written up for Mallok. Until then the limits above are what there is, and `SECURITY.md` says what they do not stop.
 2. *No retention period, and a copy the shop cannot delete.* An inquiry stays until an administrator deletes it, and its emails stay in Mallok's queue after that (the review's second finding). Written up.
-3. *The shop's data is not in Mallok's export.* The plugin implements no `exportFiles`, for inquiries or for anything else it holds — variants, prices, the stock ledger. That is a gap of its own, older than this work, and is not closed here.
+3. *The shop's data is not in Mallok's export.* Closed the same day: §19.
 4. *A job is queued beside a conditional write that stored nothing* in a true race, and finds nothing to send. Mallok's statement takes no condition. Written up.
 5. *An amount is stored twice* because a table panel has no money column. Written up.
 6. *Whether a quantity must be a multiple of the minimum order* (§17, left open, item 8) and *the rounding of a derived price* (item 3) were put to the owner with this work and are not settled in it.
 7. *The older tests of a race* — a payment reported twice at once, two refunds, a payment against a cancellation, nine in all — were looked at the same day, after the review. They call functions side by side rather than send requests, and such calls do overlap every time: twenty-five rounds of two payments went to the database in one and the same order, both readings before either write. So none had to be rewritten for that. They now run through `atTheSameMoment`, which fails unless the calls overlapped, so that it is seen on every run rather than taken on trust; and each of the nine, with everything that stops its second write taken away, was red eight times in eight. One thing that showed: an order's write is stopped by several keys at once — the status condition, the event's two keys, the ledger row's id, the outbox row's id — and removing the status condition alone turns no payment test red. That is the design, not a gap in the tests.
 8. *A request with no connecting address.* Whether a zone that uses Cloudflare's "Remove visitor IP headers" transform still hands a Worker that header is not stated in the documentation that was read. If it does not, every visitor of such a site shares one limit of five an hour.
+
+## 19. What the export changed or found (2026-10-09)
+
+A site export is how an operator leaves with what is theirs: `mallok export` writes the content, the settings and whatever each plugin hands over, and refuses to call the result a backup when a plugin fails. The shop handed over nothing — a gap as old as the plugin, found while the inquiry cart was built (§18). It hands over everything now.
+
+**What is exported**, a JSON file each under `shop/`, with a manifest that names each file and counts its rows: variants, prices, the stock ledger, orders and their lines, payment events, the outbox, inquiries and their lines.
+
+**Choices made here, which the owner may reverse.**
+
+1. *JSON, as stored.* A row is an object, a column a key; an amount stays the integer of minor units it is, an absent value `null`, and what a buyer typed is not touched. The export of inquiries in the admin is CSV and makes a formula text, because it is for reading in a spreadsheet; this one is for carrying, and a file that had been rewritten for a spreadsheet's sake could not be put back.
+2. *A variant carries the slug of its product* as well as the translation group. The group is an id this database gave the product; the slug — in the default language, or in whichever the product is out in — is what the export of the content calls it.
+3. *The outbox and the payment events go too.* A row of the outbox that nobody has acted on is a duty — a refund that is owed — and losing it in a move is the worst thing an export could lose.
+4. *Left behind*: carts, which are a visitor's and gone in a month; exchange rates, which are fetched again; the scheduler's state; and of an inquiry the cart it came from and the mark of who sent it.
+5. *Every column, by `*`.* A column a later migration adds is exported without anyone remembering to list it. A test fails when a new `p_shop_` table is neither exported nor named among those left behind.
+6. *A table past twenty thousand rows fails the export, by name.* An export is built whole, in one request. Leaving the oldest rows out would produce a file that passes for a backup; failing makes Mallok say that there is none. The figure is a guard and not a measurement.
+
+**How it was verified.** Twelve tests inside workerd: the files through Mallok's own export endpoint with no plugin reported as failed; every table's rows compared with the table, column for column; the slug in the default language and outside it; what is left behind, searched for in the whole text; an empty shop; the same text for the same data; one round trip; the limit at its edge for the first table and for another. Thirteen deliberate breakages, twelve red at once and one that called for the second of those. The smoke run reads the shop's nine variants, twenty-seven prices and one inquiry out of the export of a real local Worker, beside the inquiry plugin's own file, and was seen to fail with the export unwired.
+
+**Not verified.** `mallok export` itself was not run against this site: the test and the smoke run read the endpoint it reads. Nothing was deployed, and what an export costs a Worker in CPU and memory is not known.
+
+**Left open.**
+
+1. *Nothing imports these files.* Mallok's import knows content; a plugin has no hook to be handed its own files back. An export without an import is half of taking one's data with one. Written up.
+2. *A shop can outgrow its export* (choice 6), and takes the whole site's backup with it when it does. Mallok has no way for a plugin to hand over a table a page at a time. Written up.
+3. *Mallok's own inquiry plugin exports its newest thousand rows and no more*, without saying so — found by reading it, while deciding what this export should do past its limit. Written up.
 
