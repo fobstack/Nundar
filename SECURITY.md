@@ -44,7 +44,7 @@ security document describes each. Nundar implements none of them again.
 | Card numbers, CVV | **Nowhere in Nundar** | Payment goes through Stripe's hosted checkout, so card data never reaches this code. A test lists the columns an order may have. No checkout route exists yet. |
 | Buyer email and shipping address | D1, on the order | Written when an order is placed, which nothing can do yet: the order logic is built and has no route. Never written to a log. |
 | Stripe keys and the webhook signing secret | Not stored yet | They will be plugin secrets, which Mallok encrypts. No code path reads them today. |
-| What a buyer says of themselves in an inquiry: name, email address, company, phone, message | D1, on the inquiry | Written when a cart is sent as a request for a quote. It is the first personal data the shop holds. Read in the admin by a signed-in administrator, or a token with `export`; deleted there for good. Never written to a log, never put in an address, never copied into a job's payload. |
+| What a buyer says of themselves in an inquiry: name, email address, company, phone, message | D1, on the inquiry | Written when a cart is sent as a request for a quote. It is the first personal data the shop holds. Read in the admin by a signed-in administrator, or a token with `export`; deleted there. Never written to a log or put in an address, and the job the plugin queues carries an id only. **The email is another matter**: once handed to Mallok it sits, whole, in Mallok's own queue — see the residual risks. |
 | A mark of the visitor who sent an inquiry | D1, on the inquiry | Mallok's one-way hash of the connecting address, which is what the limit per visitor counts by. The address itself is never stored, and the admin's list does not show the mark. |
 | Cart contents | D1, keyed by an unguessable 128-bit id | Variant ids and quantities only — **never prices**. A test asserts the table has no price column. |
 | The cart cookie | `HttpOnly`, `SameSite=Lax`, `Secure` on HTTPS, scoped to `/_mallok/p/shop` | It identifies a cart and nothing else. It is not a session and grants nothing in the admin. |
@@ -133,16 +133,21 @@ risks — has no challenge in front of it. What is in its place:
 - **A visitor may send five inquiries in an hour, exactly.** The count is
   taken in the plugin's own table inside the write, so two sent at the same
   moment cannot both slip under it. It is asked once before the write too,
-  so that a visitor over it queues no work.
+  so that a visitor over it queues no work. Requests that reach the Worker
+  with no connecting address, which Mallok can give no mark, are counted
+  together as one visitor, as Mallok's own rate limit counts them: tighter
+  than meant, never unlimited.
 - **An inquiry needs a cart.** The form is a second request, carrying the
   cookie of a first that put a real part, in a quantity the shop accepts,
   into a cart. A request that has neither stores nothing.
 - **A field no person sees.** Whatever fills it in is answered as if all
   were well, and nothing is stored.
-- **A cart is stored as one inquiry however often the form arrives.** The
-  write happens only while the cart still has lines, and empties it in the
-  same batch; a second request finds the first one's inquiry and is told its
-  number.
+- **A cart is stored as one inquiry however often the form arrives, and as
+  exactly what is in it.** The write happens only while the cart is still
+  what was read — the same lines, the same quantities, no other — and
+  empties it in the same batch. A second request finds the first one's
+  inquiry and is told its number; a cart that changed meanwhile is not sent,
+  and nothing put in it is lost.
 - **Nothing a person typed travels in an address.** The answer to the form
   is a redirect that carries the inquiry's number, or the kind of reason
   none was made and the name of a field — so a refused form comes back
@@ -151,20 +156,35 @@ risks — has no challenge in front of it. What is in its place:
 - **The page that confirms an inquiry shows it only to the browser holding
   the cart it was sent from.** A number alone, in a link somebody passed on
   or made up, shows nothing.
-- **A name, a company and a phone number are one line each.** A line break in
-  one is refused: such a value ends up in the subject of an email.
+- **A name, a company and a phone number are one line each.** White space of
+  any kind in one, a line break included, becomes a single space before it
+  is stored: such a value ends up in the subject of an email. Any other
+  control character is refused.
+- **An address is made only of what addresses are made of**: letters and
+  digits of any script, and `.`, `_`, `+`, `-` and `'`. The admin makes a
+  `mailto:` link of an address, and the seller's email is answered to it; a
+  `?`, a `%` or a `,` in one would add a recipient or a subject of the
+  buyer's choosing. The rare real address with another sign in it is refused
+  with them.
 - **Emails escape everything a person typed**, and the one to the seller is
   answered to the buyer's address, not sent from it.
 - **The email that confirms to the buyer is off unless switched on**, and
   repeats nothing the buyer typed about themselves: it goes to an address
   nobody has shown to be theirs.
 - **An exported cell cannot be a formula.** A value beginning with `=`, `+`,
-  `-` or `@` is a formula to a spreadsheet; the export makes it text.
+  `-` or `@` is a formula to a spreadsheet; the export makes it text. So
+  is every piece of a value that a spreadsheet would make a cell of: where
+  the list separator is a semicolon, a row is split on `;` whatever the
+  quotes say.
 - **Deleting inquiries asks for a box to be ticked**, and is refused without
-  it. It removes the inquiry and its lines for good, which is how what a
-  person typed is erased when they ask.
+  it. It removes the inquiry and its lines from the shop's tables for good.
+  It does not reach an email already handed to Mallok — see the residual
+  risks.
 - **The job that sends the emails is given an id and nothing else.** It reads
-  the inquiry when it runs, and sends each email once however often it runs.
+  the inquiry when it runs, and marks each email on the inquiry once Mallok
+  has taken it, so that a second run sends only what is not marked. That is
+  at least once, and nearly always once: a Worker stopped between the two
+  sends that email again. The mark means handed to Mallok, not delivered.
 
 ### Payment, built and not yet reachable
 
@@ -256,10 +276,21 @@ Stated plainly rather than left for an auditor to find:
   no retention period. An administrator deletes inquiries in the admin; a
   CSV that was exported, and an email already sent to the seller, are copies
   the shop no longer controls.
-- **A form the server refuses comes back empty.** Validation is not how a
-  person meets that, since the fields carry the same rules; a line of the
-  cart changing, or the visitor's limit being reached, while the form is
-  being filled in, is.
+- **Deleting an inquiry does not delete its email from Mallok's queue.** To
+  send an email a plugin hands the whole message to Mallok, which keeps it —
+  the buyer's name, address, phone number and message — as a row of its own
+  `job` table: for seven days after it is delivered, and for good if it
+  never is, which is what happens on a site with no email key. A plugin may
+  not write Mallok's tables, so nothing here can remove it. **To erase what
+  a person typed, delete the inquiry and then the rows of `job` whose
+  payload names them, in the database.** It is written up for Mallok.
+- **A form the server refuses comes back empty.** The fields carry the
+  server's rules, and the server takes what a browser lets through, so a
+  person should not meet that for what they typed; the cart changing, or
+  the visitor's limit being reached, while the form is being filled in, is
+  how they can. Whether a browser's autofill ever fills the field no person
+  sees — which would drop a real request without a word — has not been
+  tried.
 - **Sample content and sample variants are public test data.** Do not load
   `seed/shop-sample.sql` into a production database. The sample catalogue
   describes a supplier that does not exist: its certifications, test figures
