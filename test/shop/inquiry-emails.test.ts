@@ -7,11 +7,7 @@ import {
 } from 'cloudflare:test';
 import type { EmailMessage, PluginContext } from 'mallok/worker';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import {
-  type InquiryDetail,
-  inquiryFormSchema,
-  inquiryStatements,
-} from '../../src/plugins/shop/lib/inquiries.js';
+import type { InquiryDetail } from '../../src/plugins/shop/lib/inquiries.js';
 import {
   inquiryAcknowledgementEmail,
   inquiryNotificationEmail,
@@ -31,6 +27,7 @@ import {
   ensureSite,
   ORIGIN,
   setPrice,
+  storeInquiry,
 } from './helpers.js';
 
 const INQUIRY: InquiryDetail = {
@@ -235,45 +232,27 @@ describe('the job that sends an inquiry’s emails', () => {
   beforeAll(ensureSite);
   beforeEach(async () => {
     await clearShopTables();
-    const cartId = 'c'.repeat(32);
-    await db().batch([
-      db()
-        .prepare(
-          `INSERT INTO p_shop_cart (id, created_at, updated_at, expires_at)
-           VALUES (?, ?, ?, '2999-01-01')`,
-        )
-        .bind(cartId, now.toISOString(), now.toISOString()),
-      db()
-        .prepare(
-          "INSERT INTO p_shop_cart_line (cart_id, variant_id, quantity) VALUES (?, 'cs-10', 1)",
-        )
-        .bind(cartId),
-    ]);
-    await db().batch(
-      inquiryStatements(db(), {
-        id: 'inq-1',
-        inquiryNo: 'RFQ-261009-7K3M9QXA',
-        cartId,
-        form: inquiryFormSchema.parse({
-          name: 'Ada Lovelace',
-          email: 'ada@buyer.example',
-        }),
-        locale: 'fr',
-        currency: 'EUR',
-        country: '',
-        ipHash: null,
-        lines: [
-          {
-            variantId: 'cs-10',
-            sku: 'CS-10',
-            name: 'Vis M5',
-            quantity: 100,
-            unitPriceMinor: 172,
-          },
-        ],
-        now,
-      }),
-    );
+    await storeInquiry({
+      id: 'inq-1',
+      at: now.toISOString(),
+      locale: 'fr',
+      currency: 'EUR',
+      country: '',
+      lines: [
+        {
+          variantId: 'cs-10',
+          sku: 'CS-10',
+          name: 'Vis M5',
+          quantity: 100,
+          unitPriceMinor: 172,
+        },
+      ],
+    });
+    await db()
+      .prepare(
+        "UPDATE p_shop_inquiry SET inquiry_no = 'RFQ-261009-7K3M9QXA' WHERE id = 'inq-1'",
+      )
+      .run();
   });
 
   function context(

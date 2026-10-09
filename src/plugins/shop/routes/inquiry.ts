@@ -9,8 +9,11 @@
  * nothing a person typed: an address ends up in histories and logs.
  *
  * So a form the server refuses comes back empty. The fields carry the
- * server's own rules as `required`, `maxlength` and `pattern`, which is what
- * keeps a person using a browser from ever meeting that.
+ * server's own rules as `required`, `maxlength` and `pattern`, and the
+ * server takes what a browser lets through — a tab in a name, a line break
+ * counted once — so that a person using a browser does not meet that for
+ * what they typed. They can for what happened meanwhile: the cart changed,
+ * or the limit was reached.
  *
  * The form has no challenge in front of it. A theme may load no script from
  * another host and Mallok runs no hook on a plugin's page, so Turnstile has
@@ -18,6 +21,10 @@
  * and its strict rate limit, a field no person sees, an exact limit per
  * visitor counted in the table, and that a cart must exist — an inquiry is a
  * second request, with the cookie from the first.
+ *
+ * What is sent is the cart exactly as it is at the write: a cart that
+ * changed between being read here and being written is not sent, and the
+ * buyer is asked to look at it again.
  */
 
 import type { PluginRequestContext, RouteInput } from 'mallok/worker';
@@ -51,6 +58,7 @@ export const INQUIRY_REFUSALS = [
   'invalid',
   'empty',
   'cart_problem',
+  'cart_changed',
   'too_many',
 ] as const;
 
@@ -118,11 +126,14 @@ export async function cartInquiry(
       : defaultCurrencyForLocale(ctx.locale);
 
   /** An inquiry that was not stored: say which it was, from the data. */
-  const notStored = async (): Promise<Response> => {
+  const notStored = async (
+    sending: readonly { variantId: string; quantity: number }[],
+  ): Promise<Response> => {
     const why = await whyNotStored(ctx.db, {
       cartId,
       ipHash: ctx.ipHash,
       now,
+      lines: sending,
     });
     return why.kind === 'sent'
       ? to({ [SENT_PARAM]: why.inquiryNo })
@@ -132,7 +143,7 @@ export async function cartInquiry(
   // Nothing in the cart: an empty cart, or this same form arriving a second
   // time after the first emptied it.
   if (lines.length === 0) {
-    return notStored();
+    return notStored([]);
   }
 
   const facts = await readCartFacts(ctx.db, {
@@ -153,7 +164,7 @@ export async function cartInquiry(
   // to send still takes a turn.
   const alreadySent =
     ((countResult?.results ?? [])[0] as { n: number } | undefined)?.n ?? 0;
-  if (atVisitorLimit(ctx.ipHash, alreadySent)) {
+  if (atVisitorLimit(alreadySent)) {
     return refuse('too_many');
   }
 
@@ -182,7 +193,7 @@ export async function cartInquiry(
   }
   const [stored] = await ctx.db.batch(statements);
   if ((stored?.meta.changes ?? 0) === 0) {
-    return notStored();
+    return notStored(sendable);
   }
 
   // The address is all that is logged of it: a kind and a count, no person.

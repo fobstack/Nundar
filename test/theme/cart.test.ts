@@ -1,8 +1,9 @@
 import { SELF } from 'cloudflare:test';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
-  EMAIL_PATTERN,
+  EMAIL_PATTERN_SOURCE,
   INQUIRY_LIMITS,
+  NAME_PATTERN_SOURCE,
 } from '../../src/plugins/shop/lib/inquiries.js';
 import {
   countD1Calls,
@@ -1205,6 +1206,8 @@ describe('the cart', () => {
       expect(form?.controls.name).toMatchObject({
         type: 'text',
         required: '',
+        // `required` is satisfied by spaces, and the server is not.
+        pattern: NAME_PATTERN_SOURCE,
         maxlength: String(INQUIRY_LIMITS.name),
         autocomplete: 'name',
       });
@@ -1212,8 +1215,9 @@ describe('the cart', () => {
         type: 'email',
         required: '',
         maxlength: String(INQUIRY_LIMITS.email),
-        // A pattern is anchored at both ends by the browser.
-        pattern: EMAIL_PATTERN.source.replace(/^\^|\$$/g, ''),
+        // The very text the server compiles, which a browser anchors at
+        // both ends and compiles the same way.
+        pattern: EMAIL_PATTERN_SOURCE,
         autocomplete: 'email',
       });
       expect(form?.controls.company).toMatchObject({
@@ -1399,6 +1403,11 @@ describe('the cart', () => {
         'inquiry=cart_problem',
         'cart_problem',
         'Your request was not sent. Please put right the lines marked below first.',
+      ],
+      [
+        'inquiry=cart_changed',
+        'cart_changed',
+        'Your request was not sent. The cart changed while it was being sent. Please check it and send it again.',
       ],
       [
         'inquiry=too_many',

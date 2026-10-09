@@ -93,6 +93,7 @@
   "quote_problem_invalid": "Merci de vérifier ce champ :",
   "quote_problem_empty": "Le panier ne contient rien à envoyer.",
   "quote_problem_cart_problem": "Merci de corriger d’abord les lignes signalées ci-dessous.",
+  "quote_problem_cart_changed": "Le panier a changé pendant l’envoi. Merci de le vérifier et de l’envoyer à nouveau.",
   "quote_problem_too_many": "Trop de demandes ont été envoyées d’ici au cours de la dernière heure. Merci de réessayer plus tard.",
   "quote_fix_first": "Une fois les lignes signalées ci-dessus corrigées, le panier pourra être envoyé comme demande de devis.",
   "spec_highlights": "Ce qui compte ici",

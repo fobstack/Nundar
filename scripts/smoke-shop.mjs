@@ -740,10 +740,24 @@ try {
       !confirmation.includes('Smoke Buyer'),
     'the cart page does not confirm the inquiry it was sent as, on an empty cart',
   );
-  // Somebody else, following the same link, is told nothing.
+  // Somebody else, following the same link, is told nothing: neither a
+  // browser with no cart, nor one with a cart of its own.
   const strangers = await page(sentTo);
+  const othersCart = (
+    (await submit(form)).headers.get('set-cookie') ?? ''
+  ).split(';')[0];
+  const others = await (
+    await fetch(`${base}${sentTo}`, {
+      headers: { cookie: othersCart },
+      signal: timeout(),
+    })
+  ).text();
   expect(
-    strangers.status === 200 && !strangers.html.includes('cart-sent'),
+    strangers.status === 200 &&
+      !strangers.html.includes('cart-sent') &&
+      othersCart !== '' &&
+      othersCart !== cartCookie &&
+      !others.includes('cart-sent'),
     'the cart page confirms an inquiry to a browser that did not send it',
   );
   // The same form again — a button pressed twice — is the same inquiry.
@@ -753,7 +767,10 @@ try {
     again.headers.get('location') === sentTo && stillOne[0].n === 1,
     `sending the same cart again returned ${again.headers.get('location')} and left ${stillOne[0].n} inquiries`,
   );
-  const emptied = await query('SELECT COUNT(*) AS n FROM p_shop_cart_line');
+  const emptied = await query(
+    `SELECT COUNT(*) AS n FROM p_shop_cart_line
+     WHERE cart_id = '${cartCookie.split('=')[1]}'`,
+  );
   expect(emptied[0].n === 0, 'the cart was not emptied into its inquiry');
 
   // The admin's side of it: the panel's list, and the lines of the row.

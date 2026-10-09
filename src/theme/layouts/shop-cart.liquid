@@ -123,9 +123,10 @@
     offered only when the plugin says the cart can go as it stands.
 
     Each field carries the server's own rule: `required`, the length the
-    plugin allows, and for the address the pattern it is held to. A browser
-    then refuses what the server would, and the server's refusal — which
-    comes back with the fields empty — is not something a person meets.
+    plugin allows, for the address the pattern it is held to, and for the
+    name that it is not only spaces. A browser then refuses what the server
+    would, and the server's refusal — which comes back with the fields
+    empty — is not something a person meets for what they typed.
 
     The last field is one no person sees or reaches: whatever fills it in is
     not one, and the plugin stores nothing for it.
@@ -136,8 +137,8 @@
     <h2 class="quote-form-title" id="quote-form-title">{{ t.quote_form_title }}</h2>
     <p class="quote-form-intro">{{ t.quote_form_intro }}</p>
     <div class="quote-form-pair">
-      <label>{{ t.quote_name }}<input type="text" name="name" required maxlength="200" autocomplete="name"></label>
-      <label>{{ t.quote_email }}<input type="email" name="email" required maxlength="320" pattern="[^\s@]+@[^\s@]+\.[^\s@]+" autocomplete="email"></label>
+      <label>{{ t.quote_name }}<input type="text" name="name" required pattern=".*\S.*" maxlength="200" autocomplete="name"></label>
+      <label>{{ t.quote_email }}<input type="email" name="email" required maxlength="320" pattern="[\p{L}\p{N}._+'\-]+@[\p{L}\p{N}\-]+(\.[\p{L}\p{N}\-]+)+" autocomplete="email"></label>
     </div>
     <div class="quote-form-pair">
       <label>{{ t.quote_company }} <span class="quote-form-optional">{{ t.optional }}</span><input type="text" name="company" maxlength="200" autocomplete="organization"></label>

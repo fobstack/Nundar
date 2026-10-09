@@ -93,6 +93,7 @@
   "quote_problem_invalid": "Revise este campo:",
   "quote_problem_empty": "No hay nada en el carrito que enviar.",
   "quote_problem_cart_problem": "Corrija primero las líneas señaladas abajo.",
+  "quote_problem_cart_changed": "El carrito ha cambiado durante el envío. Revíselo y envíelo de nuevo.",
   "quote_problem_too_many": "Se han enviado demasiadas solicitudes desde aquí en la última hora. Inténtelo de nuevo más tarde.",
   "quote_fix_first": "Cuando corrija las líneas señaladas arriba, podrá enviar el carrito como solicitud de presupuesto.",
   "spec_highlights": "Lo que importa aquí",

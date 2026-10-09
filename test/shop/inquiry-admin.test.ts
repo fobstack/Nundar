@@ -1,67 +1,30 @@
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
-  inquiryFormSchema,
-  inquiryStatements,
-  newInquiryNo,
-} from '../../src/plugins/shop/lib/inquiries.js';
-import { api, clearShopTables, db, ensureSite } from './helpers.js';
+  api,
+  clearShopTables,
+  db,
+  ensureSite,
+  storeInquiry,
+} from './helpers.js';
 
 const PANEL = '/_mallok/api/plugins/shop/panels/inquiries';
 
-async function store(input: {
+function store(input: {
   readonly id: string;
   readonly name: string;
   readonly at: string;
-  readonly email?: string;
-}): Promise<void> {
-  const cartId = crypto.randomUUID().replace(/-/g, '');
-  await db().batch([
-    db()
-      .prepare(
-        `INSERT INTO p_shop_cart (id, created_at, updated_at, expires_at)
-         VALUES (?, ?, ?, '2999-01-01')`,
-      )
-      .bind(cartId, input.at, input.at),
-    db()
-      .prepare(
-        "INSERT INTO p_shop_cart_line (cart_id, variant_id, quantity) VALUES (?, 'cs-10', 1)",
-      )
-      .bind(cartId),
-  ]);
-  await db().batch(
-    inquiryStatements(db(), {
-      id: input.id,
-      inquiryNo: newInquiryNo(new Date(input.at)),
-      cartId,
-      form: inquiryFormSchema.parse({
-        name: input.name,
-        email: input.email ?? 'buyer@buyer.example',
-        company: 'Engines Ltd',
-        message: 'Delivered prices, please.',
-      }),
-      locale: 'en',
-      currency: 'USD',
-      country: 'GB',
-      ipHash: 'f'.repeat(64),
-      lines: [
-        {
-          variantId: 'cs-10',
-          sku: 'CS-10',
-          name: 'Cap screw M5',
-          quantity: 300,
-          unitPriceMinor: 185,
-        },
-        {
-          variantId: 'wa-5',
-          sku: 'WA-5',
-          name: 'Washer M5',
-          quantity: 50,
-          unitPriceMinor: null,
-        },
-      ],
-      now: new Date(input.at),
-    }),
-  );
+}): Promise<string> {
+  return storeInquiry({
+    id: input.id,
+    at: input.at,
+    form: {
+      name: input.name,
+      email: 'buyer@buyer.example',
+      company: 'Engines Ltd',
+      message: 'Delivered prices, please.',
+    },
+    ipHash: 'f'.repeat(64),
+  });
 }
 
 function act(action: string, body: Record<string, unknown>): Promise<Response> {

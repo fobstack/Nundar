@@ -93,6 +93,7 @@
   "quote_problem_invalid": "Bitte prüfen Sie dieses Feld:",
   "quote_problem_empty": "Der Warenkorb enthält nichts, was gesendet werden könnte.",
   "quote_problem_cart_problem": "Bitte korrigieren Sie zuerst die unten markierten Positionen.",
+  "quote_problem_cart_changed": "Der Warenkorb hat sich während des Sendens geändert. Bitte prüfen Sie ihn und senden Sie ihn erneut.",
   "quote_problem_too_many": "Von hier wurden in der letzten Stunde zu viele Anfragen gesendet. Bitte versuchen Sie es später erneut.",
   "quote_fix_first": "Sobald die oben markierten Positionen korrigiert sind, können Sie den Warenkorb als Angebotsanfrage senden.",
   "spec_highlights": "Worauf es hier ankommt",

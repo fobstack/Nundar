@@ -3,11 +3,8 @@ import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   INQUIRY_LIMITS,
   inquiriesCsv,
-  inquiryFormSchema,
-  inquiryStatements,
   isInquiryNo,
   MAX_INQUIRIES_PER_HOUR,
-  newInquiryNo,
   readInquiries,
   readInquiry,
 } from '../../src/plugins/shop/lib/inquiries.js';
@@ -19,8 +16,11 @@ import {
   createVariant,
   db,
   ensureSite,
+  holdWrites,
+  INQUIRY_WRITE,
   ORIGIN,
   setPrice,
+  storeInquiry,
   type TestProduct,
 } from './helpers.js';
 
@@ -57,11 +57,15 @@ async function add(
   quantity: string,
   cookie?: string,
   locale?: string,
+  visitor?: string | null,
 ): Promise<string> {
   const response = await post(
     `${locale === undefined ? '' : `/${locale}`}/cart/update`,
     { variant, quantity },
-    cookie === undefined ? {} : { cookie },
+    {
+      ...(cookie === undefined ? {} : { cookie }),
+      ...(visitor === undefined ? {} : { visitor }),
+    },
   );
   return (
     cookie ?? response.headers.get('set-cookie')?.split(';')[0] ?? 'no cookie'
@@ -420,10 +424,31 @@ describe('a cart sent as an inquiry', () => {
     it.each([
       ['name', { ...BUYER, name: '   ' }],
       ['name', { ...BUYER, name: 'x'.repeat(INQUIRY_LIMITS.name + 1) }],
-      ['name', { ...BUYER, name: 'Ada\nBcc: someone@else.example' }],
+      // A control character that is not white space: nothing a keyboard types.
+      ['name', { ...BUYER, name: 'Ada\u0000Lovelace' }],
       ['email', { ...BUYER, email: 'ada at buyer' }],
       ['email', { ...BUYER, email: 'ada@buyer' }],
       ['email', { ...BUYER, email: '' }],
+      // A line break inside an address is the start of another header.
+      ['email', { ...BUYER, email: 'ada@buyer.example\nBcc: x@evil.example' }],
+      ['email', { ...BUYER, email: 'ada@buyer.example\r\nx@evil.example' }],
+      // What a `mailto:` link would read as a second recipient or a subject.
+      [
+        'email',
+        {
+          ...BUYER,
+          email: 'x?bcc=boss%40evil.example&subject=Hi&to=ada@buyer.example',
+        },
+      ],
+      [
+        'email',
+        { ...BUYER, email: 'victim%40evil.example%2Cada@buyer.example' },
+      ],
+      ['email', { ...BUYER, email: 'ada,x@buyer.example' }],
+      ['email', { ...BUYER, email: 'Ada <ada@buyer.example>' }],
+      ['email', { ...BUYER, email: 'ada@buyer.example;x@evil.example' }],
+      ['company', { ...BUYER, company: 'Engines\u001b[31m Ltd' }],
+      ['phone', { ...BUYER, phone: '+44\u0007 20' }],
       [
         'company',
         { ...BUYER, company: 'x'.repeat(INQUIRY_LIMITS.company + 1) },
@@ -449,6 +474,64 @@ describe('a cart sent as an inquiry', () => {
       expect(await cartLines()).toEqual([
         { variant_id: 'cs-10', quantity: 100 },
       ]);
+    });
+
+    it('takes the addresses people have', async () => {
+      for (const email of [
+        'ada@buyer.example',
+        'ada.lovelace+rfq@mail.buyer.example',
+        "o'brien@buyer.example",
+        'einkauf@müller-bücher.example',
+        'ADA_L-1@BUYER.EXAMPLE',
+      ]) {
+        const cookie = await add('cs-10', '100', undefined, undefined, null);
+        const response = await send(
+          cookie,
+          { ...BUYER, email },
+          { visitor: null },
+        );
+        expect(outcome(response).sent, email).not.toBeNull();
+        await db().batch([
+          db().prepare('DELETE FROM p_shop_inquiry_line'),
+          db().prepare('DELETE FROM p_shop_inquiry'),
+        ]);
+      }
+    });
+
+    it('makes one line of a name, a company and a phone number, whatever white space came with them', async () => {
+      // A tab pasted from a spreadsheet, a line break: a browser lets them
+      // through, so the server does not send the form back empty for them.
+      const cookie = await add('cs-10', '100');
+
+      const response = await send(cookie, {
+        ...BUYER,
+        name: '  Ada\tLovelace\nBcc: someone@else.example ',
+        company: 'Analytical\r\nEngines   Ltd',
+        phone: '+44\t20 7946\n0000',
+      });
+
+      expect(outcome(response).sent).not.toBeNull();
+      expect((await inquiries())[0]).toMatchObject({
+        name: 'Ada Lovelace Bcc: someone@else.example',
+        company: 'Analytical Engines Ltd',
+        phone: '+44 20 7946 0000',
+      });
+    });
+
+    it('counts a line break in the message once, as the field that let it through does', async () => {
+      // A browser counts a line break as one character against `maxlength`
+      // and sends it as two.
+      const typed = `${'x'.repeat(INQUIRY_LIMITS.message - 20)}${'\n'.repeat(10)}${'y'.repeat(10)}`;
+      expect(typed).toHaveLength(INQUIRY_LIMITS.message);
+      const cookie = await add('cs-10', '100');
+
+      const response = await send(cookie, {
+        ...BUYER,
+        message: typed.replace(/\n/g, '\r\n'),
+      });
+
+      expect(outcome(response).sent).not.toBeNull();
+      expect((await inquiries())[0]?.message).toBe(typed);
     });
 
     it('names the first field of several, in the order the page shows them', async () => {
@@ -573,15 +656,83 @@ describe('a cart sent as an inquiry', () => {
   describe('sent twice', () => {
     it('stores one inquiry when the same cart is sent twice at the same moment', async () => {
       const cookie = await add('cs-10', '100');
+      // Both requests have read the cart, full, before either writes.
+      const gate = holdWrites(INQUIRY_WRITE);
 
-      const [first, second] = await Promise.all([send(cookie), send(cookie)]);
+      let answers: Response[];
+      try {
+        const pending = Promise.all([send(cookie), send(cookie)]);
+        await gate.arrived(2);
+        gate.open();
+        answers = await pending;
+      } finally {
+        gate.restore();
+      }
 
       const stored = await inquiries();
       expect(stored).toHaveLength(1);
       expect(await inquiryLines()).toHaveLength(1);
+      expect(await cartLines()).toEqual([]);
       // Both are told the number of the one inquiry there is.
-      expect(outcome(first).sent).toBe(stored[0]?.inquiry_no);
-      expect(outcome(second).sent).toBe(stored[0]?.inquiry_no);
+      expect(answers.map((answer) => outcome(answer).sent)).toEqual([
+        stored[0]?.inquiry_no,
+        stored[0]?.inquiry_no,
+      ]);
+    });
+
+    it('queues one job for the two', async () => {
+      await setShopSettings({ inquiry_recipient: 'sales@seller.example' });
+      const cookie = await add('cs-10', '100');
+      const gate = holdWrites(INQUIRY_WRITE);
+
+      try {
+        const pending = Promise.all([send(cookie), send(cookie)]);
+        await gate.arrived(2);
+        gate.open();
+        await pending;
+      } finally {
+        gate.restore();
+      }
+
+      // Mallok's statement takes no condition, so the batch that stored
+      // nothing queued a job as well. It names an inquiry that is not there,
+      // and the job finds nothing to send for it.
+      const [stored] = await inquiries();
+      const named = (await queuedJobs()).map(
+        (job) => (JSON.parse(job.payload) as { inquiryId: string }).inquiryId,
+      );
+      expect(named).toHaveLength(2);
+      expect(named.filter((id) => id === stored?.id)).toHaveLength(1);
+    });
+
+    it('tells both the number, not the limit, when the first of the two was the last the visitor may send', async () => {
+      for (let sent = 0; sent < MAX_INQUIRIES_PER_HOUR - 1; sent += 1) {
+        await send(await add('cs-10', '100'));
+      }
+      const cookie = await add('cs-10', '100');
+      const gate = holdWrites(INQUIRY_WRITE);
+
+      let answers: Response[];
+      try {
+        const pending = Promise.all([send(cookie), send(cookie)]);
+        await gate.arrived(2);
+        gate.open();
+        answers = await pending;
+      } finally {
+        gate.restore();
+      }
+
+      // The second finds the visitor at the limit — because of the first.
+      // It is the same request, and is told what the first was.
+      const stored = await inquiries();
+      expect(stored).toHaveLength(MAX_INQUIRIES_PER_HOUR);
+      const last = stored.find(
+        (row) => row.cart_id === cookie.split('=')[1],
+      )?.inquiry_no;
+      expect(answers.map((answer) => outcome(answer).sent)).toEqual([
+        last,
+        last,
+      ]);
     });
 
     it('answers a form sent again a moment later with the inquiry it already became', async () => {
@@ -607,9 +758,75 @@ describe('a cart sent as an inquiry', () => {
     });
   });
 
-  describe('the limit for one visitor', () => {
-    async function sendFromNewCart(visitor: string): Promise<Response> {
+  describe('a cart that changes while it is being sent', () => {
+    it.each([
+      [
+        'a part is added',
+        "INSERT INTO p_shop_cart_line (cart_id, variant_id, quantity) SELECT id, 'wa-5', 50 FROM p_shop_cart",
+        [
+          { variant_id: 'cs-10', quantity: 100 },
+          { variant_id: 'wa-5', quantity: 50 },
+        ],
+      ],
+      [
+        'a quantity is changed',
+        "UPDATE p_shop_cart_line SET quantity = 300 WHERE variant_id = 'cs-10'",
+        [{ variant_id: 'cs-10', quantity: 300 }],
+      ],
+    ])(
+      'is not sent as it no longer is when %s, and loses nothing',
+      async (_what, change, after) => {
+        const cookie = await add('cs-10', '100');
+        // Between the request's reading of the cart and its write: another
+        // tab of the same browser.
+        const gate = holdWrites(INQUIRY_WRITE);
+
+        let response: Response;
+        try {
+          const pending = send(cookie);
+          await gate.arrived(1);
+          await db().prepare(change).run();
+          gate.open();
+          response = await pending;
+        } finally {
+          gate.restore();
+        }
+
+        expect(outcome(response)).toMatchObject({
+          status: 303,
+          sent: null,
+          inquiry: 'cart_changed',
+        });
+        expect(await inquiries()).toEqual([]);
+        expect(await inquiryLines()).toEqual([]);
+        // What was put in the cart meanwhile is still in it.
+        expect(await cartLines()).toEqual(after);
+      },
+    );
+
+    it('is told there is nothing to send when the cart was emptied meanwhile', async () => {
       const cookie = await add('cs-10', '100');
+      const gate = holdWrites(INQUIRY_WRITE);
+
+      let response: Response;
+      try {
+        const pending = send(cookie);
+        await gate.arrived(1);
+        await db().prepare('DELETE FROM p_shop_cart_line').run();
+        gate.open();
+        response = await pending;
+      } finally {
+        gate.restore();
+      }
+
+      expect(outcome(response).inquiry).toBe('empty');
+      expect(await inquiries()).toEqual([]);
+    });
+  });
+
+  describe('the limit for one visitor', () => {
+    async function sendFromNewCart(visitor: string | null): Promise<Response> {
+      const cookie = await add('cs-10', '100', undefined, undefined, visitor);
       return send(cookie, BUYER, { visitor });
     }
 
@@ -647,25 +864,100 @@ describe('a cart sent as an inquiry', () => {
       expect(outcome(await sendFromNewCart(VISITOR)).sent).not.toBeNull();
     });
 
-    it('holds when two carts of one visitor are sent at the same moment', async () => {
-      for (let sent = 0; sent < MAX_INQUIRIES_PER_HOUR - 1; sent += 1) {
-        await sendFromNewCart(VISITOR);
+    it.each([
+      ['one visitor', VISITOR],
+      // And of the requests Mallok could give no mark, which are one.
+      ['no visitor Mallok can tell apart', null],
+    ])(
+      'holds when two carts of %s are sent at the same moment',
+      async (_who, visitor) => {
+        for (let sent = 0; sent < MAX_INQUIRIES_PER_HOUR - 1; sent += 1) {
+          await sendFromNewCart(visitor);
+        }
+        const one = await add('cs-10', '100', undefined, undefined, visitor);
+        const other = await add('cs-10', '200', undefined, undefined, visitor);
+        // Both have read "one short of the limit" before either writes.
+        const gate = holdWrites(INQUIRY_WRITE);
+
+        let answers: Response[];
+        try {
+          const pending = Promise.all([
+            send(one, BUYER, { visitor }),
+            send(other, BUYER, { visitor }),
+          ]);
+          await gate.arrived(2);
+          gate.open();
+          answers = await pending;
+        } finally {
+          gate.restore();
+        }
+
+        // The write asks again, and one of them is over.
+        expect(await inquiries()).toHaveLength(MAX_INQUIRIES_PER_HOUR);
+        expect(
+          answers.map((answer) => outcome(answer).inquiry ?? 'sent').sort(),
+        ).toEqual(['sent', 'too_many']);
+        // The one that was refused still has its cart, and no lines of an
+        // inquiry that was never stored were written for it.
+        expect(await cartLines()).toHaveLength(1);
+        expect(await inquiryLines()).toHaveLength(MAX_INQUIRIES_PER_HOUR);
+      },
+    );
+
+    it('says the limit, not "sent", when a cart that was sent a moment ago is filled and sent again over it', async () => {
+      const cookie = await add('cs-10', '100');
+      const first = outcome(await send(cookie));
+      await add('cs-10', '200', cookie);
+      // The visitor reaches the limit between this request's reading and
+      // its write.
+      // Its own write is held; the ones this test makes meanwhile pass.
+      const gate = holdWrites(INQUIRY_WRITE, 1);
+
+      let second: Response;
+      try {
+        const pending = send(cookie);
+        await gate.arrived(1);
+        for (let other = 0; other < MAX_INQUIRIES_PER_HOUR - 1; other += 1) {
+          await storeInquiry({
+            id: `other-${other}`,
+            at: new Date().toISOString(),
+            ipHash: (await inquiries())[0]?.ip_hash ?? null,
+          });
+        }
+        gate.open();
+        second = await pending;
+      } finally {
+        gate.restore();
       }
-      const one = await add('cs-10', '100');
-      const other = await add('cs-10', '200');
 
-      const answers = await Promise.all([
-        send(one, BUYER, { visitor: VISITOR }),
-        send(other, BUYER, { visitor: VISITOR }),
-      ]);
-
-      // Both read "one short of the limit". The write asks again.
+      expect(outcome(second)).toMatchObject({
+        sent: null,
+        inquiry: 'too_many',
+      });
+      expect(first.sent).not.toBeNull();
       expect(await inquiries()).toHaveLength(MAX_INQUIRIES_PER_HOUR);
-      expect(
-        answers.map((answer) => outcome(answer).inquiry ?? 'sent').sort(),
-      ).toEqual(['sent', 'too_many']);
-      // The one that was refused still has its cart.
-      expect(await cartLines()).toHaveLength(1);
+      expect(await cartLines()).toEqual([
+        { variant_id: 'cs-10', quantity: 200 },
+      ]);
+    });
+
+    it('counts together the requests Mallok could give no mark', async () => {
+      // No connecting address: a call that did not come through the edge.
+      // They are one visitor, as they are to Mallok's own rate limit.
+      for (let sent = 0; sent < MAX_INQUIRIES_PER_HOUR; sent += 1) {
+        const cookie = await add('cs-10', '100', undefined, undefined, null);
+        expect(
+          outcome(await send(cookie, BUYER, { visitor: null })).sent,
+        ).not.toBeNull();
+      }
+      const cookie = await add('cs-10', '100', undefined, undefined, null);
+
+      const over = await send(cookie, BUYER, { visitor: null });
+
+      expect(outcome(over).inquiry).toBe('too_many');
+      expect((await inquiries()).every((row) => row.ip_hash === null)).toBe(
+        true,
+      );
     });
 
     it('stores a one-way mark of the visitor, never the address', async () => {
@@ -731,60 +1023,41 @@ describe('a cart sent as an inquiry', () => {
   describe('reading and exporting', () => {
     const now = new Date('2026-10-09T08:00:00.000Z');
 
-    async function store(over: {
+    const LINES = [
+      {
+        variantId: 'cs-10',
+        sku: 'CS-10',
+        name: 'Cap screw, "M5"',
+        quantity: 300,
+        unitPriceMinor: 185,
+      },
+      {
+        variantId: 'wa-5',
+        sku: 'WA-5',
+        name: 'Washer M5',
+        quantity: 50,
+        unitPriceMinor: null,
+      },
+    ];
+
+    function store(over: {
       id: string;
       name?: string;
+      company?: string;
       message?: string;
       at?: Date;
-      priced?: boolean;
-    }): Promise<void> {
-      const cartId = crypto.randomUUID().replace(/-/g, '');
-      await db()
-        .prepare(
-          `INSERT INTO p_shop_cart (id, created_at, updated_at, expires_at)
-           VALUES (?, ?, ?, ?)`,
-        )
-        .bind(cartId, now.toISOString(), now.toISOString(), '2999-01-01')
-        .run();
-      await db()
-        .prepare(
-          'INSERT INTO p_shop_cart_line (cart_id, variant_id, quantity) VALUES (?, ?, 1)',
-        )
-        .bind(cartId, 'cs-10')
-        .run();
-      await db().batch(
-        inquiryStatements(db(), {
-          id: over.id,
-          inquiryNo: newInquiryNo(over.at ?? now),
-          cartId,
-          form: inquiryFormSchema.parse({
-            ...BUYER,
-            ...(over.name === undefined ? {} : { name: over.name }),
-            ...(over.message === undefined ? {} : { message: over.message }),
-          }),
-          locale: 'en',
-          currency: 'USD',
-          country: 'GB',
-          ipHash: null,
-          lines: [
-            {
-              variantId: 'cs-10',
-              sku: 'CS-10',
-              name: 'Cap screw, "M5"',
-              quantity: 300,
-              unitPriceMinor: over.priced === false ? null : 185,
-            },
-            {
-              variantId: 'wa-5',
-              sku: 'WA-5',
-              name: 'Washer M5',
-              quantity: 50,
-              unitPriceMinor: null,
-            },
-          ],
-          now: over.at ?? now,
-        }),
-      );
+    }): Promise<string> {
+      return storeInquiry({
+        id: over.id,
+        at: (over.at ?? now).toISOString(),
+        form: {
+          ...BUYER,
+          ...(over.name === undefined ? {} : { name: over.name }),
+          ...(over.company === undefined ? {} : { company: over.company }),
+          ...(over.message === undefined ? {} : { message: over.message }),
+        },
+        lines: LINES,
+      });
     }
 
     it('reads an inquiry with its lines in one round trip', async () => {
@@ -853,16 +1126,39 @@ describe('a cart sent as an inquiry', () => {
       await store({
         id: 'one',
         name: '=HYPERLINK("https://evil.example","x")',
-        message: '+1 for speed\n@home',
+        company: '@SUM(1+1)',
+        message: '+1 for speed\n@home\tand\t=2+2',
       });
 
       const csv = inquiriesCsv(await readInquiries(db(), [], 10));
 
       expect(csv).toContain(`"'=HYPERLINK(""https://evil.example"",""x"")"`);
-      expect(csv).toContain(`"'+1 for speed\n@home"`);
+      expect(csv).toContain(",'@SUM(1+1),");
+      // A line break inside a value starts a row to a spreadsheet that does
+      // not honour the quotes: what follows it is made text as well.
+      // And so does a tab, which is a separator of its own to some.
+      expect(csv).toContain(`"'+1 for speed\n'@home\tand\t'=2+2"`);
       // So is a phone number that begins with a plus sign, the ordinary
       // case: left alone, a spreadsheet reads `+1-555-0100` as a sum.
       expect(csv).toContain(",'+44 20 7946 0000,");
+    });
+
+    it.each([
+      ['-2+3', "'-2+3"],
+      // Where the list separator is a semicolon, a spreadsheet splits a row
+      // on it whatever the quotes say, and each piece is a cell.
+      ["x;=cmd|'/C calc'!A0;z", "x;'=cmd|'/C calc'!A0;z"],
+      [';=1+1', ";'=1+1"],
+      ['m;@SUM(1+1)*cmd', "m;'@SUM(1+1)*cmd"],
+      ['a;-1;+2', "a;'-1;'+2"],
+      // Not a formula anywhere a cell could begin.
+      ['3 - 2 = 1; a @ b', '3 - 2 = 1; a @ b'],
+    ])('leaves no piece of %j a formula', async (typed, exported) => {
+      await store({ id: 'one', company: typed });
+
+      const csv = inquiriesCsv(await readInquiries(db(), [], 10));
+
+      expect(csv).toContain(`,Ada Lovelace,${exported},ada@buyer.example,`);
     });
   });
 });

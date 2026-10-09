@@ -93,6 +93,7 @@
   "quote_problem_invalid": "Please check this field:",
   "quote_problem_empty": "There is nothing in the cart to send.",
   "quote_problem_cart_problem": "Please put right the lines marked below first.",
+  "quote_problem_cart_changed": "The cart changed while it was being sent. Please check it and send it again.",
   "quote_problem_too_many": "Too many requests have been sent from here in the last hour. Please try again later.",
   "quote_fix_first": "Once the lines marked above are put right, the cart can be sent as a request for a quote.",
   "spec_highlights": "What matters here",
