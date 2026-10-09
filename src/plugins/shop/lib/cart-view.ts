@@ -10,19 +10,21 @@
  *   empty         nothing in it
  *   orderable     every line can be ordered as it stands
  *   subtotal      the sum of the lines; '' unless the cart is orderable
+ *   max_quantity  the most one line may hold
  *   lines[]       variant_id, sku, name, path, quantity, moq, unit_price,
  *                 line_total, problem, available
  *
  * A line's `problem` is '' or the reason it cannot be ordered: `unavailable`,
- * `below_moq`, `insufficient_stock`, `no_price`. A theme prints its own
- * words for each. `available` is how many can be had when the reason is
- * stock, and null otherwise.
+ * `below_moq`, `quantity_too_large`, `insufficient_stock`, `no_price`. A
+ * theme prints its own words for each. `available` is how many can be had
+ * when the reason is stock, and null otherwise.
  *
  * The route adds where its forms post (`action`), the cart's own address
  * (`cart_path`) and, after a change that was refused, what was refused
  * (`problem`).
  */
 
+import { MAX_LINE_QUANTITY } from './cart.js';
 import type { CartFacts, CartIssue } from './cart-pricing.js';
 import type { Currency } from './currency.js';
 import { formatMoney, sumMinor } from './money.js';
@@ -49,6 +51,7 @@ export interface CartView {
   readonly empty: boolean;
   readonly orderable: boolean;
   readonly subtotal: string;
+  readonly max_quantity: number;
   readonly lines: readonly CartLineView[];
 }
 
@@ -96,6 +99,7 @@ export function cartView(facts: CartFacts, locale: string): CartView {
           locale,
         )
       : '',
+    max_quantity: MAX_LINE_QUANTITY,
     lines,
   };
 }

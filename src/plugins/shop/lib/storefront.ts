@@ -13,6 +13,7 @@
  *   currencies    the currencies every priced variant has a price in
  *   price_from    the lowest unit price that can be ordered; '' when none
  *   prices_from   the same, once per currency
+ *   max_quantity  the most of one variant a cart line may hold
  *   variants[]    id, sku, label, moq, availability, lead_time, price, prices,
  *                 orderable
  *
@@ -89,6 +90,7 @@ export interface ProductView {
   readonly currencies: readonly Currency[];
   readonly price_from: string;
   readonly prices_from: readonly DisplayPrice[];
+  readonly max_quantity: number;
   readonly variants: readonly VariantView[];
 }
 
@@ -280,6 +282,7 @@ export function productView(
     price_from:
       from.find((price) => price.currency === currency)?.display ?? '',
     prices_from: from,
+    max_quantity: MAX_LINE_QUANTITY,
     variants: variants.map((variant) => {
       const own = display(amounts.get(variant.id), currencies, locale);
       const price =

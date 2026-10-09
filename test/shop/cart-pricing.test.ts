@@ -143,6 +143,43 @@ describe('priceCart', () => {
     });
   });
 
+  it('rejects more of one variant than a cart line may hold', async () => {
+    // Made to order, so nothing but the ceiling stands in the way.
+    await createVariant({
+      id: 'bulk',
+      productGroup: valve.translationGroup,
+      stockPolicy: 'made_to_order',
+    });
+    await setPrice({
+      variantId: 'bulk',
+      currency: 'USD',
+      amountMinor: 100,
+      source: 'base',
+    });
+
+    expect(await price([{ variantId: 'bulk', quantity: 501 }])).toEqual({
+      ok: false,
+      issues: [
+        {
+          kind: 'quantity_too_large',
+          variantId: 'bulk',
+          max: 500,
+          requested: 501,
+        },
+      ],
+    });
+    expect((await price([{ variantId: 'bulk', quantity: 500 }])).ok).toBe(true);
+  });
+
+  it('says the ceiling rather than the stock when a quantity is above both', async () => {
+    // "At most 500" is still true after the next delivery.
+    const result = await price([{ variantId: 'dn50', quantity: 600 }]);
+
+    expect(!result.ok && result.issues.map((issue) => issue.kind)).toEqual([
+      'quantity_too_large',
+    ]);
+  });
+
   it('rejects a quantity above the stock of a tracked variant', async () => {
     const result = await price([{ variantId: 'dn50', quantity: 101 }]);
 

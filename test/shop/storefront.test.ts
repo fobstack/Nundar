@@ -191,10 +191,10 @@ describe('a product page’s view', () => {
         variant('unpriced'),
         variant('gone', { stock: 0 }),
         variant('custom', { stock: 0, stock_policy: 'made_to_order' }),
-        // A cart line holds ten thousand at most: this minimum order could
+        // A cart line holds five hundred at most: this minimum order could
         // never be met, and a form for it would be refused every time.
-        variant('vast', { moq: 20000, stock_policy: 'made_to_order' }),
-        variant('limit', { moq: 10000, stock_policy: 'made_to_order' }),
+        variant('vast', { moq: 501, stock_policy: 'made_to_order' }),
+        variant('limit', { moq: 500, stock_policy: 'made_to_order' }),
       ],
       [
         price('ok', 'USD', 100),
@@ -223,7 +223,7 @@ describe('a product page’s view', () => {
   it('says what state each variant is in, and never how many are left', () => {
     const view = productView(
       [
-        variant('a', { stock: 500, moq: 100 }),
+        variant('a', { stock: 7321, moq: 100 }),
         variant('b', { stock: 50, moq: 100 }),
         variant('c', { stock: 0, stock_policy: 'made_to_order' }),
       ],
@@ -237,7 +237,12 @@ describe('a product page’s view', () => {
       'made_to_order',
     ]);
     expect(JSON.stringify(view)).not.toMatch(/"stock"/);
-    expect(JSON.stringify(view)).not.toContain('500');
+    expect(JSON.stringify(view)).not.toContain('7321');
+  });
+
+  it('tells a page the most of one variant a cart line may hold', () => {
+    // The owner's figure. A quantity field carries it as `max`.
+    expect(productView([variant('a')], [], 'en')?.max_quantity).toBe(500);
   });
 
   it('states a lead time only when both ends are known and in order', () => {

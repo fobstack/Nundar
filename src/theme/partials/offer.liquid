@@ -25,16 +25,17 @@
   </dl>
   {%- comment -%}
     The form that puts this size in the cart: a plain POST, no script. The
-    quantity starts at the minimum order and moves in steps of it. A size
-    without a price, or that cannot be had, is offered no form — the server
-    would refuse it. The currency is the one the page shows; the currency
-    switch changes this field with the prices.
+    quantity starts at the minimum order, moves in steps of it and stops at
+    the most a cart line may hold — all three checked again by the server.
+    A size without a price, or that cannot be had, is offered no form. The
+    currency is the one the page shows; the currency switch changes this
+    field with the prices.
   {%- endcomment -%}
   {% if variant.orderable and plugins.shop.cart_action != blank %}
   <form class="offer-buy" method="post" action="{{ plugins.shop.cart_action }}">
     <input type="hidden" name="variant" value="{{ variant.id }}">
     <input type="hidden" name="currency" value="{{ plugins.shop.currency }}">
-    <label class="offer-qty"><span>{{ t.quantity }}</span><input type="number" name="quantity" min="{{ variant.moq }}" step="{{ variant.moq }}" value="{{ variant.moq }}" required inputmode="numeric"></label>
+    <label class="offer-qty"><span>{{ t.quantity }}</span><input type="number" name="quantity" min="{{ variant.moq }}" step="{{ variant.moq }}"{% if plugins.shop.max_quantity %} max="{{ plugins.shop.max_quantity }}"{% endif %} value="{{ variant.moq }}" required inputmode="numeric"></label>
     <button class="btn btn-solid btn-sm" type="submit">{{ t.add_to_cart }}<span class="visually-hidden"> {{ sku }}</span></button>
   </form>
   {% endif %}

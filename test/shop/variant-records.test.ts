@@ -366,17 +366,17 @@ describe('variants in the admin', () => {
       const { ctx } = context();
 
       const atLimit = await saveVariant(
-        record(screw, null, { sku: 'CS-A', moq: 10000 }),
+        record(screw, null, { sku: 'CS-A', moq: 500 }),
         ctx,
       );
       const over = await saveVariant(
-        record(screw, null, { sku: 'CS-B', moq: 10001 }),
+        record(screw, null, { sku: 'CS-B', moq: 501 }),
         ctx,
       );
 
       expect(atLimit).toHaveProperty('id');
       expect(over).toEqual({
-        errors: { moq: 'The minimum order can be at most 10000.' },
+        errors: { moq: 'The minimum order can be at most 500.' },
       });
     });
 

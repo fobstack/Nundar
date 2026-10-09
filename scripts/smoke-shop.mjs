@@ -490,10 +490,10 @@ try {
     `the product page offers no usable form for its 20 mm size: ${JSON.stringify(form)}`,
   );
   expect(
-    /<input type="number" name="quantity" min="100" step="100" value="100"/.test(
+    /<input type="number" name="quantity" min="100" step="100" max="500" value="100"/.test(
       product.html,
     ),
-    'the quantity field does not start at the minimum order and step by it',
+    'the quantity field does not start at the minimum order, step by it and stop at the most a line may hold',
   );
 
   // A request can skip the field: the server says no itself. It sends the

@@ -371,6 +371,14 @@ The phases follow Mallok's own roadmap (`mallok: docs/PRODUCT_VISION.md §9`: 0.
    - Decision: Mallok is published (`0.1.0-rc.7` on npm, `latest`).
    - The owner implements the Mallok extension points in the Mallok project from a separate task list; Nundar work starts now against that plan.
 
+Decided later:
+
+9. **The most a cart line may hold (2026-10-09).**
+   - Decision: 500 of one variant. It was 10,000, carried over from the previous implementation as a guard against scripted abuse (§17, left open, item 7).
+   - It is a rule of the shop now, so it is judged where the minimum order is — `quantityIssue`, which add-to-cart and cart pricing share — and a quantity field carries it as `max`. A line above it that is already in a cart cannot be ordered and says so.
+   - A minimum order above 500 is refused in the admin, and a variant that has one from a seed or by hand is offered no form.
+   - The sample's largest minimum order is 200.
+
 ## 12. What phase 1A changed or found
 
 Recorded here rather than edited away, so a later reader can see what the design said, what the build found, and why they differ.
@@ -618,7 +626,7 @@ Along the way the review's reading of the cart turned up a column: Mallok's `con
 4. *Stock set in the admin is a figure, not a difference.* When the seller types one, a payment that lands between opening the form and saving it is overwritten by it. The ledger stays true — it records the difference from the stock as it was when the write landed — but the seller is not told. A save that names no figure touches no stock.
 5. *The not-found page has no cart link*: it waits for Mallok (written up for it).
 6. *The cart page's forms are not rate-limited beyond Mallok's relaxed tier* (120 a minute per visitor per route), which is best-effort by Cloudflare's own description.
-7. *Ten thousand to a line.* `MAX_LINE_QUANTITY` came over from the previous implementation as a guard against scripted abuse. A catalogue of small parts sells washers by the fifty thousand; whether the ceiling is right for one is the owner's to say. Until then a minimum order above it is refused in the admin.
+7. *Ten thousand to a line.* Decided on 2026-10-09: five hundred (§11, decision 9).
 8. *The step is the browser's.* A quantity field moves in steps of the minimum order (2026-09-03 §4.5.1); the server enforces the minimum and accepts any quantity above it. Whether multiples are a rule or a convenience is not written down.
 9. *A price of nothing.* The admin refuses one; a row with one, from a seed or by hand, is shown and can go in a cart, where it totals zero — which meets §14's open item 4 when checkout is built.
 10. *Deletions the plugin missed.* If the delete hook fails, or the plugin is off when a product is deleted, its variants stay: on no page and in no order, with their SKUs taken. Nothing tells a plugin afterwards.
