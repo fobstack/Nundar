@@ -17,9 +17,10 @@
  * be switched: a page rendered by the POST itself would be listed, in every
  * language, at an address that only takes a POST.
  *
- * A quantity field's `min`, `step` and `max` enforce the minimum order and
- * the most a line may hold in the browser. This enforces both again, because
- * a form can be bypassed.
+ * A quantity field's `min` and `max` enforce the minimum order and the most
+ * a line may hold in the browser. This enforces both again, because a form
+ * can be bypassed. Between the two any whole number may be ordered: the
+ * minimum is a floor, not a pack size (design §11, decision 12).
  *
  * The cart page is one visitor's own: Mallok serves it uncached and
  * unindexed, whatever is returned here.

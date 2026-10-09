@@ -307,13 +307,13 @@ describe('the cart', () => {
         action: `${SHOP}/cart/update`,
         method: 'post',
         fields: { variant: 'cs-10', currency: 'USD', quantity: '100' },
-        // The minimum order is where the quantity starts and what it moves
-        // in steps of.
+        // The minimum order is where the quantity starts. From there any
+        // whole number may be asked for: it is a floor, not a pack size.
         quantity: {
           type: 'number',
           name: 'quantity',
           min: '100',
-          step: '100',
+          step: '1',
           // The most a cart line may hold.
           max: '500',
           value: '100',
@@ -535,7 +535,7 @@ describe('the cart', () => {
       ]);
     });
 
-    it('gives each line a form to set its quantity, in steps of its minimum order, and one to remove it', async () => {
+    it('gives each line a form to set its quantity, from its minimum order up, and one to remove it', async () => {
       const cookie = await add(screw.path, 'CS-16', '150');
       const [line] = cartLines((await get(`${SHOP}/cart`, cookie)).html);
 
@@ -548,7 +548,7 @@ describe('the cart', () => {
             type: 'number',
             name: 'quantity',
             min: '50',
-            step: '50',
+            step: '1',
             max: '500',
             value: '150',
             inputmode: 'numeric',
@@ -724,7 +724,7 @@ describe('the cart', () => {
       // The form already asks for the new minimum.
       expect(line?.forms[0]?.quantity).toMatchObject({
         min: '200',
-        step: '200',
+        step: '1',
         value: '100',
       });
       // A sum nobody can pay is not stated.

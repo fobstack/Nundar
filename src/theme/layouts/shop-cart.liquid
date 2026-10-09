@@ -7,8 +7,8 @@
   The page is one visitor's own: Mallok serves it uncached and unindexed.
   Every control is a plain form posting to `plugin_page.action`, so the cart
   works without a script, and the quantity fields carry the minimum order in
-  `min` and `step` and the most a line may hold in `max` — which the server
-  checks again. The last of them sends the cart as a request for a quote.
+  `min` and the most a line may hold in `max` — which the server checks
+  again. The last of them sends the cart as a request for a quote.
 {%- endcomment -%}
 {% block title %}{{ t.cart_title }} — {{ site.name }}{% endblock %}
 {% block content %}
@@ -82,7 +82,7 @@
         <form class="offer-buy" method="post" action="{{ cart.action }}">
           <input type="hidden" name="action" value="set">
           <input type="hidden" name="variant" value="{{ line.variant_id }}">
-          <label class="offer-qty"><span>{{ t.quantity }}</span><input type="number" name="quantity" min="{{ line.moq }}" step="{{ line.moq }}"{% if cart.max_quantity %} max="{{ cart.max_quantity }}"{% endif %} value="{{ line.quantity }}" required inputmode="numeric"></label>
+          <label class="offer-qty"><span>{{ t.quantity }}</span><input type="number" name="quantity" min="{{ line.moq }}" step="1"{% if cart.max_quantity %} max="{{ cart.max_quantity }}"{% endif %} value="{{ line.quantity }}" required inputmode="numeric"></label>
           <button class="btn btn-outline btn-sm" type="submit">{{ t.update }}{% if line.sku != blank %}<span class="visually-hidden"> {{ line.sku }}</span>{% endif %}</button>
         </form>
         {% endif %}

@@ -381,6 +381,12 @@ Decided later:
 10. **The inquiry cart (2026-10-09).**
    - Decision: the shop plugin builds it — a table of its own, a form on the cart page, an email to the seller (§17, left open, item 1; built in §18).
    - Mallok's inquiry plugin stays what it is: the form on a content page. The two are separate stores, read in separate panels of the admin.
+11. **The rounding of a derived price (2026-10-09).**
+   - Decision: the rule stays as it is — a converted price is rounded up to the next `.99`, or to the next whole unit where a shop sets that (2026-09-03 §4.4.4; §17, left open, item 3).
+   - A catalogue of parts priced at a dollar or two is served by prices entered by hand, which are never recomputed, as the sample's are.
+12. **What a quantity must be (2026-10-09).**
+   - Decision: at least the minimum order, and no more than a line may hold. Not a multiple of the minimum: with a minimum of ten, seventeen can be ordered (§17, left open, item 8).
+   - This replaces the stepping of 2026-09-03 §4.5.1, where the quantity field moved in steps of the minimum. The server never required a multiple; the field's `step` did, so a browser refused what the server would have taken — and, with a ceiling of 500, let a part with a minimum of 200 be ordered as 200 or 400 and nothing else. The field steps by one now.
 
 ## 12. What phase 1A changed or found
 
@@ -625,12 +631,12 @@ Along the way the review's reading of the cart turned up a column: Mallok's `con
 
 1. *The inquiry cart.* Decided on 2026-10-09: the shop plugin's (§11, decision 10), and built (§18).
 2. *Measurements on a real account*, and whether purges evict (the table above).
-3. *The rounding rule and unit prices.* A derived price is rounded up to the next `.99` or whole unit (2026-09-03 §4.4). For a part priced at two dollars that turns $1.60, $1.85 and $2.05 alike into €1.99. The rule is the owner's and is unchanged; a catalogue of small parts wants a third strategy that rounds to the cent, or hand-entered prices, which is what the sample uses.
+3. *The rounding rule and unit prices.* Decided on 2026-10-09: the rule stays (§11, decision 11).
 4. *Stock set in the admin is a figure, not a difference.* When the seller types one, a payment that lands between opening the form and saving it is overwritten by it. The ledger stays true — it records the difference from the stock as it was when the write landed — but the seller is not told. A save that names no figure touches no stock.
 5. *The not-found page has no cart link*: it waits for Mallok (written up for it).
 6. *The cart page's forms are not rate-limited beyond Mallok's relaxed tier* (120 a minute per visitor per route), which is best-effort by Cloudflare's own description.
 7. *Ten thousand to a line.* Decided on 2026-10-09: five hundred (§11, decision 9).
-8. *The step is the browser's.* A quantity field moves in steps of the minimum order (2026-09-03 §4.5.1); the server enforces the minimum and accepts any quantity above it. Whether multiples are a rule or a convenience is not written down.
+8. *The step is the browser's.* Decided on 2026-10-09: a quantity is any whole number from the minimum order up, and the field steps by one (§11, decision 12).
 9. *A price of nothing.* The admin refuses one; a row with one, from a seed or by hand, is shown and can go in a cart, where it totals zero — which meets §14's open item 4 when checkout is built.
 10. *Deletions the plugin missed.* If the delete hook fails, or the plugin is off when a product is deleted, its variants stay: on no page and in no order, with their SKUs taken. Nothing tells a plugin afterwards.
 
@@ -692,7 +698,7 @@ Not changed: the export still takes up to a thousand inquiries, as Mallok's own 
 3. *The shop's data is not in Mallok's export.* Closed the same day: §19.
 4. *A job is queued beside a conditional write that stored nothing* in a true race, and finds nothing to send. Mallok's statement takes no condition. Written up.
 5. *An amount is stored twice* because a table panel has no money column. Written up.
-6. *Whether a quantity must be a multiple of the minimum order* (§17, left open, item 8) and *the rounding of a derived price* (item 3) were put to the owner with this work and are not settled in it.
+6. *Whether a quantity must be a multiple of the minimum order*, and *the rounding of a derived price*, were put to the owner with this work and settled afterwards: §11, decisions 11 and 12.
 7. *The older tests of a race* — a payment reported twice at once, two refunds, a payment against a cancellation, nine in all — were looked at the same day, after the review. They call functions side by side rather than send requests, and such calls do overlap every time: twenty-five rounds of two payments went to the database in one and the same order, both readings before either write. So none had to be rewritten for that. They now run through `atTheSameMoment`, which fails unless the calls overlapped, so that it is seen on every run rather than taken on trust; and each of the nine, with everything that stops its second write taken away, was red eight times in eight. One thing that showed: a payment's write is stopped by several keys at once — the status condition, the event's two keys, the ledger row's id, the outbox row's id — so that removing the shared status condition turns no race between two payments red. The races between two different changes of an order — shipping against refunding, paying against cancelling — have no key in common, and the status condition is all that stops them: those go red without it. `atTheSameMoment` watches the order of each call's trips to the database it was handed, and is told how many of them are readings; it refuses calls that never write, which would not be a race.
 8. *A request with no connecting address.* Whether a zone that uses Cloudflare's "Remove visitor IP headers" transform still hands a Worker that header is not stated in the documentation that was read. If it does not, every visitor of such a site shares one limit of five an hour.
 
