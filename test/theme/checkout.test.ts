@@ -10,6 +10,7 @@ import {
   createProduct,
   createShippingZone,
   createVariant,
+  db,
   ensureSite,
   ORIGIN,
   type StripeCall,
@@ -289,6 +290,55 @@ describe('an order’s page', () => {
     expect(found).toContain('Shipping to');
     expect(missing).toContain('This order cannot be shown.');
   });
+
+  // Every status the page can show, with what changes beside it: a carrier
+  // and a tracking number once it ships, tax when Stripe added it, a buyer
+  // who gave no company and no tax number.
+  it.each([
+    ['paid', 'paid', null, null, 'Analytical Engines Ltd', 0],
+    [
+      'shipped',
+      'shipped',
+      'DHL',
+      'JD014600003828',
+      'Analytical Engines Ltd',
+      0,
+    ],
+    ['delivered', 'delivered', 'UPS', '1Z999', 'Analytical Engines Ltd', 0],
+    ['refunded', 'refunded', null, null, 'Analytical Engines Ltd', 0],
+    ['cancelled', 'cancelled', null, null, 'Analytical Engines Ltd', 0],
+    ['oversold', 'oversold', null, null, 'Analytical Engines Ltd', 0],
+    ['paid with tax, by a buyer with no company', 'paid', null, null, '', 3515],
+  ] as const)(
+    'is whole when the order is %s',
+    async (_what, status, carrier, trackingNo, company, taxMinor) => {
+      const link = await placed();
+      const orderNo = decodeURIComponent(
+        new URL(link).pathname.split('/').at(-1) ?? '',
+      );
+      await db()
+        .prepare(
+          `UPDATE p_shop_order
+           SET status = ?, carrier = ?, tracking_no = ?, company = ?,
+               tax_minor = ?, total_minor = total_minor + ?
+           WHERE order_no = ?`,
+        )
+        .bind(status, carrier, trackingNo, company, taxMinor, taxMinor, orderNo)
+        .run();
+
+      const page = await (await SELF.fetch(link)).text();
+      const main = between(page, '<main', '</main>');
+
+      expect(emptyElements(main)).toEqual([]);
+      expect(page).not.toMatch(/href=""/);
+      expect([...main.matchAll(/<h1\b/g)]).toHaveLength(1);
+      for (const shown of [carrier, trackingNo]) {
+        if (shown !== null) {
+          expect(main).toContain(shown);
+        }
+      }
+    },
+  );
 });
 
 describe('the page a buyer finds their orders on', () => {
