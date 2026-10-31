@@ -25,6 +25,11 @@ import { INQUIRY_EMAILS_JOB, sendInquiryEmails } from './lib/inquiry-jobs.js';
 import { renderData } from './lib/render-data.js';
 import { runScheduledTick } from './lib/scheduled.js';
 import {
+  loadShippingZone,
+  removeShippingZone,
+  saveShippingZone,
+} from './lib/shipping-records.js';
+import {
   loadVariant,
   onProductDeleted,
   removeVariant,
@@ -33,6 +38,7 @@ import {
 import shopSql from './migrations/0001_shop.sql';
 import ordersSql from './migrations/0002_orders.sql';
 import inquiriesSql from './migrations/0003_inquiries.sql';
+import checkoutSql from './migrations/0004_checkout.sql';
 import manifest from './plugin.json';
 import { cartPage, cartUpdate } from './routes/cart.js';
 import { cartInquiry } from './routes/inquiry.js';
@@ -52,6 +58,7 @@ export const shop = definePlugin({
     { id: 'plugin:shop:0001_shop', sql: shopSql },
     { id: 'plugin:shop:0002_orders', sql: ordersSql },
     { id: 'plugin:shop:0003_inquiries', sql: inquiriesSql },
+    { id: 'plugin:shop:0004_checkout', sql: checkoutSql },
   ],
   hooks: {
     scheduled,
@@ -64,6 +71,11 @@ export const shop = definePlugin({
       load: loadVariant,
       save: (record, ctx) => saveVariant(record, ctx),
       remove: (id, ctx) => removeVariant(id, ctx),
+    },
+    shipping: {
+      load: loadShippingZone,
+      save: (record, ctx) => saveShippingZone(record, ctx),
+      remove: removeShippingZone,
     },
   },
   // What the shop holds travels with a site export: leaving Mallok must not

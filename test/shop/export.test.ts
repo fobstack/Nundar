@@ -127,6 +127,22 @@ async function fill(): Promise<void> {
   await db().batch([
     db()
       .prepare(
+        `INSERT INTO p_shop_shipping_zone (id, name, sort_order, created_at, updated_at)
+         VALUES ('zone-uk', 'United Kingdom', 2, ?, ?),
+                ('zone-eu', 'Europe', 1, ?, ?)`,
+      )
+      .bind(LATER, LATER, EARLIER, EARLIER),
+    db().prepare(
+      `INSERT INTO p_shop_shipping_country (country, zone_id)
+       VALUES ('GB', 'zone-uk'), ('FR', 'zone-eu'), ('DE', 'zone-eu')`,
+    ),
+    db().prepare(
+      `INSERT INTO p_shop_shipping_rate (zone_id, currency, amount_minor, free_over_minor)
+       VALUES ('zone-uk', 'GBP', 3900, NULL), ('zone-eu', 'USD', 4900, 100000),
+              ('zone-eu', 'EUR', 4500, 90000)`,
+    ),
+    db()
+      .prepare(
         `INSERT INTO p_shop_stock_adjustment
            (id, variant_id, delta, reason, ref_id, created_at)
          VALUES ('order_paid:o-1:cs-10', 'cs-10', -100, 'order_paid', 'o-1', ?),
@@ -250,6 +266,9 @@ describe('the shop in a site export', () => {
       'shop/payment-events.json',
       'shop/prices.json',
       'shop/settings.json',
+      'shop/shipping-countries.json',
+      'shop/shipping-rates.json',
+      'shop/shipping-zones.json',
       'shop/stock-adjustments.json',
       'shop/variants.json',
     ]);
@@ -272,13 +291,24 @@ describe('the shop in a site export', () => {
         'stock-adjustments',
         'SELECT * FROM p_shop_stock_adjustment ORDER BY created_at, id',
       ],
-      ['orders', 'SELECT * FROM p_shop_order ORDER BY created_at, id'],
       ['order-lines', 'SELECT * FROM p_shop_order_line ORDER BY order_id, id'],
       [
         'payment-events',
         'SELECT * FROM p_shop_stripe_event ORDER BY processed_at, event_id',
       ],
       ['outbox', 'SELECT * FROM p_shop_outbox ORDER BY seq'],
+      [
+        'shipping-zones',
+        'SELECT * FROM p_shop_shipping_zone ORDER BY sort_order, name, id',
+      ],
+      [
+        'shipping-countries',
+        'SELECT * FROM p_shop_shipping_country ORDER BY country',
+      ],
+      [
+        'shipping-rates',
+        'SELECT * FROM p_shop_shipping_rate ORDER BY zone_id, currency',
+      ],
       [
         'inquiry-lines',
         'SELECT * FROM p_shop_inquiry_line ORDER BY inquiry_id, position',
@@ -293,10 +323,24 @@ describe('the shop in a site export', () => {
       'manual:1',
       'order_paid:o-1:cs-10',
     ]);
+    // An order whole, but for the cart it came from and the digest of the
+    // buyer's link.
+    expect(rowsOf(files, 'orders')).toEqual(
+      (await table('SELECT * FROM p_shop_order ORDER BY created_at, id')).map(
+        ({ cart_id: _cart, access_hash: _link, ...kept }) => kept,
+      ),
+    );
     expect(rowsOf(files, 'orders').map((row) => row.id)).toEqual([
       'o-1',
       'o-2',
     ]);
+    expect(rowsOf(files, 'shipping-zones').map((row) => row.id)).toEqual([
+      'zone-eu',
+      'zone-uk',
+    ]);
+    expect(
+      rowsOf(files, 'shipping-countries').map((row) => row.country),
+    ).toEqual(['DE', 'FR', 'GB']);
     expect(rowsOf(files, 'order-lines').map((row) => row.id)).toEqual([
       'o-1:cs-10',
       'o-1:cs-16',
@@ -399,8 +443,10 @@ describe('the shop in a site export', () => {
     // A rate, which is fetched again, and the scheduler's state.
     expect(everything).not.toContain('0.87654321');
     expect(everything).not.toContain('rates_tried_at');
+    // No file of carts, exchange rates or the scheduler's state. Shipping
+    // rates are the seller's prices, and go.
     expect(files.map((file) => file.path).join(' ')).not.toMatch(
-      /cart|rate|state/,
+      /shop\/(carts?|cart-lines|rates|exchange-rates|state)\.json/,
     );
   });
 
@@ -435,11 +481,14 @@ describe('the shop in a site export', () => {
         'variant_id currency amount_minor source rate_used updated_at',
       p_shop_stock_adjustment: 'id variant_id delta reason ref_id created_at',
       p_shop_order:
-        'id order_no status currency subtotal_minor shipping_minor tax_minor total_minor stripe_session_id stripe_payment_intent_id email shipping_address locale tracking_no created_at updated_at',
+        'id order_no status currency subtotal_minor shipping_minor tax_minor total_minor stripe_session_id stripe_payment_intent_id email shipping_address locale tracking_no created_at updated_at cart_id access_hash company tax_id carrier shipping_zone tax_mode stripe_session_expires_at',
       p_shop_order_line:
         'id order_id variant_id sku_snapshot name_snapshot unit_price_minor quantity',
       p_shop_stripe_event:
-        'event_id type order_id payment_intent_id outcome processed_at',
+        'event_id type order_id payment_intent_id outcome processed_at refund_id',
+      p_shop_shipping_zone: 'id name sort_order created_at updated_at',
+      p_shop_shipping_country: 'country zone_id',
+      p_shop_shipping_rate: 'zone_id currency amount_minor free_over_minor',
       p_shop_outbox: 'seq id topic order_id ref created_at handled_at',
       p_shop_inquiry:
         'id inquiry_no status name email company phone message locale currency country line_count subtotal_minor subtotal cart_id ip_hash notified_at acknowledged_at created_at updated_at',
@@ -466,6 +515,9 @@ describe('the shop in a site export', () => {
       tables: {
         variants: { file: 'shop/variants.json', rows: 3 },
         prices: { file: 'shop/prices.json', rows: 4 },
+        'shipping-zones': { file: 'shop/shipping-zones.json', rows: 2 },
+        'shipping-countries': { file: 'shop/shipping-countries.json', rows: 3 },
+        'shipping-rates': { file: 'shop/shipping-rates.json', rows: 3 },
         'stock-adjustments': { file: 'shop/stock-adjustments.json', rows: 2 },
         orders: { file: 'shop/orders.json', rows: 2 },
         'order-lines': { file: 'shop/order-lines.json', rows: 2 },
@@ -484,7 +536,7 @@ describe('the shop in a site export', () => {
   it('exports an empty shop as files that are empty and valid', async () => {
     const files = await exported();
 
-    expect(files).toHaveLength(11);
+    expect(files).toHaveLength(14);
     expect(files[1]?.text).toBe('{}\n');
     for (const file of files.slice(2)) {
       expect(file.text, file.path).toBe('[]\n');
@@ -497,7 +549,7 @@ describe('the shop in a site export', () => {
           }
         ).tables,
       ).map((entry) => entry.rows),
-    ).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0]);
+    ).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
   });
 
   it('writes a row to a line, to every reader of lines', async () => {
@@ -554,6 +606,9 @@ describe('the shop in a site export', () => {
     const NAMES = [
       'variants',
       'prices',
+      'shipping-zones',
+      'shipping-countries',
+      'shipping-rates',
       'stock-adjustments',
       'orders',
       'order-lines',
@@ -573,7 +628,7 @@ describe('the shop in a site export', () => {
         // As many as there may be, in every table.
         await expect(
           exportShopFiles(holding(counts(7)), options),
-        ).resolves.toHaveLength(11);
+        ).resolves.toHaveLength(14);
         // One more than that, in this one.
         await expect(
           exportShopFiles(holding(counts(8)), options),
@@ -589,7 +644,7 @@ describe('the shop in a site export', () => {
       await fill();
 
       // Three variants and four prices, really read.
-      await expect(exported({ rowLimit: 4 })).resolves.toHaveLength(11);
+      await expect(exported({ rowLimit: 4 })).resolves.toHaveLength(14);
       await expect(exported({ rowLimit: 3 })).rejects.toThrow(
         /^The shop's prices have more than 3 rows/,
       );
@@ -604,7 +659,7 @@ describe('the shop in a site export', () => {
         .slice(2)
         .reduce((total, file) => total + file.text.length * 2, 0);
 
-      await expect(exported({ byteLimit: size })).resolves.toHaveLength(11);
+      await expect(exported({ byteLimit: size })).resolves.toHaveLength(14);
       await expect(exported({ byteLimit: size - 1 })).rejects.toThrow(
         /^The shop's inquiry-lines bring the export past \d+ bytes of text/,
       );

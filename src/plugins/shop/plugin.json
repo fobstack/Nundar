@@ -53,16 +53,31 @@
     },
     "inquiry_recipient": {
       "type": "string",
-      "label": "Inquiry recipient",
-      "help": "The address that is told by email when a cart is sent as an inquiry. The email is sent from the site's own address (Settings → Email) and is answered straight to the buyer. Left empty, inquiries are only listed here in the admin.",
-      "group": "Inquiries"
+      "label": "Notification email",
+      "help": "Where the shop tells the seller what needs them: a cart sent as an inquiry, a new order, an order paid for after its stock had gone, a payment that has to be refunded. The email is sent from the site's own address (Settings → Email). Left empty, all of it is only listed here in the admin.",
+      "group": "Notifications"
     },
     "inquiry_acknowledge": {
       "type": "boolean",
       "label": "Confirm to the buyer by email",
       "help": "Sends the buyer an email saying their request arrived, in their language. Off by default: the form has no challenge in front of it, so anyone can have that email sent to an address that is not theirs.",
       "default": false,
-      "group": "Inquiries"
+      "group": "Notifications"
+    },
+    "order_no_prefix": {
+      "type": "string",
+      "label": "Order number prefix",
+      "help": "What every order's number begins with, followed by the date and eight characters: ND-261031-7K3M9QXA. Up to six capital letters or digits.",
+      "default": "ND",
+      "group": "Orders"
+    },
+    "tax_mode": {
+      "type": "select",
+      "label": "Tax",
+      "help": "none: prices are without tax and no tax is charged; the buyer settles any import duty and tax. stripe: Stripe Tax calculates tax at checkout where your account is registered to collect it, for a fee Stripe charges per transaction.",
+      "choices": ["none", "stripe"],
+      "default": "none",
+      "group": "Orders"
     }
   },
   "panels": [
@@ -314,6 +329,79 @@
           }
         }
       ]
+    },
+    {
+      "id": "shipping",
+      "label": "Shipping zones",
+      "type": "records",
+      "table": "p_shop_shipping_zone",
+      "columns": [
+        {
+          "field": "name",
+          "label": "Zone",
+          "sortable": true
+        },
+        {
+          "field": "sort_order",
+          "label": "Order"
+        },
+        {
+          "field": "updated_at",
+          "label": "Changed",
+          "type": "datetime"
+        }
+      ],
+      "search": ["name"],
+      "orderBy": "updated_at",
+      "fields": {
+        "name": {
+          "type": "string",
+          "label": "Name",
+          "required": true,
+          "help": "What the buyer sees beside the rate: Europe, United Kingdom."
+        },
+        "countries": {
+          "type": "string[]",
+          "label": "Countries",
+          "required": true,
+          "help": "Two-letter ISO codes, such as DE or GB. A country is in one zone at most; one in no zone cannot be shipped to."
+        },
+        "rates": {
+          "type": "rows",
+          "label": "Rates",
+          "max": 3,
+          "required": true,
+          "help": "What shipping to this zone costs in each currency it can be paid in. An order in a currency the zone has no rate in cannot be shipped there.",
+          "fields": {
+            "price": {
+              "type": "money",
+              "label": "Rate",
+              "required": true,
+              "currencies": ["USD", "EUR", "GBP"]
+            },
+            "free_over": {
+              "type": "money",
+              "label": "Free from",
+              "currencies": ["USD", "EUR", "GBP"],
+              "help": "Goods coming to this much or more ship free. Empty: never free."
+            }
+          }
+        },
+        "sort_order": {
+          "type": "number",
+          "label": "Order",
+          "default": 0,
+          "help": "Lower first in the list a buyer chooses a country from."
+        }
+      }
     }
-  ]
+  ],
+  "secrets": {
+    "stripe_secret_key": {
+      "label": "Stripe secret key"
+    },
+    "stripe_webhook_secret": {
+      "label": "Stripe webhook signing secret"
+    }
+  }
 }

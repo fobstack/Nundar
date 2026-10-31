@@ -10,6 +10,7 @@
  *   settings.json           the shop's own settings, as the admin has them
  *   variants.json           with the slug of the product each belongs to
  *   prices.json             with each variant's SKU
+ *   shipping-zones.json, shipping-countries.json, shipping-rates.json
  *   stock-adjustments.json  the ledger of every change of stock
  *   orders.json, order-lines.json
  *   payment-events.json     every payment acted on, and what was done
@@ -104,6 +105,21 @@ const TABLES: readonly ExportedTable[] = [
           ORDER BY p.variant_id, p.currency LIMIT ?`,
   },
   {
+    name: 'shipping-zones',
+    table: 'p_shop_shipping_zone',
+    sql: 'SELECT * FROM p_shop_shipping_zone ORDER BY sort_order, name, id LIMIT ?',
+  },
+  {
+    name: 'shipping-countries',
+    table: 'p_shop_shipping_country',
+    sql: 'SELECT * FROM p_shop_shipping_country ORDER BY country LIMIT ?',
+  },
+  {
+    name: 'shipping-rates',
+    table: 'p_shop_shipping_rate',
+    sql: 'SELECT * FROM p_shop_shipping_rate ORDER BY zone_id, currency LIMIT ?',
+  },
+  {
     name: 'stock-adjustments',
     table: 'p_shop_stock_adjustment',
     sql: 'SELECT * FROM p_shop_stock_adjustment ORDER BY created_at, id LIMIT ?',
@@ -112,6 +128,9 @@ const TABLES: readonly ExportedTable[] = [
     name: 'orders',
     table: 'p_shop_order',
     sql: 'SELECT * FROM p_shop_order ORDER BY created_at, id LIMIT ?',
+    // The cart an order came from and the digest of the buyer's link: the
+    // one was a credential, the other is a credential's fingerprint.
+    without: ['cart_id', 'access_hash'],
   },
   {
     name: 'order-lines',

@@ -38,6 +38,9 @@ describe('the shop schema', () => {
       'p_shop_outbox',
       'p_shop_price',
       'p_shop_rate',
+      'p_shop_shipping_country',
+      'p_shop_shipping_rate',
+      'p_shop_shipping_zone',
       'p_shop_state',
       'p_shop_stock_adjustment',
       'p_shop_stripe_event',
@@ -53,6 +56,7 @@ describe('the shop schema', () => {
       'plugin:shop:0001_shop',
       'plugin:shop:0002_orders',
       'plugin:shop:0003_inquiries',
+      'plugin:shop:0004_checkout',
     ]);
   });
 
@@ -115,6 +119,11 @@ describe('the shop schema', () => {
     };
 
     expect(await columns('p_shop_order')).toEqual([
+      // A digest of the secret in the buyer's link, never the secret.
+      'access_hash',
+      'carrier',
+      'cart_id',
+      'company',
       'created_at',
       'currency',
       'email',
@@ -123,11 +132,15 @@ describe('the shop schema', () => {
       'order_no',
       'shipping_address',
       'shipping_minor',
+      'shipping_zone',
       'status',
       'stripe_payment_intent_id',
+      'stripe_session_expires_at',
       'stripe_session_id',
       'subtotal_minor',
+      'tax_id',
       'tax_minor',
+      'tax_mode',
       'total_minor',
       'tracking_no',
       'updated_at',

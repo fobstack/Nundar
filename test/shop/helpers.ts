@@ -335,6 +335,9 @@ export async function setRate(
 export async function clearShopTables(): Promise<void> {
   await db().batch(
     [
+      'p_shop_shipping_rate',
+      'p_shop_shipping_country',
+      'p_shop_shipping_zone',
       'p_shop_inquiry_line',
       'p_shop_inquiry',
       'p_shop_outbox',
