@@ -72,11 +72,9 @@ SELECT
   i.subtotal
 FROM p_shop_inquiry AS i;
 
--- Sales by month and currency. A sale is counted in the month its payment
--- was confirmed — when the outbox owed its confirmation, which is also when
--- an oversold order was restocked and fulfilled — and a refund in the month
--- it was made. Nothing prunes the outbox. Whatever first does has to keep
--- these rows or change this view
+-- Sales by month and currency, as first written. 0006 replaces it: this
+-- counted an oversold order's refund and not its payment. Nothing prunes
+-- the outbox. Whatever first does has to keep these rows or change the view
 CREATE VIEW IF NOT EXISTS p_shop_sales_month AS
 WITH movement AS (
   SELECT substr(b.created_at, 1, 7) AS month, o.currency,

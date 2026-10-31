@@ -54,6 +54,7 @@ import ordersSql from './migrations/0002_orders.sql';
 import inquiriesSql from './migrations/0003_inquiries.sql';
 import checkoutSql from './migrations/0004_checkout.sql';
 import storefrontSql from './migrations/0005_storefront.sql';
+import reviewSql from './migrations/0006_review.sql';
 import manifest from './plugin.json';
 import { cartPage, cartUpdate } from './routes/cart.js';
 import { checkoutPage, checkoutPlace } from './routes/checkout.js';
@@ -79,6 +80,7 @@ export const shop = definePlugin({
     { id: 'plugin:shop:0003_inquiries', sql: inquiriesSql },
     { id: 'plugin:shop:0004_checkout', sql: checkoutSql },
     { id: 'plugin:shop:0005_storefront', sql: storefrontSql },
+    { id: 'plugin:shop:0006_review', sql: reviewSql },
   ],
   hooks: {
     scheduled,

@@ -1,6 +1,9 @@
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { priceCart } from '../../src/plugins/shop/lib/cart-pricing.js';
-import { refundOrder } from '../../src/plugins/shop/lib/order-fulfilment.js';
+import {
+  fulfilOversold,
+  refundOrder,
+} from '../../src/plugins/shop/lib/order-fulfilment.js';
 import {
   createPendingOrder,
   markOrderPaid,
@@ -298,6 +301,71 @@ describe('the sales panels', () => {
     expect((await rows('sales', '?currency=EUR')).map((row) => row.id)).toEqual(
       ['2026-10:EUR'],
     );
+  });
+
+  it('count a payment taken for an oversold order once, in the month it was taken', async () => {
+    // The stock is short when each payment arrives — sold elsewhere after
+    // the orders were placed — so both are oversold. One is refunded the
+    // same month; the other is restocked and fulfilled the month after,
+    // which takes no second payment.
+    const refunded = await order({
+      email: 'a@x.example',
+      placed: '2026-10-05T10:00:00.000Z',
+    });
+    const fulfilled = await order({
+      email: 'b@x.example',
+      placed: '2026-10-06T10:00:00.000Z',
+    });
+    await db()
+      .prepare("UPDATE p_shop_variant SET stock = 5 WHERE id = 'bolt'")
+      .run();
+    for (const [orderId, paid] of [
+      [refunded, '2026-10-05T10:05:00.000Z'],
+      [fulfilled, '2026-10-06T10:05:00.000Z'],
+    ] as const) {
+      await markOrderPaid(db(), {
+        orderId,
+        eventId: `evt_${orderId}`,
+        paymentIntentId: `pi_${orderId}`,
+        now: new Date(paid),
+      });
+    }
+    const statuses = await db()
+      .prepare('SELECT status FROM p_shop_order ORDER BY created_at')
+      .all<{ status: string }>();
+    expect(statuses.results.map((row) => row.status)).toEqual([
+      'oversold',
+      'oversold',
+    ]);
+    await refundOrder(db(), {
+      orderId: refunded,
+      restock: false,
+      now: new Date('2026-10-20T09:00:00.000Z'),
+    });
+    await db()
+      .prepare("UPDATE p_shop_variant SET stock = 10000 WHERE id = 'bolt'")
+      .run();
+    await fulfilOversold(db(), {
+      orderId: fulfilled,
+      now: new Date('2026-11-03T09:00:00.000Z'),
+    });
+
+    const months = await rows('sales');
+
+    // Taken twice in October, given back once: a net of one order's worth,
+    // and nothing in November, when no money moved.
+    expect(
+      months.map((row) => [
+        row.id,
+        row.orders,
+        row.revenue,
+        row.refunds,
+        row.refunded,
+        row.net,
+      ]),
+    ).toEqual([
+      ['2026-10:USD', 2, 'USD 208.00', 1, 'USD 104.00', 'USD 104.00'],
+    ]);
   });
 
   it('say what sells, by SKU, over orders paid and kept', async () => {
