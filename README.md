@@ -88,7 +88,7 @@ The reasoning and the plan are in [`docs/superpowers/specs/2026-09-30-nundar-on-
 - A payment is checked against its order's currency and total; one that does not fit is kept for a refund, not taken for the order.
 - Money moves at Stripe before the shop's books do: a refund is made at Stripe before the order says refunded, and a payment page is closed at Stripe before its order is cancelled. A cart has one payment page open at a time.
 - An order's page opens only with the secret its link carries, never with its number alone.
-- The form that emails a buyer their orders says the same whether or not there were any, and writes only to an address a payment was made from.
+- The form that emails a buyer their orders says the same whether or not there were any, in the same time, and writes only to an address a payment was made from.
 - A payment is believed only with Stripe's signature on the exact bytes received, and only for five minutes.
 - A manually set price is never overwritten by an exchange-rate refresh.
 - Language is decided by the URL alone, never by the visitor's IP.

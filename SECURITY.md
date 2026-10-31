@@ -242,8 +242,14 @@ There are no buyer accounts. A buyer who has lost an order's link asks for
 their orders by the address they ordered with.
 
 - **The form says the same whether or not there were orders** — that a
-  link is on its way if any were placed with that address. It tells nobody
-  who has bought here.
+  link is on its way if any were placed with that address — **and in the
+  same time**: the email, and the key that signs the orders' links, are
+  queued after the answer has gone. It tells nobody who has bought here.
+- **An address is compared without regard to ASCII case, and only so.** The
+  database folds ASCII letters and nothing else, and the address typed is
+  folded by the database too, never by the Worker: JavaScript folds all of
+  Unicode, and turns U+212A KELVIN SIGN into an ASCII k, so an address
+  folded there could be sent the orders of another.
 - **Only an address a payment was made from is written to.** An order left
   waiting, or cancelled because its payment page lapsed, carries whatever
   address was typed into checkout, and is not counted. Without that, a
@@ -258,8 +264,13 @@ their orders by the address they ordered with.
   order by its own signed link, and the page sends no referrer and writes
   nothing.
 - **What a request leaves behind** is the address typed, lower-cased, and
-  the visitor's IP hash, for the day the link is good; the cron's
-  housekeeping deletes them afterwards. They are not in the export.
+  the visitor's IP hash, for the day the link is good; the cron's hourly
+  housekeeping deletes every expired one, all at once, on its next run
+  after the day. They are not in the export.
+- **A request costs the same, however large the shop.** It reads the
+  address's own orders through an index, and a refused one reads none: D1
+  bills rows read, and on the Free plan stops every query for the rest of
+  the day once they are spent.
 - **The address is never in a link or a log.** The email carries the link
   and nothing of the orders.
 
@@ -368,9 +379,12 @@ Stated plainly rather than left for an auditor to find:
   stay in its `job` table as described above. So does the email that carries
   a link to a buyer's orders, link included: whoever can read that table
   within the day can open the list.
-- **A link to a buyer's orders opens them for a day, for whoever has it.** It
-  is in the address of the page it opens, as an order's own link is. It
-  cannot be withdrawn before it lapses, except by deleting its row.
+- **A link to a buyer's orders opens them for a day, for whoever has it** —
+  and the list it opens carries each order's own link, which does not
+  expire. Whoever opens a forwarded email within the day can keep those
+  orders' addresses, companies and tax numbers for good. The link is in the
+  address of the page it opens, as an order's own link is, and cannot be
+  withdrawn before it lapses, except by deleting its row.
 - **Many addresses together can still have the shop write to real buyers**:
   three links an hour to each address that has paid, whoever asks. Nothing
   more is disclosed by it — the email goes to the address, not to whoever
