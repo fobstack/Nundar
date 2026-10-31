@@ -59,6 +59,7 @@ describe('the shop schema', () => {
       'plugin:shop:0003_inquiries',
       'plugin:shop:0004_checkout',
       'plugin:shop:0005_storefront',
+      'plugin:shop:0006_review',
     ]);
   });
 
