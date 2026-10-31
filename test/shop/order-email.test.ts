@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  cancellationEmail,
   orderConfirmationEmail,
+  refundNotificationEmail,
+  sellerNewOrderEmail,
+  sellerOversoldEmail,
+  sellerRefundOwedEmail,
   shippingNotificationEmail,
 } from '../../src/plugins/shop/lib/order-email.js';
 
@@ -164,4 +169,151 @@ describe('shippingNotificationEmail', () => {
     expect(nasty.html).not.toContain('<b>T1</b>');
     expect(nasty.html).toContain('&lt;b&gt;T1&lt;/b&gt;');
   });
+});
+
+describe('the confirmation, with what checkout knows', () => {
+  const full = orderConfirmationEmail(
+    {
+      ...ORDER,
+      subtotalMinor: 99_000,
+      shippingMinor: 4900,
+      taxMinor: 0,
+      totalMinor: 103_900,
+      company: 'Engines & <Sons>',
+      shippingAddress: {
+        recipient: 'Ada <b>Lovelace</b>',
+        line1: '1 Harbour Road',
+        city: 'Aberdeen',
+        postalCode: 'AB11 5RY',
+        country: 'GB',
+      },
+    },
+    'https://shop.example/_mallok/p/shop/order/ND-261005-7K3M9QXA?k=abc',
+  );
+
+  it('states the goods and the shipping as well as the total, and no tax line for none', () => {
+    expect(full.text).toContain('Subtotal: $990.00');
+    expect(full.text).toContain('Shipping: $49.00');
+    expect(full.text).toContain('Total: $1,039.00');
+    expect(full.text).not.toContain('Tax:');
+  });
+
+  it('says where the order goes, the country by name', () => {
+    expect(full.text).toContain(
+      'Shipping to:\nAda <b>Lovelace</b>\nEngines & <Sons>\n1 Harbour Road\nAB11 5RY Aberdeen\nUnited Kingdom',
+    );
+    expect(full.html).toContain('Ada &lt;b&gt;Lovelace&lt;/b&gt;');
+    expect(full.html).toContain('Engines &amp; &lt;Sons&gt;');
+    expect(full.html).not.toContain('<b>Lovelace</b>');
+  });
+
+  it('carries the buyer’s link to their order', () => {
+    expect(full.text).toContain(
+      'See your order: https://shop.example/_mallok/p/shop/order/ND-261005-7K3M9QXA?k=abc',
+    );
+    expect(full.html).toContain(
+      '<a href="https://shop.example/_mallok/p/shop/order/ND-261005-7K3M9QXA?k=abc">See your order</a>',
+    );
+  });
+
+  it('links nothing that is not a web address', () => {
+    const odd = orderConfirmationEmail(ORDER, 'javascript:alert(1)');
+    expect(odd.html).not.toContain('javascript:');
+  });
+});
+
+describe('the shipping notice, with a carrier', () => {
+  it('names the carrier beside the tracking number', () => {
+    const mail = shippingNotificationEmail({
+      orderNo: 'ND-1',
+      locale: 'fr',
+      trackingNo: '1Z999',
+      carrier: 'UPS',
+    });
+
+    expect(mail.text).toContain('Transporteur: UPS\nNuméro de suivi: 1Z999');
+  });
+});
+
+describe('refundNotificationEmail', () => {
+  it('says how much went back, in the order’s language and money', () => {
+    const mail = refundNotificationEmail({
+      orderNo: 'ND-1',
+      locale: 'de',
+      currency: 'EUR',
+      totalMinor: 94_500,
+    });
+
+    expect(mail.subject).toBe('Bestellung ND-1 erstattet');
+    expect(mail.text).toContain('Wir haben 945,00');
+  });
+});
+
+describe('cancellationEmail', () => {
+  it('says the order was cancelled and nothing was charged', () => {
+    const mail = cancellationEmail({ orderNo: 'ND-1', locale: 'es' });
+
+    expect(mail.subject).toBe('Pedido ND-1 cancelado');
+    expect(mail.text).toContain('No se le ha cobrado nada.');
+  });
+});
+
+describe('the seller’s notices', () => {
+  const ORDER_FOR_SELLER = {
+    orderNo: 'ND-261031-7K3M9QXA',
+    currency: 'USD' as const,
+    subtotalMinor: 99_000,
+    shippingMinor: 4900,
+    taxMinor: 0,
+    totalMinor: 103_900,
+    email: 'ada@buyer.example',
+    company: 'Engines & <Sons>',
+    taxId: 'GB123',
+    shippingZone: 'United Kingdom',
+    shippingAddress: {
+      recipient: 'Ada',
+      line1: '1 Road',
+      city: 'Aberdeen',
+      country: 'GB',
+    },
+    lines: ORDER.lines,
+  };
+
+  it('names a new order and its total, with what it holds and who bought it', () => {
+    const mail = sellerNewOrderEmail(ORDER_FOR_SELLER);
+
+    expect(mail.subject).toBe('New order ND-261031-7K3M9QXA — $1,039.00');
+    expect(mail.text).toContain('Buyer: ada@buyer.example');
+    expect(mail.text).toContain('Tax number: GB123');
+    expect(mail.text).toContain('Shipping zone: United Kingdom');
+    expect(mail.html).toContain('Engines &amp; &lt;Sons&gt;');
+  });
+
+  it('asks for an oversold order to be refunded or restocked', () => {
+    const mail = sellerOversoldEmail(ORDER_FOR_SELLER);
+
+    expect(mail.subject).toBe(
+      'Order ND-261031-7K3M9QXA was paid for, and the stock had gone',
+    );
+    expect(mail.text).toContain('either refund it, or restock and fulfil it');
+  });
+
+  it.each([
+    ['cancelled', 'the order had been cancelled'],
+    ['already_paid', 'another payment had already settled the order'],
+    ['amount_mismatch', "did not come to the order's total"],
+  ] as const)(
+    'asks for a payment to be refunded and says why: %s',
+    (because, words) => {
+      const mail = sellerRefundOwedEmail({
+        orderNo: 'ND-1',
+        paymentIntentId: 'pi_9',
+        because,
+      });
+
+      expect(mail.subject).toBe('A payment for order ND-1 has to be refunded');
+      expect(mail.text).toContain(words);
+      expect(mail.text).toContain('Payment: pi_9');
+    },
+  );
 });
