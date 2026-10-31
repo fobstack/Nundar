@@ -10,7 +10,8 @@
 
 -- A customer is an address that placed an order or sent an inquiry, as
 -- typed, compared without regard to case. There are no buyer accounts: this
--- gathers what the shop already holds, and holds nothing of its own
+-- gathers what the shop already holds, and holds nothing of its own. 0006
+-- replaces it, to choose the country differently
 CREATE VIEW IF NOT EXISTS p_shop_customer_admin AS
 WITH contact AS (
   SELECT lower(email) AS id, email, company, created_at,

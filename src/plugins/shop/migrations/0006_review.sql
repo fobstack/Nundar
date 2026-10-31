@@ -65,3 +65,56 @@ CREATE INDEX IF NOT EXISTS p_shop_order_email
 -- The customers view gathers inquiries by the same expression
 CREATE INDEX IF NOT EXISTS p_shop_inquiry_email
   ON p_shop_inquiry (lower(email));
+
+-- A customer's country was the newest contact's that named one, and the two
+-- kinds of contact mean different things: an order names the country it
+-- ships to, which the buyer gave, and an inquiry the country the request
+-- came from, as the edge reported it — one inquiry sent while travelling
+-- moved a buyer abroad. The country an order ships to comes first now, and
+-- an inquiry's only for an address that never ordered
+DROP VIEW IF EXISTS p_shop_customer_admin;
+
+CREATE VIEW p_shop_customer_admin AS
+WITH contact AS (
+  SELECT lower(email) AS id, email, company, created_at,
+         COALESCE(json_extract(shipping_address, '$.country'), '') AS country
+  FROM p_shop_order
+  UNION ALL
+  SELECT lower(email), email, company, created_at, country
+  FROM p_shop_inquiry
+),
+spent AS (
+  SELECT lower(email) AS id, currency, SUM(total_minor) AS minor
+  FROM p_shop_order
+  WHERE status IN ('paid', 'shipped', 'delivered')
+  GROUP BY lower(email), currency
+)
+SELECT
+  c.id,
+  (SELECT x.email FROM contact AS x WHERE x.id = c.id
+   ORDER BY x.created_at DESC LIMIT 1) AS email,
+  COALESCE((SELECT x.company FROM contact AS x
+            WHERE x.id = c.id AND x.company <> ''
+            ORDER BY x.created_at DESC LIMIT 1), '') AS company,
+  COALESCE((SELECT json_extract(o.shipping_address, '$.country')
+            FROM p_shop_order AS o
+            WHERE lower(o.email) = c.id
+              AND COALESCE(json_extract(o.shipping_address, '$.country'), '') <> ''
+            ORDER BY o.created_at DESC LIMIT 1),
+           (SELECT i.country FROM p_shop_inquiry AS i
+            WHERE lower(i.email) = c.id AND i.country <> ''
+            ORDER BY i.created_at DESC LIMIT 1),
+           '') AS country,
+  (SELECT COUNT(*) FROM p_shop_order AS o
+   WHERE lower(o.email) = c.id
+     AND o.status IN ('paid', 'shipped', 'delivered', 'refunded', 'oversold')) AS orders,
+  (SELECT COUNT(*) FROM p_shop_inquiry AS i WHERE lower(i.email) = c.id) AS inquiries,
+  COALESCE((SELECT group_concat(amount, '  ')
+            FROM (SELECT s.currency || ' ' || (s.minor / 100) || '.' ||
+                         substr('0' || (s.minor % 100), -2) AS amount
+                  FROM spent AS s WHERE s.id = c.id
+                  ORDER BY s.currency)), '') AS spent,
+  MIN(c.created_at) AS first_seen,
+  MAX(c.created_at) AS last_seen
+FROM contact AS c
+GROUP BY c.id;

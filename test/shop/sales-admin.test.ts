@@ -166,8 +166,9 @@ describe('the customers panel', () => {
     expect(listed[1]).toMatchObject({
       email: 'ADA@buyer.example',
       company: 'Analytical Engines Ltd',
-      // The newest contact that named one: the inquiry.
-      country: 'GB',
+      // Where the newest order ships to, which the buyer gave: not where
+      // the newer inquiry came from, which the edge guessed.
+      country: 'DE',
       orders: 2,
       inquiries: 1,
       // In each currency, in the currencies' order.
@@ -180,6 +181,8 @@ describe('the customers panel', () => {
       inquiries: 1,
       spent: '',
       company: 'Bob & Co',
+      // With no order, where the inquiry came from is all there is.
+      country: 'GB',
     });
   });
 
