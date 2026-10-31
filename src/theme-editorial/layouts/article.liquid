@@ -1,0 +1,17 @@
+{% layout "layouts/base" %}
+{% block content %}
+<article class="column">
+  {% render "partials/crumbs" %}
+  <h1>{{ content.title }}</h1>
+  {% if content.published_at %}<p class="small"><time datetime="{{ content.published_at }}">{{ content.published_at | date: "%Y-%m-%d" }}</time></p>{% endif %}
+  {% if content.description != "" %}<p class="lede">{{ content.description }}</p>{% endif %}
+  {% capture body %}{{ content.html }}{% endcapture %}
+  {% if body != blank %}<div class="prose">{{ content.html }}</div>{% endif %}
+  {% if content.siblings.size > 0 %}
+  <section>
+    <h2>{{ t.article }}</h2>
+    <ul class="entries">{% for item in content.siblings limit: 3 %}{% render "partials/entry", item: item %}{% endfor %}</ul>
+  </section>
+  {% endif %}
+</article>
+{% endblock %}

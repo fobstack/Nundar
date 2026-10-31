@@ -1,0 +1,29 @@
+{%- comment -%}
+  One size of a product, as a row of the sizes table: the SKU, what
+  distinguishes it, and what the shop knows of it — price, minimum order,
+  availability, lead time — with the form that puts it in the cart. A plain
+  POST: the quantity starts at the minimum order and stops at the most a
+  line may hold, both checked again by the server.
+  Called as {% render "partials/offer", sku: …, size: …, variant: … %}.
+{%- endcomment -%}
+<tr role="row">
+  <th scope="row" role="rowheader"><span class="sku">{{ sku }}</span>{% if size != blank %}<br>{{ size }}{% endif %}</th>
+  {% if variant %}
+  {% assign state = "avail_" | append: variant.availability %}
+  <td role="cell" data-label="{{ t.unit_price }}">{% if variant.price != blank %}<span class="price">{{ variant.price }}</span>{% else %}{{ t.price_on_request }}{% endif %}</td>
+  <td role="cell" data-label="{{ t.moq }}">{{ variant.moq }}</td>
+  <td role="cell" data-label="{{ t.availability }}">{{ t[state] }}{% if variant.lead_time != blank %}<br><span class="small">{{ variant.lead_time }} {{ t.business_days }}</span>{% endif %}</td>
+  <td role="cell">
+    {% if variant.addable and plugins.shop.cart_action != blank %}
+    <form class="buy" method="post" action="{{ plugins.shop.cart_action }}">
+      <input type="hidden" name="variant" value="{{ variant.id }}">
+      <input type="hidden" name="currency" value="{{ plugins.shop.currency }}">
+      <label><span class="visually-hidden">{{ t.quantity }} {{ sku }}</span><input type="number" name="quantity" min="{{ variant.moq }}" step="1"{% if plugins.shop.max_quantity %} max="{{ plugins.shop.max_quantity }}"{% endif %} value="{{ variant.moq }}" required inputmode="numeric"></label>
+      <button type="submit">{{ t.add_to_cart }}<span class="visually-hidden"> {{ sku }}</span></button>
+    </form>
+    {% else %}—{% endif %}
+  </td>
+  {% else %}
+  <td role="cell" colspan="4" class="small">—</td>
+  {% endif %}
+</tr>

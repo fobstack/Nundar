@@ -1,0 +1,10 @@
+{%- comment -%}
+  One item in a list of reading: a kicker, a title, a line. No picture: this
+  theme lists what a page says, not what it shows.
+  Called as {% render "partials/entry", item: item, kicker: "…" %}.
+{%- endcomment -%}
+<li class="entry">
+  {% if kicker != blank %}<p class="kicker">{{ kicker }}</p>{% endif %}
+  <h3><a href="{{ item.path }}">{{ item.title }}</a></h3>
+  {% if item.description != blank %}<p>{{ item.description }}</p>{% endif %}
+</li>

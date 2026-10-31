@@ -1,0 +1,136 @@
+{%- comment -%}
+  The whole stylesheet, in the page: Mallok stages the files of the theme at
+  `src/theme` only, and this theme is a second one beside it. Serif type the
+  reader already has, warm paper, ink, and one accent from the site's
+  options. No font is loaded from anywhere.
+{%- endcomment -%}
+<style>
+:root {
+  --paper: #faf6ef;
+  --paper-deep: #f1eadd;
+  --ink: #23201c;
+  --ink-soft: #5b544b;
+  --rule: #d8cfbf;
+  --accent: #9a3412;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, "Times New Roman", serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--paper); color: var(--ink); }
+/* A German title can hold one word wider than a phone. It is hyphenated in
+   the page's language (`lang` is on <html>), and broken where it must be,
+   rather than carry the page sideways. */
+body { margin: 0; font-family: var(--serif); font-size: 1.125rem; line-height: 1.65; overflow-wrap: break-word; }
+a { color: var(--accent); text-underline-offset: 0.15em; }
+a:hover { color: var(--ink); }
+img { max-width: 100%; height: auto; }
+.skip { position: absolute; left: -999rem; }
+.skip:focus { left: 1rem; top: 1rem; background: var(--paper); padding: 0.5rem 1rem; z-index: 10; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.column { max-width: 42rem; margin: 0 auto; padding: 0 1.25rem; }
+.column.wide { max-width: 64rem; }
+.small { font-size: 0.875rem; color: var(--ink-soft); }
+.kicker { margin: 0 0 0.25rem; font-family: var(--sans); font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+h1, h2, h3 { font-weight: 600; line-height: 1.2; letter-spacing: -0.01em; hyphens: auto; }
+h1 { font-size: clamp(2rem, 5vw, 3rem); margin: 0.5rem 0 1rem; }
+h2 { font-size: 1.5rem; margin: 2.5rem 0 1rem; }
+h3 { font-size: 1.2rem; margin: 0 0 0.35rem; }
+.lede { font-size: 1.3rem; color: var(--ink-soft); margin: 0 0 2rem; }
+.masthead { border-bottom: 3px double var(--rule); padding: 2rem 0 0.75rem; text-align: center; }
+.masthead-name { font-size: clamp(1.75rem, 4vw, 2.5rem); color: var(--ink); text-decoration: none; font-weight: 600; }
+.masthead-tagline { margin: 0.25rem 0 1rem; font-style: italic; color: var(--ink-soft); }
+.masthead-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.25rem 1.25rem; font-family: var(--sans); font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.masthead-nav a { color: var(--ink); text-decoration: none; }
+.masthead-nav a[aria-current] { color: var(--accent); }
+.masthead-langs { margin-top: 0.5rem !important; text-transform: none !important; letter-spacing: 0 !important; }
+main { padding: 2rem 0 4rem; }
+.trail { font-family: var(--sans); font-size: 0.8rem; color: var(--ink-soft); margin-bottom: 1rem; }
+.trail a { color: var(--ink-soft); }
+.prose p, .prose ul, .prose ol { margin: 0 0 1.1rem; }
+/* A table in a text is as wide as its figures need. Wider than the page, it
+   scrolls inside itself rather than squeezing a figure onto three lines or
+   taking the page sideways with it — as the commerce theme's does. */
+.prose table { display: block; width: max-content; max-width: 100%; overflow-x: auto; border-collapse: collapse; font-size: 0.95rem; margin: 1.5rem 0; }
+.prose th, .prose td { border-bottom: 1px solid var(--rule); padding: 0.4rem 0.5rem; text-align: left; vertical-align: top; }
+.prose blockquote { margin: 1.5rem 0; padding-left: 1rem; border-left: 3px solid var(--accent); font-style: italic; }
+.prose code { font-family: var(--mono); font-size: 0.9em; }
+.entries { list-style: none; margin: 0; padding: 0; }
+.entry { padding: 1.1rem 0; border-top: 1px solid var(--rule); }
+.entry:last-child { border-bottom: 1px solid var(--rule); }
+.entry p { margin: 0; color: var(--ink-soft); }
+.entry h3 a { color: var(--ink); text-decoration: none; }
+.entry h3 a:hover { color: var(--accent); }
+.ledger { width: 100%; border-collapse: collapse; font-size: 0.98rem; }
+/* German names a thing in one long word; on a phone a cell has to break it
+   rather than push the table past the page. */
+.ledger th, .ledger td { border-bottom: 1px solid var(--rule); padding: 0.6rem 0.5rem; text-align: left; vertical-align: top; hyphens: auto; overflow-wrap: anywhere; }
+.ledger thead th { font-family: var(--sans); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); font-weight: 600; }
+.ledger tbody th { font-weight: 600; }
+.ledger tbody th a { color: var(--ink); }
+/* Below 40rem a table of several columns is drawn a row at a time, each
+   value under the column's name: a sizes table, the catalogue and the cart
+   are wider than a phone. The roles in the markup keep it a table to a
+   screen reader once its display is changed. */
+@media (max-width: 40rem) {
+  .stack thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .stack, .stack tbody, .stack tr, .stack th, .stack td { display: block; width: 100%; }
+  .stack tr { border-bottom: 1px solid var(--rule); padding: 0.7rem 0; }
+  .ledger.stack th, .ledger.stack td { border: 0; padding: 0.2rem 0; }
+  .stack td[data-label] { position: relative; padding-left: 8.5rem; }
+  .stack td[data-label]::before { content: attr(data-label); position: absolute; left: 0; top: 0.35rem; width: 8rem; font-family: var(--sans); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); font-weight: 600; }
+}
+.sku { font-family: var(--mono); font-size: 0.85rem; }
+.price { font-variant-numeric: tabular-nums; font-weight: 600; }
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 1.25rem; margin: 0 0 1.5rem; }
+.facts dt { font-family: var(--sans); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-soft); padding-top: 0.2rem; }
+.facts dd { margin: 0; overflow-wrap: anywhere; }
+/* A label is sized to its longest; on a phone one can be a sentence, so each
+   goes above its value instead. */
+@media (max-width: 40rem) {
+  .facts { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .facts dd { margin-bottom: 0.6rem; }
+}
+.aside { margin: 2rem 0; padding: 1.25rem 1.5rem; background: var(--paper-deep); border-left: 3px solid var(--accent); }
+.aside h2 { margin-top: 0; font-size: 1.15rem; }
+.aside p:last-child { margin-bottom: 0; }
+.notice { margin: 0 0 1.5rem; padding: 0.9rem 1.1rem; border: 1px solid var(--rule); background: #fff8ec; }
+.notice-bad { border-color: #e5b4a5; background: #fbefe9; color: #7c2d12; }
+.notice-good { border-color: #b8d4b4; background: #eff6ec; color: #22401f; }
+.notice p { margin: 0; }
+.notice p + p { margin-top: 0.3rem; }
+.button, button { display: inline-block; font-family: var(--sans); font-size: 0.85rem; letter-spacing: 0.04em; padding: 0.55rem 1rem; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); text-decoration: none; cursor: pointer; border-radius: 2px; }
+.button:hover, button:hover { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+.button-quiet { background: transparent; color: var(--ink); }
+.buy { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; margin: 0; }
+.buy input { width: 5.5rem; }
+input, select, textarea { font: inherit; font-size: 1rem; padding: 0.45rem 0.6rem; border: 1px solid var(--ink-soft); background: #fffdf9; color: var(--ink); border-radius: 2px; }
+.form { display: grid; gap: 1rem; margin: 2rem 0; padding: 1.5rem; border: 1px solid var(--rule); background: #fffdf9; }
+.form h2 { margin: 0; }
+.form label { display: grid; gap: 0.3rem; font-family: var(--sans); font-size: 0.85rem; color: var(--ink-soft); }
+.form .pair { display: grid; gap: 1rem; }
+@media (min-width: 40rem) { .form .pair { grid-template-columns: 1fr 1fr; } }
+.form .tick { display: flex; gap: 0.5rem; align-items: center; }
+.trap { position: absolute; left: -999rem; width: 1px; height: 1px; overflow: hidden; }
+.sums { margin: 1.5rem 0 0 auto; max-width: 24rem; }
+.sums div { display: flex; justify-content: space-between; gap: 1rem; padding: 0.3rem 0; border-bottom: 1px solid var(--rule); }
+.sums dt { color: var(--ink-soft); }
+.sums dd { margin: 0; }
+.sums .total { font-weight: 700; border-bottom: 3px double var(--rule); }
+.qa details { border-top: 1px solid var(--rule); padding: 0.9rem 0; }
+.qa details:last-child { border-bottom: 1px solid var(--rule); }
+.qa summary { cursor: pointer; font-weight: 600; }
+.qa p { margin: 0.6rem 0 0; }
+.pager { display: flex; justify-content: space-between; margin-top: 2rem; font-family: var(--sans); font-size: 0.9rem; }
+.colophon { border-top: 3px double var(--rule); padding: 2.5rem 0 2rem; font-size: 0.95rem; }
+.colophon-in { display: grid; gap: 1.5rem; }
+@media (min-width: 48rem) { .colophon-in { grid-template-columns: 2fr 1fr 1fr; } }
+.colophon-name { font-weight: 600; }
+.colophon ul { list-style: none; margin: 0; padding: 0; }
+.colophon-base { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem; font-size: 0.85rem; color: var(--ink-soft); }
+.colophon-base p { margin: 0; }
+.mallok-inquiry { display: grid; gap: 0.8rem; margin: 2rem 0; padding: 1.5rem; border: 1px solid var(--rule); background: #fffdf9; }
+.mallok-inquiry label { display: grid; gap: 0.3rem; font-family: var(--sans); font-size: 0.85rem; color: var(--ink-soft); }
+.mallok-inquiry label br { display: none; }
+.mallok-inquiry p { margin: 0; }
+</style>

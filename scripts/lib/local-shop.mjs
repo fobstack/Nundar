@@ -64,12 +64,14 @@ export function portInUse(port) {
 
 /**
  * Starts `wrangler dev` on `port`, keeping its database, its files and its
- * cache under `state`.
+ * cache under `state`. `main` is the Worker to run, when it is not the one
+ * `wrangler.jsonc` names — `src/worker/editorial.ts`, the same site with the
+ * second theme.
  *
  * `ready` resolves once the Worker answers. `stopped` resolves if it exits on
  * its own. `stop` ends it and everything it started.
  */
-export function startWorker({ port, state }) {
+export function startWorker({ port, state, main }) {
   const processGroup = process.platform !== 'win32';
   const base = `http://127.0.0.1:${port}`;
 
@@ -78,6 +80,7 @@ export function startWorker({ port, state }) {
     [
       wrangler,
       'dev',
+      ...(main === undefined ? [] : [main]),
       '--local',
       '--port',
       String(port),

@@ -1,0 +1,60 @@
+{% layout "layouts/base" %}
+{%- comment -%}
+  The home page reads like the front of a journal: the site's own headline,
+  then where its parts are used, then what it has written, and only then the
+  catalogue. The commerce theme leads with the catalogue; this one is its
+  opposite on purpose, to show that the same content and the same shop data
+  stand up either way.
+{%- endcomment -%}
+{% block content %}
+<div class="column">
+  <h1>{% if theme.options.hero_title != blank %}{{ theme.options.hero_title }}{% else %}{{ site.name }}{% endif %}</h1>
+  {% if theme.options.hero_lede != blank %}<p class="lede">{{ theme.options.hero_lede }}</p>{% endif %}
+
+  {% if recent.application.size > 0 %}
+  <section>
+    <h2>{{ t.application }}</h2>
+    <ul class="entries">{% for item in recent.application %}{% render "partials/entry", item: item, kicker: t.application_note %}{% endfor %}</ul>
+  </section>
+  {% endif %}
+
+  {% if recent.case.size > 0 %}
+  <section>
+    <h2>{{ t.case }}</h2>
+    <ul class="entries">{% for item in recent.case %}{% render "partials/entry", item: item, kicker: item.frontmatter.sector %}{% endfor %}</ul>
+  </section>
+  {% endif %}
+
+  {% if recent.article.size > 0 %}
+  <section>
+    <h2>{{ t.article }}</h2>
+    <ul class="entries">{% for item in recent.article %}{% render "partials/entry", item: item %}{% endfor %}</ul>
+  </section>
+  {% endif %}
+</div>
+
+{% if recent.product.size > 0 %}
+<section class="column wide">
+  <h2>{{ t.product }}</h2>
+  {% render "partials/catalogue", items: recent.product %}
+  {% if site.kinds.product %}<p><a href="{{ site.kinds.product.path }}">{{ t.view_catalogue }} →</a></p>{% endif %}
+</section>
+{% endif %}
+
+{% if recent.collection.size > 0 %}
+<section class="column">
+  <h2>{{ t.collection }}</h2>
+  <ul class="entries">{% for item in recent.collection %}{% render "partials/entry", item: item %}{% endfor %}</ul>
+</section>
+{% endif %}
+
+{% if theme.options.cta_title != blank %}
+<div class="column">
+  <div class="aside">
+    <h2>{{ theme.options.cta_title }}</h2>
+    {% if theme.options.cta_text != blank %}<p>{{ theme.options.cta_text }}</p>{% endif %}
+    {% if theme.options.quote_href != blank %}<p><a class="button" href="{{ theme.options.quote_href }}">{{ t.request_quote }}</a></p>{% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

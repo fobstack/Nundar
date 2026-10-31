@@ -1,0 +1,11 @@
+{%- comment -%}
+  Where a content page sits: home, its kind's list when the site has one,
+  and for a product its collection (`via`).
+{%- endcomment -%}
+{%- assign own = site.kinds[content.kind] -%}
+<nav class="trail" aria-label="{{ t.breadcrumb }}">
+  <a href="{{ site.home_path }}">{{ t.home }}</a>
+  {%- if own %} · <a href="{{ own.path }}">{{ own.label }}</a>{% endif %}
+  {%- if via %} · <a href="{{ via.path }}">{{ via.title }}</a>{% endif %}
+  · <span aria-current="page">{{ content.title }}</span>
+</nav>

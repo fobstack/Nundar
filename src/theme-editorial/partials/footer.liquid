@@ -1,0 +1,25 @@
+<footer class="colophon">
+  <div class="column wide colophon-in">
+    <div>
+      <p class="colophon-name">{{ site.name }}</p>
+      {% if theme.options.footer_blurb != blank %}<p>{{ theme.options.footer_blurb }}</p>{% elsif site.tagline != "" %}<p>{{ site.tagline }}</p>{% endif %}
+      {% if theme.options.footer_note != blank %}<p class="small">{{ theme.options.footer_note }}</p>{% endif %}
+    </div>
+    <nav aria-label="{{ t.footer_nav }}">
+      <ul>
+        {% for item in site.nav %}<li><a href="{{ item.href }}">{{ item.label }}</a></li>{% endfor %}
+      </ul>
+    </nav>
+    <div>
+      {% if theme.options.contact_email != blank %}<p><a href="mailto:{{ theme.options.contact_email }}">{{ theme.options.contact_email }}</a></p>{% endif %}
+      {% if theme.options.contact_phone != blank %}<p>{{ theme.options.contact_phone }}</p>{% endif %}
+      {% if theme.options.contact_href != blank %}<p><a href="{{ theme.options.contact_href }}">{{ t.contact_us }}</a></p>{% endif %}
+    </div>
+  </div>
+  <div class="column wide colophon-base">
+    <p>© {{ site.name }}</p>
+    {% if theme.options.terms_href != blank %}<a href="{{ theme.options.terms_href }}">{{ t.terms }}</a>{% endif %}
+    {% if theme.options.privacy_href != blank %}<a href="{{ theme.options.privacy_href }}">{{ t.privacy }}</a>{% endif %}
+    {% if theme.options.compliance_href != blank %}<a href="{{ theme.options.compliance_href }}">{{ t.compliance }}</a>{% endif %}
+  </div>
+</footer>

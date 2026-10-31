@@ -1,0 +1,38 @@
+{% layout "layouts/base" %}
+{%- comment -%}
+  Every topic's questions on one page. A list item carries its front matter
+  as written, so each spelling Mallok accepts is read — `question` and
+  `answer`, `q` and `a`, and the mapping the admin's control produces — and a
+  pair with a half missing is left out.
+{%- endcomment -%}
+{% block content %}
+<section class="column">
+  <h1>{{ page.title }}</h1>
+  {% if list.items.size > 0 %}
+  {% for item in list.items %}
+  <section>
+    <h2><a href="{{ item.path }}">{{ item.title }}</a></h2>
+    {% if item.description != "" %}<p class="small">{{ item.description }}</p>{% endif %}
+    {% assign written = 0 %}
+    {% for pair in item.frontmatter.faq %}
+    {% assign question = pair.question %}{% if question == blank %}{% assign question = pair.q %}{% endif %}{% if question == blank %}{% assign question = pair[0] %}{% endif %}
+    {% assign answer = pair.answer %}{% if answer == blank %}{% assign answer = pair.a %}{% endif %}{% if answer == blank %}{% assign answer = pair[1] %}{% endif %}
+    {% if question != blank and answer != blank %}{% assign written = written | plus: 1 %}{% endif %}
+    {% endfor %}
+    {% if written > 0 %}
+    <div class="qa">
+      {% for pair in item.frontmatter.faq %}
+      {% assign question = pair.question %}{% if question == blank %}{% assign question = pair.q %}{% endif %}{% if question == blank %}{% assign question = pair[0] %}{% endif %}
+      {% assign answer = pair.answer %}{% if answer == blank %}{% assign answer = pair.a %}{% endif %}{% if answer == blank %}{% assign answer = pair[1] %}{% endif %}
+      {% if question != blank and answer != blank %}<details><summary>{{ question }}</summary><p>{{ answer }}</p></details>{% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+  </section>
+  {% endfor %}
+  {% else %}
+  <p>{{ t.empty }}</p>
+  {% endif %}
+  {% render "partials/pager", list: list %}
+</section>
+{% endblock %}

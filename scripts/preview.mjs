@@ -15,6 +15,9 @@
  *
  *   npm run preview                    on port 8799
  *   npm run preview -- --port 8800     on another port
+ *   npm run preview -- --theme editorial
+ *                                      the same shop, drawn by the second
+ *                                      theme (src/theme-editorial)
  *   npm run preview -- --check         bring it up, check it, take it down
  *
  * It brings the shop up through the same code as `npm run smoke:shop`, which
@@ -39,9 +42,21 @@ import {
 const { values } = parseArgs({
   options: {
     port: { type: 'string' },
+    theme: { type: 'string', default: 'nundar' },
     check: { type: 'boolean', default: false },
   },
 });
+/** The Worker each theme is built into: one site, two ways of drawing it. */
+const WORKERS = {
+  nundar: undefined,
+  editorial: 'src/worker/editorial.ts',
+};
+if (!Object.hasOwn(WORKERS, values.theme)) {
+  process.stderr.write(
+    `preview: there is no theme "${values.theme}". Use ${Object.keys(WORKERS).join(' or ')}.\n`,
+  );
+  process.exit(1);
+}
 // A person wants an address they can come back to; a check wants whatever
 // port is free, so that it can run beside a preview someone has open.
 const port =
@@ -64,7 +79,7 @@ if (await portInUse(port)) {
 
 const say = (line) => process.stdout.write(`${line}\n`);
 const state = await mkdtemp(join(tmpdir(), 'nundar-preview-'));
-const worker = startWorker({ port, state });
+const worker = startWorker({ port, state, main: WORKERS[values.theme] });
 const { base } = worker;
 
 let stopping = false;
@@ -105,8 +120,10 @@ async function check(login) {
     home.html.includes(escaped(site.themeOptions.hero_title)),
     'the home page does not carry the headline in site.json',
   );
+  // Asked of the links, not of one theme's table, so that either theme
+  // passes for the same catalogue.
   expect(
-    (home.html.match(/<tr role="row">/g) ?? []).length > 1,
+    new Set(home.html.match(/href="\/products\/[^"]+"/g) ?? []).size > 1,
     'the home page lists no products',
   );
   for (const locale of site.locales) {

@@ -1,0 +1,37 @@
+{% layout "layouts/base" %}
+{%- comment -%}
+  A buyer's way back to their orders, as the shop plugin hands it over
+  (`routes/orders.ts`): the form that emails a link, or the list it opens.
+{%- endcomment -%}
+{% block title %}{{ t.orders_title }} — {{ site.name }}{% endblock %}
+{% block content %}
+{% assign lookup = plugin_page %}
+<section class="column">
+  <h1>{{ t.orders_title }}</h1>
+  {% if lookup.mode == "list" %}
+  <p>{{ t.orders_for }} <strong>{{ lookup.email }}</strong></p>
+  {% if lookup.orders.size > 0 %}
+  <ul class="entries">
+    {% for order in lookup.orders %}
+    {% assign status_key = "order_status_" | append: order.status %}
+    <li class="entry"><h3><a href="{{ order.path }}">{{ order.order_no }}</a></h3><p>{{ order.placed_on }} · {{ t[status_key] }} · <span class="price">{{ order.total }}</span></p></li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p>{{ t.orders_none }}</p>
+  {% endif %}
+  <p class="small">{{ t.orders_valid_note }}</p>
+  {% else %}
+  {% if lookup.notice == "sent" %}<div class="notice notice-good" role="status"><p>{{ t.orders_sent }}</p></div>{% elsif lookup.notice == "expired" %}<div class="notice notice-bad" role="alert" data-problem="orders_expired"><p>{{ t.orders_expired }}</p></div>{% endif %}
+  {% if lookup.problem != blank %}{% assign reason = "orders_problem_" | append: lookup.problem %}<div class="notice notice-bad" role="alert" data-problem="orders_{{ lookup.problem }}"><p>{{ t[reason] }}</p></div>{% endif %}
+  <form class="form" method="post" action="{{ lookup.action }}" aria-labelledby="orders-form-title">
+    <h2 id="orders-form-title">{{ t.orders_form_title }}</h2>
+    <p class="small">{{ t.orders_intro }}</p>
+    <label>{{ t.orders_email }}<input type="email" name="email" required maxlength="{{ lookup.email_max }}" pattern="{{ lookup.email_pattern }}" autocomplete="email"></label>
+    <p class="trap" aria-hidden="true"><label>{{ t.quote_leave_empty }}<input type="text" name="website" tabindex="-1" autocomplete="off"></label></p>
+    <p><button type="submit">{{ t.orders_send }}</button></p>
+  </form>
+  {% endif %}
+  <p><a href="{{ lookup.cart_path }}">{{ t.checkout_back_to_cart }}</a></p>
+</section>
+{% endblock %}

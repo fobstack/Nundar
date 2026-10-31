@@ -1,0 +1,16 @@
+{% layout "layouts/base" %}
+{%- comment -%}
+  A reference page as its text, which gives the formulas, constants and
+  tables of results itself. This theme runs no script, so it offers no
+  calculator: the commerce theme's are an addition to the same text.
+{%- endcomment -%}
+{% block content %}
+<article class="column">
+  {% render "partials/crumbs" %}
+  <p class="kicker">{{ t.tool_eyebrow }}</p>
+  <h1>{{ content.title }}</h1>
+  {% if content.description != "" %}<p class="lede">{{ content.description }}</p>{% endif %}
+  {% capture body %}{{ content.html }}{% endcapture %}
+  {% if body != blank %}<div class="prose">{{ content.html }}</div>{% endif %}
+</article>
+{% endblock %}

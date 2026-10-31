@@ -1,0 +1,13 @@
+{% layout "layouts/base" %}
+{% block content %}
+<section class="column wide">
+  <h1>{{ page.title }}</h1>
+  <p class="lede">{{ t.catalogue_lede }}</p>
+  {% if list.items.size > 0 %}
+  {% render "partials/catalogue", items: list.items %}
+  {% else %}
+  <p>{{ t.empty }}</p>
+  {% endif %}
+  {% render "partials/pager", list: list %}
+</section>
+{% endblock %}

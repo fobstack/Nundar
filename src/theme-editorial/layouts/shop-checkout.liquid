@@ -1,0 +1,89 @@
+{% layout "layouts/base" %}
+{%- comment -%}
+  Checkout, as the shop plugin hands it over (`lib/checkout-view.ts`): a form
+  by GET that chooses the country, then the order form, which carries it.
+  Every field carries the server's own rule, from the view.
+{%- endcomment -%}
+{% block title %}{{ t.checkout_title }} — {{ site.name }}{% endblock %}
+{% block content %}
+{% assign co = plugin_page %}
+<section class="column wide">
+  <h1>{{ t.checkout_title }}</h1>
+
+  {% if co.refused %}
+  {% assign reason = "checkout_problem_" | append: co.refused.kind %}
+  <div class="notice notice-bad" role="alert" data-problem="checkout_{{ co.refused.kind }}">
+    <p><strong>{{ t.checkout_refused }}</strong></p>
+    <p>{{ t[reason] }}{% if co.refused.field != blank %}{% assign label = "checkout_" | append: co.refused.field %} {{ t[label] }}{% endif %}</p>
+  </div>
+  {% endif %}
+
+  {% if co.problem == "empty" or co.problem == "cart_problem" %}
+  <p>{% if co.problem == "empty" %}{{ t.cart_empty }}{% else %}{{ t.checkout_problem_cart_problem }}{% endif %}</p>
+  {% else %}
+  <p class="lede">{{ t.checkout_intro }}</p>
+  <table class="ledger">
+    <tbody>
+      {% for line in co.lines %}<tr><th scope="row">{{ line.name }}<br><span class="sku">{{ line.sku }}</span></th><td>× {{ line.quantity }}</td><td><span class="price">{{ line.line_total }}</span></td></tr>{% endfor %}
+    </tbody>
+  </table>
+
+  {% if co.countries.size == 0 %}
+  <p class="small">{{ t.checkout_no_countries }}</p>
+  {% else %}
+  <form class="buy" method="get" action="{{ co.country_action }}">
+    <label>{{ t.checkout_country }}
+      <select name="country" required autocomplete="country">
+        {% if co.country == blank %}<option value="">{{ t.checkout_country_none }}</option>{% endif %}
+        {% for entry in co.countries %}<option value="{{ entry.code }}"{% if entry.selected %} selected{% endif %}>{{ entry.name }}</option>{% endfor %}
+      </select>
+    </label>
+    <button class="button-quiet" type="submit">{% if co.country == blank %}{{ t.checkout_country_show }}{% else %}{{ t.checkout_change }}{% endif %}</button>
+  </form>
+  {% endif %}
+
+  <dl class="sums">
+    <div><dt>{{ t.checkout_goods }}</dt><dd><span class="price">{{ co.goods }}</span></dd></div>
+    {% if co.shipping != blank %}<div><dt>{{ t.checkout_shipping }}{% if co.zone != blank %} · {{ co.zone }}{% endif %}</dt><dd>{% if co.shipping_free %}{{ t.checkout_shipping_free }}{% else %}<span class="price">{{ co.shipping }}</span>{% endif %}</dd></div>{% endif %}
+    {% if co.total != blank %}<div class="total"><dt>{{ t.checkout_total }}</dt><dd><span class="price">{{ co.total }}</span></dd></div>{% endif %}
+  </dl>
+  {% if co.free_over != blank %}{% unless co.shipping_free %}<p class="small">{{ t.checkout_free_over }} {{ co.free_over }}</p>{% endunless %}{% endif %}
+  <p class="small">{% if co.tax_mode == "stripe" %}{{ t.checkout_tax_stripe }}{% else %}{{ t.checkout_tax_none }}{% endif %}</p>
+
+  {% if co.payments == false %}
+  <div class="notice" role="status"><p>{{ t.checkout_unavailable }}</p></div>
+  {% elsif co.problem == "too_small" or co.problem == "too_large" %}
+  {% assign reason = "checkout_problem_" | append: co.problem %}
+  <div class="notice notice-bad" role="status" data-problem="{{ co.problem }}"><p>{{ t[reason] }}</p></div>
+  {% elsif co.can_place %}
+  <form class="form" method="post" action="{{ co.action }}" aria-labelledby="checkout-form-title">
+    <h2 id="checkout-form-title">{{ t.checkout_details }}</h2>
+    <div class="pair">
+      <label>{{ t.checkout_company }}<input type="text" name="company" required pattern="{{ co.name_pattern }}" maxlength="{{ co.limits.company }}" autocomplete="organization"></label>
+      <label>{{ t.checkout_email }}<input type="email" name="email" required maxlength="{{ co.limits.email }}" pattern="{{ co.email_pattern }}" autocomplete="email"></label>
+    </div>
+    <div class="pair">
+      <label>{{ t.checkout_recipient }}<input type="text" name="recipient" required pattern="{{ co.name_pattern }}" maxlength="{{ co.limits.recipient }}" autocomplete="name"></label>
+      <label>{{ t.checkout_phone }} {{ t.optional }}<input type="tel" name="phone" maxlength="{{ co.limits.phone }}" autocomplete="tel"></label>
+    </div>
+    <label>{{ t.checkout_line1 }}<input type="text" name="line1" required pattern="{{ co.name_pattern }}" maxlength="{{ co.limits.line1 }}" autocomplete="address-line1"></label>
+    <label>{{ t.checkout_line2 }} {{ t.optional }}<input type="text" name="line2" maxlength="{{ co.limits.line2 }}" autocomplete="address-line2"></label>
+    <div class="pair">
+      <label>{{ t.checkout_postal_code }} {{ t.optional }}<input type="text" name="postal_code" maxlength="{{ co.limits.postal_code }}" autocomplete="postal-code"></label>
+      <label>{{ t.checkout_city }}<input type="text" name="city" required pattern="{{ co.name_pattern }}" maxlength="{{ co.limits.city }}" autocomplete="address-level2"></label>
+    </div>
+    <div class="pair">
+      <label>{{ t.checkout_state }} {{ t.optional }}<input type="text" name="state" maxlength="{{ co.limits.state }}" autocomplete="address-level1"></label>
+      <label>{{ t.checkout_tax_id }} {{ t.optional }}<input type="text" name="tax_id" maxlength="{{ co.limits.tax_id }}"></label>
+    </div>
+    <input type="hidden" name="country" value="{{ co.country }}">
+    {% if co.terms_path != blank %}<label class="tick"><input type="checkbox" name="terms" value="yes" required> {{ t.checkout_terms }} <a href="{{ co.terms_path }}">{{ t.checkout_terms_link }}</a></label>{% endif %}
+    <p class="trap" aria-hidden="true"><label>{{ t.quote_leave_empty }}<input type="text" name="website" tabindex="-1" autocomplete="off"></label></p>
+    <p><button type="submit">{{ t.checkout_pay }}</button></p>
+    <p class="small">{{ t.checkout_pay_note }}</p>
+  </form>
+  {% endif %}
+  {% endif %}
+  <p><a href="{{ co.cart_path }}">{{ t.checkout_back_to_cart }}</a></p>
+</section>
+{% endblock %}

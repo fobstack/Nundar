@@ -1,0 +1,27 @@
+{% layout "layouts/base" %}
+{% block content %}
+<article class="column">
+  {% render "partials/crumbs" %}
+  <p class="kicker">{% if content.frontmatter.sector != blank %}{{ content.frontmatter.sector }}{% else %}{{ t.case_eyebrow }}{% endif %}</p>
+  <h1>{{ content.title }}</h1>
+  {% if content.description != "" %}<p class="lede">{{ content.description }}</p>{% endif %}
+  {% assign results = content.frontmatter.results %}
+  {% if results != blank %}
+  <dl class="facts" aria-label="{{ t.results }}">{% for pair in results %}<dt>{{ pair[0] }}</dt><dd>{{ pair[1] }}</dd>{% endfor %}</dl>
+  {% endif %}
+  {% capture body %}{{ content.html }}{% endcapture %}
+  {% if body != blank %}<div class="prose">{{ content.html }}</div>{% endif %}
+  {% if content.refs.product %}
+  <aside class="aside">
+    <p class="kicker">{{ t.the_product_used }}</p>
+    <p><a href="{{ content.refs.product.path }}">{{ content.refs.product.title }}</a></p>
+  </aside>
+  {% endif %}
+  {% if content.siblings.size > 0 %}
+  <section>
+    <h2>{{ t.other_cases }}</h2>
+    <ul class="entries">{% for item in content.siblings limit: 3 %}{% render "partials/entry", item: item, kicker: item.frontmatter.sector %}{% endfor %}</ul>
+  </section>
+  {% endif %}
+</article>
+{% endblock %}

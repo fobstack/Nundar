@@ -1,0 +1,305 @@
+{
+  "id": "nundar-editorial",
+  "name": "Nundar Editorial",
+  "description": "A second theme for the same shop: serif type on warm paper, the industries and notes before the catalogue, and no script and no file of its own. It reads the same content, options and shop data as the commerce theme.",
+  "version": "0.1.0",
+  "themeApi": 1,
+  "home": "layouts/home.liquid",
+  "kinds": {
+    "page": {
+      "layout": "layouts/page.liquid",
+      "label": "Page"
+    },
+    "article": {
+      "layout": "layouts/article.liquid",
+      "listLayout": "layouts/list.liquid",
+      "label": "Article",
+      "base": "news"
+    },
+    "product": {
+      "layout": "layouts/product.liquid",
+      "listLayout": "layouts/products.liquid",
+      "label": "Product",
+      "base": "products",
+      "fields": {
+        "facets": {
+          "type": "keyvalue",
+          "label": "Filterable attributes",
+          "group": "Specification",
+          "help": "What a buyer filters the catalogue by, for example Head type, Thread, Material. Use the same names, in the same order, on every product: they become the columns of the specification finder."
+        },
+        "sizes": {
+          "type": "keyvalue",
+          "label": "Sizes",
+          "group": "Specification",
+          "help": "One row per size on offer: the SKU, then what distinguishes it, for example TI-SHC-M5-20 and 20 mm."
+        },
+        "specs": {
+          "type": "keyvalue",
+          "label": "Specifications",
+          "group": "Specification",
+          "help": "The full specification, shown as a table on the product page."
+        },
+        "collection": {
+          "type": "reference",
+          "kind": "collection",
+          "label": "Collection",
+          "group": "Classification",
+          "help": "Slug of the collection this product is listed in."
+        },
+        "gallery": {
+          "type": "image[]",
+          "label": "Gallery",
+          "help": "Relative paths under images/.",
+          "max": 12
+        },
+        "datasheet": {
+          "type": "file",
+          "label": "Datasheet",
+          "accept": ["pdf"],
+          "group": "Specification"
+        }
+      }
+    },
+    "collection": {
+      "layout": "layouts/collection.liquid",
+      "listLayout": "layouts/list.liquid",
+      "label": "Collection",
+      "base": "collections"
+    },
+    "application": {
+      "layout": "layouts/application.liquid",
+      "listLayout": "layouts/list.liquid",
+      "label": "Application",
+      "base": "industries",
+      "fields": {
+        "product": {
+          "type": "reference",
+          "kind": "product",
+          "label": "Product",
+          "required": true,
+          "help": "Slug of the product this application note is about."
+        },
+        "spec_highlights": {
+          "type": "keyvalue",
+          "label": "Parameters that matter here",
+          "help": "The few specifications this application depends on."
+        }
+      }
+    },
+    "case": {
+      "layout": "layouts/case.liquid",
+      "listLayout": "layouts/list.liquid",
+      "label": "Case study",
+      "base": "case-studies",
+      "fields": {
+        "sector": {
+          "type": "string",
+          "label": "Sector",
+          "help": "The industry the work was done for, shown above the title."
+        },
+        "product": {
+          "type": "reference",
+          "kind": "product",
+          "label": "Product",
+          "help": "Slug of the product the case study used."
+        },
+        "results": {
+          "type": "keyvalue",
+          "label": "Results",
+          "help": "The measured outcomes, each a short label and a figure."
+        }
+      }
+    },
+    "faq": {
+      "layout": "layouts/faq.liquid",
+      "listLayout": "layouts/faq-list.liquid",
+      "label": "FAQ",
+      "base": "faq",
+      "fields": {
+        "faq": {
+          "type": "keyvalue",
+          "label": "Questions and answers",
+          "help": "Each question with its answer. They are shown on the page and published as FAQ structured data."
+        }
+      }
+    },
+    "tool": {
+      "layout": "layouts/tool.liquid",
+      "listLayout": "layouts/list.liquid",
+      "label": "Engineering tool",
+      "base": "tools",
+      "fields": {
+        "calculators": {
+          "type": "select",
+          "label": "Calculators",
+          "choices": ["none", "fasteners"],
+          "default": "none",
+          "help": "Shows interactive calculators above the text. \"fasteners\" is mass reduction, tightening torque and thread engagement; the text should give the same formulas, constants and tables, because that is what a visitor without the script sees."
+        }
+      }
+    }
+  },
+  "options": {
+    "accent": {
+      "type": "color",
+      "label": "Accent colour",
+      "default": "#b45309"
+    },
+    "home_description": {
+      "type": "text",
+      "label": "Home page description, for search results and link previews",
+      "default": "",
+      "help": "A sentence or two. Empty uses the site's tagline, which is also what follows the site's name in the home page's title."
+    },
+    "hero_title": {
+      "type": "string",
+      "label": "Home page headline",
+      "default": "Built around your requirements."
+    },
+    "hero_lede": {
+      "type": "text",
+      "label": "Home page paragraph",
+      "default": "Find a part by specification, or discuss a custom one with our team."
+    },
+    "hero_badge": {
+      "type": "string",
+      "label": "Caption on the home page picture",
+      "default": ""
+    },
+    "prop_1_title": {
+      "type": "string",
+      "label": "First strength: title",
+      "default": ""
+    },
+    "prop_1_text": {
+      "type": "string",
+      "label": "First strength: one line",
+      "default": ""
+    },
+    "prop_2_title": {
+      "type": "string",
+      "label": "Second strength: title",
+      "default": ""
+    },
+    "prop_2_text": {
+      "type": "string",
+      "label": "Second strength: one line",
+      "default": ""
+    },
+    "prop_3_title": {
+      "type": "string",
+      "label": "Third strength: title",
+      "default": ""
+    },
+    "prop_3_text": {
+      "type": "string",
+      "label": "Third strength: one line",
+      "default": ""
+    },
+    "custom_title": {
+      "type": "string",
+      "label": "Custom work: headline",
+      "default": ""
+    },
+    "custom_text": {
+      "type": "text",
+      "label": "Custom work: paragraph",
+      "default": ""
+    },
+    "quality_1_title": {
+      "type": "string",
+      "label": "First assurance: title",
+      "default": ""
+    },
+    "quality_1_text": {
+      "type": "text",
+      "label": "First assurance: text",
+      "default": ""
+    },
+    "quality_2_title": {
+      "type": "string",
+      "label": "Second assurance: title",
+      "default": ""
+    },
+    "quality_2_text": {
+      "type": "text",
+      "label": "Second assurance: text",
+      "default": ""
+    },
+    "quality_3_title": {
+      "type": "string",
+      "label": "Third assurance: title",
+      "default": ""
+    },
+    "quality_3_text": {
+      "type": "text",
+      "label": "Third assurance: text",
+      "default": ""
+    },
+    "cta_title": {
+      "type": "string",
+      "label": "Closing banner: headline",
+      "default": ""
+    },
+    "cta_text": {
+      "type": "string",
+      "label": "Closing banner: one line",
+      "default": ""
+    },
+    "footer_blurb": {
+      "type": "text",
+      "label": "Footer: what the company does",
+      "default": ""
+    },
+    "footer_note": {
+      "type": "string",
+      "label": "Footer: a line under it, for example certifications held",
+      "default": ""
+    },
+    "contact_email": {
+      "type": "string",
+      "label": "Footer: email address",
+      "default": ""
+    },
+    "contact_phone": {
+      "type": "string",
+      "label": "Footer: telephone number",
+      "default": ""
+    },
+    "quote_href": {
+      "type": "string",
+      "label": "Link for the request-a-quote buttons",
+      "default": "/contact"
+    },
+    "contact_href": {
+      "type": "string",
+      "label": "Link for the contact buttons",
+      "default": "/contact"
+    },
+    "terms_href": {
+      "type": "string",
+      "label": "Footer: link to the terms",
+      "default": ""
+    },
+    "privacy_href": {
+      "type": "string",
+      "label": "Footer: link to the privacy policy",
+      "default": ""
+    },
+    "compliance_href": {
+      "type": "string",
+      "label": "Footer: link to the compliance statement",
+      "default": ""
+    }
+  },
+  "locales": ["en", "de", "fr", "es"],
+  "defaultLocale": "en",
+  "imageWidths": [480, 960, 1440],
+  "pluginLayouts": {
+    "shop/cart": "layouts/shop-cart.liquid",
+    "shop/checkout": "layouts/shop-checkout.liquid",
+    "shop/order": "layouts/shop-order.liquid",
+    "shop/orders": "layouts/shop-orders.liquid"
+  }
+}

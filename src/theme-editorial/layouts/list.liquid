@@ -1,0 +1,12 @@
+{% layout "layouts/base" %}
+{% block content %}
+<section class="column">
+  <h1>{{ page.title }}</h1>
+  {% if list.items.size > 0 %}
+  <ul class="entries">{% for item in list.items %}{% render "partials/entry", item: item, kicker: item.frontmatter.sector %}{% endfor %}</ul>
+  {% else %}
+  <p>{{ t.empty }}</p>
+  {% endif %}
+  {% render "partials/pager", list: list %}
+</section>
+{% endblock %}

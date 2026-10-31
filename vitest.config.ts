@@ -13,35 +13,57 @@ import { defineConfig } from 'vitest/config';
  * `wrangler.jsonc`: reading that file would make the pool load the `.dev.vars`
  * beside it, which is a developer's local secrets, in a test run.
  */
-export default defineConfig({
-  plugins: [
-    cloudflareTest({
-      main: 'src/worker/index.ts',
-      miniflare: {
-        compatibilityDate: '2026-08-01',
-        compatibilityFlags: ['nodejs_compat'],
-        d1Databases: ['DB'],
-        r2Buckets: ['MEDIA'],
-        bindings: {
-          MALLOK_SECRET: 'test-secret-do-not-use',
-          MALLOK_SITE: 'test',
-          // Lets a test create the administrator without a one-time setup
-          // key. A deployed site never has this.
-          MALLOK_DEV_ALLOW_SETUP_WITHOUT_KEY: 'true',
-        },
-        // The same Text rule `wrangler.jsonc` declares: migrations and theme
-        // files are imported as strings.
-        modulesRules: [
-          {
-            type: 'Text',
-            include: ['**/*.liquid', '**/*.css', '**/*.sql', '**/*.md'],
-            fallthrough: true,
-          },
-        ],
+
+/** The Worker's environment, the same for both entries below. */
+function worker(main: string) {
+  return cloudflareTest({
+    main,
+    miniflare: {
+      compatibilityDate: '2026-08-01',
+      compatibilityFlags: ['nodejs_compat'],
+      d1Databases: ['DB'],
+      r2Buckets: ['MEDIA'],
+      bindings: {
+        MALLOK_SECRET: 'test-secret-do-not-use',
+        MALLOK_SITE: 'test',
+        // Lets a test create the administrator without a one-time setup
+        // key. A deployed site never has this.
+        MALLOK_DEV_ALLOW_SETUP_WITHOUT_KEY: 'true',
       },
-    }),
-  ],
+      // The same Text rule `wrangler.jsonc` declares: migrations and theme
+      // files are imported as strings.
+      modulesRules: [
+        {
+          type: 'Text',
+          include: ['**/*.liquid', '**/*.css', '**/*.sql', '**/*.md'],
+          fallthrough: true,
+        },
+      ],
+    },
+  });
+}
+
+/**
+ * Two projects: the site as it deploys, and the same site with the
+ * editorial theme, which `test/theme-editorial` holds whole.
+ */
+export default defineConfig({
   test: {
-    include: ['test/shop/**/*.test.ts', 'test/theme/**/*.test.ts'],
+    projects: [
+      {
+        plugins: [worker('src/worker/index.ts')],
+        test: {
+          name: 'site',
+          include: ['test/shop/**/*.test.ts', 'test/theme/**/*.test.ts'],
+        },
+      },
+      {
+        plugins: [worker('src/worker/editorial.ts')],
+        test: {
+          name: 'editorial',
+          include: ['test/theme-editorial/**/*.test.ts'],
+        },
+      },
+    ],
   },
 });

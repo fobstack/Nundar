@@ -1,0 +1,88 @@
+{% layout "layouts/base" %}
+{%- comment -%}
+  A product as a reading page: what it is, in the product's own words, then
+  its sizes as a table to order from, then its specification. The sizes are
+  the page's front matter; what the shop knows of each is found in
+  `plugins.shop.variants` by walking it — `variants[sku]` would let a SKU
+  called `size` or `first` read Liquid's own answers — and a variant the page
+  does not name follows the sizes it does.
+{%- endcomment -%}
+{% block content %}
+<article class="column wide">
+  {% render "partials/crumbs", via: content.refs.collection %}
+  {% if content.refs.collection %}<p class="kicker">{{ content.refs.collection.title }}</p>{% endif %}
+  <h1>{{ content.title }}</h1>
+  {% if content.description != "" %}<p class="lede">{{ content.description }}</p>{% endif %}
+
+  {% assign facets = content.frontmatter.facets %}
+  {% if facets != blank %}
+  <dl class="facts">{% for pair in facets %}<dt>{{ pair[0] }}</dt><dd>{{ pair[1] }}</dd>{% endfor %}</dl>
+  {% endif %}
+
+  {% assign sizes = content.frontmatter.sizes %}
+  {% assign shop = plugins.shop %}
+  {% if sizes != blank or shop.variants.size > 0 %}
+  <section>
+    <h2>{{ t.sizes }}</h2>
+    <table class="ledger stack" role="table">
+      <thead role="rowgroup">
+        <tr role="row"><th scope="col" role="columnheader">{{ t.sku }}</th><th scope="col" role="columnheader">{{ t.unit_price }}</th><th scope="col" role="columnheader">{{ t.moq }}</th><th scope="col" role="columnheader">{{ t.availability }}</th><th scope="col" role="columnheader"><span class="visually-hidden">{{ t.add_to_cart }}</span></th></tr>
+      </thead>
+      <tbody role="rowgroup">
+        {% for pair in sizes %}
+          {% assign own = nil %}
+          {% for variant in shop.variants %}{% if variant.sku == pair[0] %}{% assign own = variant %}{% endif %}{% endfor %}
+          {% render "partials/offer", sku: pair[0], size: pair[1], variant: own %}
+        {% endfor %}
+        {% for variant in shop.variants %}
+          {% assign named = false %}
+          {% for pair in sizes %}{% if pair[0] == variant.sku %}{% assign named = true %}{% endif %}{% endfor %}
+          {% unless named %}{% render "partials/offer", sku: variant.sku, size: variant.label, variant: variant %}{% endunless %}
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if shop.currency != blank %}<p class="small">{{ t.currency }}: {{ shop.currency }}</p>{% endif %}
+  </section>
+  {% endif %}
+
+  {% capture body %}{{ content.html }}{% endcapture %}
+  {% if body != blank %}<div class="column prose">{{ content.html }}</div>{% endif %}
+
+  {% assign specs = content.frontmatter.specs %}
+  {% if specs != blank %}
+  <section>
+    <h2>{{ t.specifications }}</h2>
+    <table class="ledger"><tbody>{% for pair in specs %}<tr><th scope="row">{{ pair[0] }}</th><td>{{ pair[1] }}</td></tr>{% endfor %}</tbody></table>
+  </section>
+  {% endif %}
+
+  {% assign sheet = content.files[content.frontmatter.datasheet] %}
+  {% if theme.options.quote_href != blank or sheet %}
+  <p>
+    {% if theme.options.quote_href != blank %}<a class="button" href="{{ theme.options.quote_href }}">{{ t.request_quote }}</a>{% endif %}
+    {% if sheet %}<a class="button button-quiet" href="{{ sheet }}" download>{{ t.datasheet }}</a>{% endif %}
+  </p>
+  {% endif %}
+
+  {% if content.backrefs.application.size > 0 %}
+  <section class="column">
+    <h2>{{ t.used_in }}</h2>
+    <ul class="entries">{% for item in content.backrefs.application %}{% render "partials/entry", item: item, kicker: t.application_note %}{% endfor %}</ul>
+  </section>
+  {% endif %}
+
+  {% if content.backrefs.case.size > 0 %}
+  <section class="column">
+    <h2>{{ t.cases_with }}</h2>
+    <ul class="entries">{% for item in content.backrefs.case %}{% render "partials/entry", item: item, kicker: item.frontmatter.sector %}{% endfor %}</ul>
+  </section>
+  {% endif %}
+
+  {% if content.siblings.size > 0 %}
+  <section>
+    <h2>{{ t.related_products }}</h2>
+    {% render "partials/catalogue", items: content.siblings %}
+  </section>
+  {% endif %}
+</article>
+{% endblock %}

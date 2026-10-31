@@ -1,0 +1,36 @@
+<!doctype html>
+{%- comment -%}
+  The editorial theme: serif type on warm paper, a narrow reading column,
+  and nothing loaded but the page. It has no stylesheet file and no font
+  file: Mallok stages the assets of the theme at `src/theme` only, so a
+  second theme in the same project carries its styles in the page
+  (`partials/style.liquid`) and uses the reader's own serif.
+{%- endcomment -%}
+<html lang="{{ page.locale }}" style="--accent: {{ theme.options.accent }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {% assign summary = page.description %}
+  {% if page.kind == "home" and theme.options.home_description != blank %}{% assign summary = theme.options.home_description %}{% endif %}
+  <title>{% block title %}{% if page.kind == "home" %}{{ site.name }}{% if site.tagline != "" %} — {{ site.tagline }}{% endif %}{% else %}{{ page.title }}{% if page.kind == "list" and list.page > 1 %}, {{ t.page }} {{ list.page }}{% endif %} — {{ site.name }}{% endif %}{% endblock %}</title>
+  {% if summary != "" %}<meta name="description" content="{{ summary }}">{% endif %}
+  <link rel="canonical" href="{{ page.canonical }}">
+  <meta property="og:site_name" content="{{ site.name }}">
+  <meta property="og:title" content="{% if page.kind == "home" %}{{ site.name }}{% else %}{{ page.title }}{% endif %}">
+  {% if summary != "" %}<meta property="og:description" content="{{ summary }}">{% endif %}
+  <meta property="og:url" content="{{ page.canonical }}">
+  <meta property="og:type" content="website">
+  {%- comment -%}
+    hreflang and the structured data, from Mallok. A theme must never be
+    able to leave them out by accident.
+  {%- endcomment -%}
+  {{ page.head }}
+  {% render "partials/style" %}
+</head>
+<body>
+  <a class="skip" href="#main">{{ t.skip }}</a>
+  {% render "partials/header" %}
+  <main id="main">{% block content %}{% endblock %}</main>
+  {% render "partials/footer" %}
+</body>
+</html>

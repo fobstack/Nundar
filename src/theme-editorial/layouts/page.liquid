@@ -1,0 +1,9 @@
+{% layout "layouts/base" %}
+{% block content %}
+<article class="column">
+  <h1>{{ content.title }}</h1>
+  {% if content.description != "" %}<p class="lede">{{ content.description }}</p>{% endif %}
+  {% capture body %}{{ content.html }}{% endcapture %}
+  {% if body != blank %}<div class="prose">{{ content.html }}</div>{% endif %}
+</article>
+{% endblock %}

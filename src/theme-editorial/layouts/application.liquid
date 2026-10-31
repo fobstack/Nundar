@@ -1,0 +1,30 @@
+{% layout "layouts/base" %}
+{% block content %}
+<article class="column">
+  {% render "partials/crumbs" %}
+  <p class="kicker">{{ t.application_note }}</p>
+  <h1>{{ content.title }}</h1>
+  {% if content.description != "" %}<p class="lede">{{ content.description }}</p>{% endif %}
+  {% capture body %}{{ content.html }}{% endcapture %}
+  {% if body != blank %}<div class="prose">{{ content.html }}</div>{% endif %}
+  {% assign highlights = content.frontmatter.spec_highlights %}
+  {% if highlights != blank or content.refs.product %}
+  <aside class="aside">
+    {% if highlights != blank %}
+    <h2>{{ t.spec_highlights }}</h2>
+    <dl class="facts">{% for pair in highlights %}<dt>{{ pair[0] }}</dt><dd>{{ pair[1] }}</dd>{% endfor %}</dl>
+    {% endif %}
+    {% if content.refs.product %}
+    <p class="kicker">{{ t.the_part }}</p>
+    <p><a href="{{ content.refs.product.path }}">{{ content.refs.product.title }}</a></p>
+    {% endif %}
+  </aside>
+  {% endif %}
+  {% if content.siblings.size > 0 %}
+  <section>
+    <h2>{{ t.other_applications }}</h2>
+    <ul class="entries">{% for item in content.siblings limit: 3 %}{% render "partials/entry", item: item %}{% endfor %}</ul>
+  </section>
+  {% endif %}
+</article>
+{% endblock %}

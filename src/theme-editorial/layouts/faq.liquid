@@ -1,0 +1,24 @@
+{% layout "layouts/base" %}
+{%- comment -%}
+  Every pair is on the page: Mallok publishes the same pairs as FAQ
+  structured data.
+{%- endcomment -%}
+{% block content %}
+<article class="column">
+  {% render "partials/crumbs" %}
+  <p class="kicker">{{ t.faq_eyebrow }}</p>
+  <h1>{{ content.title }}</h1>
+  {% if content.description != "" %}<p class="lede">{{ content.description }}</p>{% endif %}
+  {% if content.faq.size > 0 %}
+  <div class="qa">{% for pair in content.faq %}<details{% if forloop.first %} open{% endif %}><summary>{{ pair.question }}</summary><p>{{ pair.answer }}</p></details>{% endfor %}</div>
+  {% endif %}
+  {% capture body %}{{ content.html }}{% endcapture %}
+  {% if body != blank %}<div class="prose">{{ content.html }}</div>{% endif %}
+  {% if content.siblings.size > 0 %}
+  <section>
+    <h2>{{ t.other_faq }}</h2>
+    <ul class="entries">{% for item in content.siblings limit: 3 %}{% render "partials/entry", item: item %}{% endfor %}</ul>
+  </section>
+  {% endif %}
+</article>
+{% endblock %}

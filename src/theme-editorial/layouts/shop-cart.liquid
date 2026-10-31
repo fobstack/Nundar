@@ -1,0 +1,107 @@
+{% layout "layouts/base" %}
+{%- comment -%}
+  The cart, as the shop plugin hands it over (`lib/cart-view.ts`): plain
+  forms to `plugin_page.action`, no script. A refusal, a line's problem and
+  the fate of a request for a quote arrive as kinds; the words are the pack's.
+{%- endcomment -%}
+{% block title %}{{ t.cart_title }} — {{ site.name }}{% endblock %}
+{% block content %}
+{% assign cart = plugin_page %}
+<section class="column wide">
+  <h1>{{ t.cart_title }}</h1>
+
+  {% if cart.problem %}
+  {% assign reason = "problem_" | append: cart.problem.kind %}
+  <div class="notice notice-bad" role="alert" data-problem="{{ cart.problem.kind }}">
+    <p><strong>{{ t.cart_refused }}</strong>{% if cart.problem.sku != blank %} <span class="sku">{{ cart.problem.sku }}</span>{% endif %}</p>
+    <p>{{ t[reason] }}{% if cart.problem.kind == "below_moq" %} {{ cart.problem.moq }}{% elsif cart.problem.kind == "insufficient_stock" %} {{ cart.problem.available }}{% elsif cart.problem.kind == "quantity_too_large" %} {{ cart.problem.max }}{% endif %}</p>
+  </div>
+  {% endif %}
+  {% if cart.sent %}
+  <div class="notice notice-good" role="status">
+    <p><strong>{{ t.quote_sent }}</strong> <span class="sku">{{ cart.sent.number }}</span></p>
+    <p>{{ t.quote_sent_note }}</p>
+  </div>
+  {% endif %}
+  {% if cart.inquiry_problem %}
+  {% assign reason = "quote_problem_" | append: cart.inquiry_problem.kind %}
+  <div class="notice notice-bad" role="alert" data-problem="inquiry_{{ cart.inquiry_problem.kind }}">
+    <p><strong>{{ t.quote_refused }}</strong></p>
+    <p>{{ t[reason] }}{% if cart.inquiry_problem.field != blank %}{% assign label = "quote_" | append: cart.inquiry_problem.field %} {{ t[label] }}{% endif %}</p>
+  </div>
+  {% endif %}
+
+  {% if cart.empty %}
+  <p>{{ t.cart_empty }}</p>
+  {% if cart.orders_path != blank %}<p class="small"><a href="{{ cart.orders_path }}">{{ t.orders_link }}</a></p>{% endif %}
+  {% else %}
+  <table class="ledger stack" role="table">
+    <thead role="rowgroup"><tr role="row"><th scope="col" role="columnheader">{{ t.col_product }}</th><th scope="col" role="columnheader">{{ t.unit_price }}</th><th scope="col" role="columnheader">{{ t.quantity }}</th><th scope="col" role="columnheader">{{ t.line_total }}</th></tr></thead>
+    <tbody role="rowgroup">
+      {% for line in cart.lines %}
+      <tr role="row">
+        <th scope="row" role="rowheader">
+          {% if line.name != blank %}{% if line.path != blank %}<a href="{{ line.path }}">{{ line.name }}</a>{% else %}{{ line.name }}{% endif %}<br>{% endif %}
+          <span class="sku">{{ line.sku }}</span>
+          {% if line.problem != blank %}{% assign reason = "problem_" | append: line.problem %}<br><span class="small" data-problem="{{ line.problem }}">{{ t[reason] }}{% if line.problem == "below_moq" %} {{ line.moq }}{% elsif line.problem == "insufficient_stock" %} {{ line.available }}{% elsif line.problem == "quantity_too_large" %} {{ cart.max_quantity }}{% endif %}</span>{% endif %}
+        </th>
+        <td role="cell" data-label="{{ t.unit_price }}">{% if line.unit_price != blank %}<span class="price">{{ line.unit_price }}</span>{% else %}{{ t.price_on_request }}{% endif %}</td>
+        <td role="cell" data-label="{{ t.quantity }}">
+          {% if line.problem != "unavailable" %}
+          <form class="buy" method="post" action="{{ cart.action }}">
+            <input type="hidden" name="action" value="set">
+            <input type="hidden" name="variant" value="{{ line.variant_id }}">
+            <label><span class="visually-hidden">{{ t.quantity }} {{ line.sku }}</span><input type="number" name="quantity" min="{{ line.moq }}" step="1"{% if cart.max_quantity %} max="{{ cart.max_quantity }}"{% endif %} value="{{ line.quantity }}" required inputmode="numeric"></label>
+            <button type="submit">{{ t.update }}<span class="visually-hidden"> {{ line.sku }}</span></button>
+          </form>
+          {% endif %}
+          <form method="post" action="{{ cart.action }}">
+            <input type="hidden" name="action" value="remove">
+            <input type="hidden" name="variant" value="{{ line.variant_id }}">
+            <button class="button-quiet" type="submit">{{ t.remove }}<span class="visually-hidden"> {{ line.sku }}</span></button>
+          </form>
+        </td>
+        <td role="cell" data-label="{{ t.line_total }}">{% if line.line_total != blank %}<span class="price">{{ line.line_total }}</span>{% else %}—{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if cart.currencies.size > 1 %}
+  <form class="buy" method="post" action="{{ cart.action }}" role="group" aria-label="{{ t.currency }}">
+    <input type="hidden" name="action" value="currency">
+    {% for code in cart.currencies %}<button{% unless code == cart.currency %} class="button-quiet"{% endunless %} type="submit" name="currency" value="{{ code }}" aria-pressed="{% if code == cart.currency %}true{% else %}false{% endif %}">{{ code }}</button>{% endfor %}
+  </form>
+  {% endif %}
+  {% if cart.subtotal != blank %}<dl class="sums"><div class="total"><dt>{{ t.subtotal }}</dt><dd><span class="price">{{ cart.subtotal }}</span></dd></div></dl>{% endif %}
+  <p class="small">{{ t.cart_note }}</p>
+  <p>
+    {% if cart.can_check_out %}<a class="button" href="{{ cart.checkout_path }}">{{ t.checkout }}</a>{% endif %}
+    {% if site.kinds.product %}<a class="button button-quiet" href="{{ site.kinds.product.path }}">{{ t.back_to_catalogue }}</a>{% endif %}
+  </p>
+  {% if cart.orders_path != blank %}<p class="small"><a href="{{ cart.orders_path }}">{{ t.orders_link }}</a></p>{% endif %}
+
+  {% if cart.inquiry_action != blank %}
+  {% if cart.can_inquire %}
+  <form class="form" method="post" action="{{ cart.inquiry_action }}" aria-labelledby="quote-form-title">
+    <h2 id="quote-form-title">{{ t.quote_form_title }}</h2>
+    <p class="small">{{ t.quote_form_intro }}</p>
+    <div class="pair">
+      <label>{{ t.quote_name }}<input type="text" name="name" required pattern=".*\S.*" maxlength="200" autocomplete="name"></label>
+      <label>{{ t.quote_email }}<input type="email" name="email" required maxlength="320" pattern="[\p{L}\p{N}._+'\-]+@[\p{L}\p{N}\-]+(\.[\p{L}\p{N}\-]+)+" autocomplete="email"></label>
+    </div>
+    <div class="pair">
+      <label>{{ t.quote_company }} {{ t.optional }}<input type="text" name="company" maxlength="200" autocomplete="organization"></label>
+      <label>{{ t.quote_phone }} {{ t.optional }}<input type="tel" name="phone" maxlength="60" autocomplete="tel"></label>
+    </div>
+    <label>{{ t.quote_message }} {{ t.optional }}<textarea name="message" rows="5" maxlength="5000"></textarea></label>
+    <p class="trap" aria-hidden="true"><label>{{ t.quote_leave_empty }}<input type="text" name="website" tabindex="-1" autocomplete="off"></label></p>
+    <p><button type="submit">{{ t.quote_send }}</button></p>
+  </form>
+  {% else %}
+  <p class="small">{{ t.quote_fix_first }}</p>
+  {% endif %}
+  {% endif %}
+  {% endif %}
+</section>
+{% endblock %}

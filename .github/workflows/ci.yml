@@ -46,3 +46,8 @@ jobs:
       # The one command a newcomer runs first still ends with a filled shop
       # and an admin login that works
       - run: npm run preview -- --check
+
+      # The same shop drawn by the second theme, through the Mallok CLI's
+      # publish and a real Worker, as `npm test` cannot: tests render pages
+      # inside workerd, and only this publishes the sample with its pictures
+      - run: npm run preview -- --theme editorial --check

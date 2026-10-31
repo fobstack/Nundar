@@ -1,0 +1,17 @@
+{% layout "layouts/base" %}
+{% block content %}
+<article class="column wide">
+  {% render "partials/crumbs" %}
+  <p class="kicker">{{ t.collection_eyebrow }}</p>
+  <h1>{{ content.title }}</h1>
+  {% if content.description != "" %}<p class="lede">{{ content.description }}</p>{% endif %}
+  <h2>{{ t.products_in_collection }}</h2>
+  {% if content.backrefs.product.size > 0 %}
+  {% render "partials/catalogue", items: content.backrefs.product %}
+  {% else %}
+  <p>{{ t.empty }}</p>
+  {% endif %}
+  {% capture body %}{{ content.html }}{% endcapture %}
+  {% if body != blank %}<div class="prose">{{ content.html }}</div>{% endif %}
+</article>
+{% endblock %}

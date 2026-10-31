@@ -1,0 +1,24 @@
+{%- comment -%}
+  The masthead: the site's name, set large, over a rule; below it the
+  navigation, the languages and the cart, in small capitals. It wraps
+  rather than folds, so it needs no menu button and no script.
+{%- endcomment -%}
+<header class="masthead">
+  <div class="column wide">
+    <a class="masthead-name" href="{{ site.home_path }}">{{ site.name }}</a>
+    {% if site.tagline != "" %}<p class="masthead-tagline">{{ site.tagline }}</p>{% endif %}
+  </div>
+  <nav class="column wide masthead-nav" aria-label="{{ t.nav }}">
+    <ul>
+      {% for item in site.nav %}<li><a href="{{ item.href }}"{% if item.active %} aria-current="page"{% endif %}>{{ item.label }}</a></li>{% endfor %}
+      {% assign cart_path = plugins.shop.cart_path %}
+      {% if cart_path == blank %}{% assign cart_path = plugin_page.cart_path %}{% endif %}
+      {% if cart_path != blank %}<li><a href="{{ cart_path }}"{% if plugin_page.cart_path != blank %} aria-current="page"{% endif %}>{{ t.cart }}</a></li>{% endif %}
+    </ul>
+    {% if page.alternates.size > 1 %}
+    <ul class="masthead-langs" aria-label="{{ t.language }}">
+      {% for alt in page.alternates %}<li><a href="{{ alt.href }}" hreflang="{{ alt.locale }}" lang="{{ alt.locale }}"{% if alt.locale == site.locale %} aria-current="true"{% endif %}>{{ alt.name }}</a></li>{% endfor %}
+    </ul>
+    {% endif %}
+  </nav>
+</header>
