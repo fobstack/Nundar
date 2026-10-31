@@ -4,7 +4,11 @@
   "version": "0.1.0",
   "description": "Variants, prices in several currencies, stock, minimum order quantities, a cart, the cart sent as an inquiry, and checkout with Stripe, for a Mallok site.",
   "pluginApi": 2,
-  "hooks": ["scheduled", "renderData", "onContentDelete"],
+  "hooks": [
+    "scheduled",
+    "renderData",
+    "onContentDelete"
+  ],
   "routes": [
     {
       "path": "cart",
@@ -71,7 +75,10 @@
       "type": "select",
       "label": "Price rounding",
       "help": "How a converted price is rounded up to a price point: to the next .99, or to the next whole unit.",
-      "choices": ["ending99", "integer"],
+      "choices": [
+        "ending99",
+        "integer"
+      ],
       "default": "ending99",
       "group": "Pricing"
     },
@@ -99,7 +106,10 @@
       "type": "select",
       "label": "Tax",
       "help": "none: prices are without tax and no tax is charged; the buyer settles any import duty and tax. stripe: Stripe Tax calculates tax at checkout where your account is registered to collect it, for a fee Stripe charges per transaction.",
-      "choices": ["none", "stripe"],
+      "choices": [
+        "none",
+        "stripe"
+      ],
       "default": "none",
       "group": "Orders"
     },
@@ -151,8 +161,13 @@
           "type": "datetime"
         }
       ],
-      "search": ["sku"],
-      "filters": ["status", "stock_policy"],
+      "search": [
+        "sku"
+      ],
+      "filters": [
+        "status",
+        "stock_policy"
+      ],
       "orderBy": "updated_at",
       "fields": {
         "sku": {
@@ -169,14 +184,19 @@
         "status": {
           "type": "select",
           "label": "Status",
-          "choices": ["active", "archived"],
+          "choices": [
+            "active",
+            "archived"
+          ],
           "default": "active",
           "help": "An archived variant is on no page, and is taken out of every cart."
         },
         "price": {
           "type": "money",
           "label": "Base price, each",
-          "currencies": ["USD"],
+          "currencies": [
+            "USD"
+          ],
           "help": "Leave empty for a variant that is quoted on request. Other currencies are derived from this at the day's exchange rate."
         },
         "other_prices": {
@@ -188,7 +208,10 @@
             "price": {
               "type": "money",
               "label": "Price, each",
-              "currencies": ["EUR", "GBP"],
+              "currencies": [
+                "EUR",
+                "GBP"
+              ],
               "required": true
             }
           }
@@ -205,7 +228,10 @@
         "stock_policy": {
           "type": "select",
           "label": "Stock policy",
-          "choices": ["track", "made_to_order"],
+          "choices": [
+            "track",
+            "made_to_order"
+          ],
           "default": "track",
           "help": "track: the stock below is a limit. made_to_order: always orderable, and the lead time is what the buyer is told."
         },
@@ -287,8 +313,15 @@
           "sortable": true
         }
       ],
-      "filters": ["status"],
-      "search": ["inquiry_no", "name", "company", "email"],
+      "filters": [
+        "status"
+      ],
+      "search": [
+        "inquiry_no",
+        "name",
+        "company",
+        "email"
+      ],
       "detail": [
         "message",
         "phone",
@@ -381,7 +414,9 @@
           "type": "datetime"
         }
       ],
-      "search": ["name"],
+      "search": [
+        "name"
+      ],
       "orderBy": "updated_at",
       "fields": {
         "name": {
@@ -407,12 +442,20 @@
               "type": "money",
               "label": "Rate",
               "required": true,
-              "currencies": ["USD", "EUR", "GBP"]
+              "currencies": [
+                "USD",
+                "EUR",
+                "GBP"
+              ]
             },
             "free_over": {
               "type": "money",
               "label": "Free from",
-              "currencies": ["USD", "EUR", "GBP"],
+              "currencies": [
+                "USD",
+                "EUR",
+                "GBP"
+              ],
               "help": "Goods coming to this much or more ship free. Empty: never free."
             }
           }
@@ -470,8 +513,15 @@
           "label": "Refunds owed"
         }
       ],
-      "filters": ["status"],
-      "search": ["order_no", "company", "email", "recipient"],
+      "filters": [
+        "status"
+      ],
+      "search": [
+        "order_no",
+        "company",
+        "email",
+        "recipient"
+      ],
       "detail": [
         "recipient",
         "phone",
@@ -533,7 +583,12 @@
             "carrier": {
               "type": "select",
               "label": "Carrier",
-              "choices": ["DHL", "FedEx", "UPS", "Other"],
+              "choices": [
+                "DHL",
+                "FedEx",
+                "UPS",
+                "Other"
+              ],
               "required": true
             },
             "carrier_other": {
@@ -630,8 +685,13 @@
           "label": "Refund"
         }
       ],
-      "filters": ["state"],
-      "search": ["order_no", "payment_intent_id"],
+      "filters": [
+        "state"
+      ],
+      "search": [
+        "order_no",
+        "payment_intent_id"
+      ],
       "detail": [],
       "orderBy": "processed_at",
       "actions": [
@@ -647,6 +707,200 @@
           }
         }
       ]
+    },
+    {
+      "id": "customers",
+      "label": "Customers",
+      "type": "table",
+      "table": "p_shop_customer_admin",
+      "columns": [
+        {
+          "field": "email",
+          "label": "Email",
+          "type": "email",
+          "sortable": true
+        },
+        {
+          "field": "company",
+          "label": "Company",
+          "sortable": true
+        },
+        {
+          "field": "country",
+          "label": "Country"
+        },
+        {
+          "field": "orders",
+          "label": "Orders",
+          "sortable": true
+        },
+        {
+          "field": "inquiries",
+          "label": "Inquiries",
+          "sortable": true
+        },
+        {
+          "field": "spent",
+          "label": "Spent"
+        },
+        {
+          "field": "last_seen",
+          "label": "Last seen",
+          "type": "datetime",
+          "sortable": true
+        }
+      ],
+      "search": [
+        "email",
+        "company"
+      ],
+      "detail": [
+        "first_seen"
+      ],
+      "orderBy": "last_seen",
+      "related": [
+        {
+          "id": "orders",
+          "label": "Orders",
+          "table": "p_shop_customer_order_admin",
+          "foreignKey": "customer_id",
+          "orderBy": "created_at",
+          "columns": [
+            {
+              "field": "order_no",
+              "label": "Number"
+            },
+            {
+              "field": "status",
+              "label": "Status",
+              "type": "badge"
+            },
+            {
+              "field": "total",
+              "label": "Total"
+            },
+            {
+              "field": "created_at",
+              "label": "Placed",
+              "type": "datetime"
+            }
+          ]
+        },
+        {
+          "id": "inquiries",
+          "label": "Inquiries",
+          "table": "p_shop_customer_inquiry_admin",
+          "foreignKey": "customer_id",
+          "orderBy": "created_at",
+          "columns": [
+            {
+              "field": "inquiry_no",
+              "label": "Number"
+            },
+            {
+              "field": "status",
+              "label": "Status",
+              "type": "badge"
+            },
+            {
+              "field": "subtotal",
+              "label": "Subtotal"
+            },
+            {
+              "field": "created_at",
+              "label": "Received",
+              "type": "datetime"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sales",
+      "label": "Sales by month",
+      "type": "table",
+      "table": "p_shop_sales_month",
+      "columns": [
+        {
+          "field": "month",
+          "label": "Month",
+          "sortable": true
+        },
+        {
+          "field": "currency",
+          "label": "Currency"
+        },
+        {
+          "field": "orders",
+          "label": "Orders paid"
+        },
+        {
+          "field": "revenue",
+          "label": "Paid"
+        },
+        {
+          "field": "refunds",
+          "label": "Refunds"
+        },
+        {
+          "field": "refunded",
+          "label": "Refunded"
+        },
+        {
+          "field": "net",
+          "label": "Net"
+        },
+        {
+          "field": "average",
+          "label": "Average order"
+        }
+      ],
+      "filters": [
+        "currency"
+      ],
+      "orderBy": "id"
+    },
+    {
+      "id": "product-sales",
+      "label": "Sales by product",
+      "type": "table",
+      "table": "p_shop_product_sales",
+      "columns": [
+        {
+          "field": "sku",
+          "label": "SKU",
+          "sortable": true
+        },
+        {
+          "field": "name",
+          "label": "Product"
+        },
+        {
+          "field": "currency",
+          "label": "Currency"
+        },
+        {
+          "field": "quantity",
+          "label": "Quantity",
+          "sortable": true
+        },
+        {
+          "field": "orders",
+          "label": "Orders"
+        },
+        {
+          "field": "revenue",
+          "label": "Takings"
+        }
+      ],
+      "filters": [
+        "currency"
+      ],
+      "search": [
+        "sku",
+        "name"
+      ],
+      "orderBy": "revenue_minor"
     }
   ],
   "secrets": {
