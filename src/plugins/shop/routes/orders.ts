@@ -5,9 +5,10 @@
  * `GET orders` asks for the address an order was placed with; opened with a
  * link's secret (`?t=…`), it lists that address's orders, each with its own
  * signed link. It reads and never writes. `POST orders/link` records the
- * request and, when the address has orders, emails it the link; it answers
- * 303 to the page, saying the same whether or not there were any, and puts
- * nothing a person typed in an address.
+ * request and, when the address has orders, emails it the link after it has
+ * answered; it answers 303 to the page, saying the same whether or not there
+ * were any, in the same time, and puts nothing a person typed in an
+ * address.
  *
  * What the layout `shop/orders` receives as `plugin_page`:
  *
@@ -139,6 +140,32 @@ export async function ordersPage(
   };
 }
 
+/** Emails a link to a buyer's orders. It never throws: nobody awaits it. */
+async function sendLookupLink(
+  ctx: PluginRequestContext,
+  input: {
+    readonly to: string;
+    readonly content: { subject: string; text: string; html: string };
+    readonly now: Date;
+  },
+): Promise<void> {
+  try {
+    // The list the link opens signs each order's own link, and a GET makes
+    // no key: an order placed other than through checkout may find none.
+    await orderLinkKey(ctx.db, input.now);
+    await ctx.sendEmail({ to: input.to, ...input.content });
+  } catch (error) {
+    // Not said on the page, which says the same whether or not there were
+    // orders, and has been answered; the buyer can ask again.
+    console.log(
+      JSON.stringify({
+        event: 'shop_order_lookup_failed',
+        reason: error instanceof Error ? error.name : 'unknown',
+      }),
+    );
+  }
+}
+
 /** `POST orders/link`: record the request, and email the link if there are orders. */
 export async function ordersLink(
   input: RouteInput,
@@ -172,28 +199,17 @@ export async function ordersLink(
     return to({ [PROBLEM_PARAM]: 'too_many' });
   }
   if (recorded.orders > 0) {
-    // The list the link opens signs each order's own link, and a GET makes
-    // no key: an order placed other than through checkout may find none.
-    await orderLinkKey(ctx.db, now);
+    // After the answer, never before it: the key and the email are two more
+    // writes, and an answer that waited on them would take longer for an
+    // address that has bought here than for one that has not.
     const link = `${siteOriginOf(ctx.site.domain, ctx.url)}${page}?t=${token}`;
-    const content = orderLookupEmail({ locale: ctx.locale, link });
-    try {
-      await ctx.sendEmail({
+    ctx.waitUntil(
+      sendLookupLink(ctx, {
         to: parsed.data.email,
-        subject: content.subject,
-        text: content.text,
-        html: content.html,
-      });
-    } catch (error) {
-      // Not said on the page, which says the same whether or not there were
-      // orders; the buyer can ask again.
-      console.log(
-        JSON.stringify({
-          event: 'shop_order_lookup_failed',
-          reason: error instanceof Error ? error.name : 'unknown',
-        }),
-      );
-    }
+        content: orderLookupEmail({ locale: ctx.locale, link }),
+        now,
+      }),
+    );
   }
   return to({ [SENT_PARAM]: '1' });
 }

@@ -1,4 +1,5 @@
 import { SELF } from 'cloudflare:test';
+import type { PluginRequestContext } from 'mallok/worker';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { priceCart } from '../../src/plugins/shop/lib/cart-pricing.js';
 import { cancelOrder } from '../../src/plugins/shop/lib/order-fulfilment.js';
@@ -11,6 +12,7 @@ import {
   createPendingOrder,
   markOrderPaid,
 } from '../../src/plugins/shop/lib/orders.js';
+import { ordersLink } from '../../src/plugins/shop/routes/orders.js';
 import {
   clearShopTables,
   createProduct,
@@ -91,8 +93,28 @@ async function order(
   return placed.orderNo;
 }
 
+/**
+ * Waits until the emails queued behind the answers have all been queued.
+ * The route answers first and queues its email afterwards, and a test sees
+ * the answer and not the work behind it: so the queue is read until it has
+ * stopped growing. An email that should not be sent is waited for as long as
+ * one that should.
+ */
+async function settled(): Promise<void> {
+  let last = -1;
+  for (let quiet = 0; quiet < 4; ) {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const counted = await db()
+      .prepare("SELECT COUNT(*) AS n FROM job WHERE type = 'email'")
+      .first<{ n: number }>();
+    quiet = counted?.n === last ? quiet + 1 : 0;
+    last = counted?.n ?? 0;
+  }
+}
+
 /** The emails Mallok has queued to an address: `{ pluginId, from, message }`. */
 async function mailTo(address: string): Promise<Record<string, unknown>[]> {
+  await settled();
   const { results } = await db()
     .prepare("SELECT payload FROM job WHERE type = 'email' ORDER BY id")
     .all<{ payload: string }>();
@@ -353,5 +375,86 @@ describe('a buyer finding their orders', () => {
       .prepare('SELECT email FROM p_shop_order_link')
       .all<{ email: string }>();
     expect(left.results).toEqual([{ email: 'bob@buyer.example' }]);
+  });
+});
+
+describe('the answer to a request for a link', () => {
+  /**
+   * Calls the route with a database that answers its first batch — the
+   * request's own record — and holds every later one, and an email that
+   * is never taken, until `release`. An answer that waited on either would
+   * not come.
+   */
+  async function askHeld(email: string) {
+    const real = db();
+    let release = (): void => {};
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let batches = 0;
+    const held = new Proxy(real, {
+      get(target, key) {
+        if (key === 'batch') {
+          return async (statements: D1PreparedStatement[]) => {
+            batches += 1;
+            if (batches > 1) {
+              await released;
+            }
+            return target.batch(statements);
+          };
+        }
+        const value = Reflect.get(target, key, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+    const sent: { to: string }[] = [];
+    const background: Promise<unknown>[] = [];
+    const ctx = {
+      db: held,
+      ipHash: 'held-visitor',
+      locale: 'en',
+      site: { defaultLocale: 'en', domain: null },
+      url: new URL(`${ORIGIN}${SHOP}/orders/link`),
+      sendEmail: async (message: { to: string }) => {
+        await released;
+        sent.push(message);
+      },
+      waitUntil: (work: Promise<unknown>) => {
+        background.push(work);
+      },
+    } as unknown as PluginRequestContext;
+    const answer = await Promise.race([
+      ordersLink({ fields: { email }, params: {}, json: undefined }, ctx),
+      new Promise<'no answer'>((resolve) =>
+        setTimeout(() => resolve('no answer'), 1000),
+      ),
+    ]);
+    const before = sent.length;
+    release();
+    await Promise.all(background);
+    return { answer, before, sent };
+  }
+
+  it('comes before anything is sent, whether or not the address has bought here', async () => {
+    // A buyer's request would otherwise wait on two more writes — the key
+    // that signs the orders' links, the email queued — and a stranger could
+    // tell a buyer's address by the time the answer took.
+    await order('ada@buyer.example');
+
+    const buyer = await askHeld('ada@buyer.example');
+    const stranger = await askHeld('nobody@buyer.example');
+
+    for (const { answer, before } of [buyer, stranger]) {
+      expect(answer).toBeInstanceOf(Response);
+      expect((answer as Response).headers.get('location')).toBe(
+        `${SHOP}/orders?sent=1`,
+      );
+      expect(before).toBe(0);
+    }
+    // And afterwards the buyer, and only the buyer, is written to.
+    expect(buyer.sent.map((message) => message.to)).toEqual([
+      'ada@buyer.example',
+    ]);
+    expect(stranger.sent).toEqual([]);
   });
 });
