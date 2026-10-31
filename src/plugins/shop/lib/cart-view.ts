@@ -37,6 +37,7 @@
  *
  *   checkout_path    the checkout page
  *   can_check_out    every line can be ordered and the shop takes payments
+ *   orders_path      where a buyer finds the orders they placed
  *
  * The form's fields are `name`, `email`, `company`, `phone` and `message`,
  * of which the first two are required, and `website`, which a person must

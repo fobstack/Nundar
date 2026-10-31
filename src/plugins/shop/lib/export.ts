@@ -24,10 +24,12 @@
  * carrying.
  *
  * Not exported: carts, which are a visitor's and gone in a month; exchange
- * rates, which are fetched again; the state of the scheduled work; and, of
- * an inquiry, the cart it came from and the mark of who sent it — the one
- * was a credential and the other means nothing outside this site. The shop
- * stores no secret; were it to, a secret would not be exported either.
+ * rates, which are fetched again; the shop's state, which holds the key
+ * buyers' order links are signed with, and the links a buyer asked for to
+ * their orders, which last a day; and, of an inquiry or an order, the cart
+ * it came from and the mark of who sent it — the one was a credential and
+ * the other means nothing outside this site. Nor what an outbox row's runner
+ * was doing with it.
  *
  * Orders and inquiries hold what a person told the shop about themselves.
  * So does this export, which is why Mallok guards it with the `export`

@@ -242,5 +242,18 @@
   "order_tracking": "Sendungsnummer",
   "order_ships_within": "Voraussichtlicher Versand innerhalb von",
   "order_not_found": "Diese Bestellung kann nicht angezeigt werden. Der Link ist möglicherweise unvollständig: Bitte verwenden Sie den Link aus Ihrer E-Mail.",
-  "order_questions": "Fragen zu dieser Bestellung? Antworten Sie einfach auf eine unserer E-Mails dazu."
+  "order_questions": "Fragen zu dieser Bestellung? Antworten Sie einfach auf eine unserer E-Mails dazu.",
+  "orders_title": "Ihre Bestellungen",
+  "orders_link": "Ihre Bestellungen finden",
+  "orders_form_title": "Ihre Bestellungen finden",
+  "orders_intro": "Geben Sie die E-Mail-Adresse an, mit der Sie bestellt haben. Wir senden einen Link zu allen Bestellungen mit dieser Adresse.",
+  "orders_email": "E-Mail",
+  "orders_send": "Link per E-Mail senden",
+  "orders_sent": "Falls mit dieser Adresse bestellt wurde, ist ein Link zu den Bestellungen unterwegs. Er gilt 24 Stunden.",
+  "orders_expired": "Dieser Link ist abgelaufen oder ungültig. Fordern Sie unten einen neuen an.",
+  "orders_problem_invalid": "Bitte geben Sie die E-Mail-Adresse an, mit der Sie bestellt haben.",
+  "orders_problem_too_many": "In der letzten Stunde wurden zu viele Links angefordert. Bitte versuchen Sie es später noch einmal.",
+  "orders_for": "Bestellungen mit",
+  "orders_none": "Mit dieser Adresse wurden keine bezahlten Bestellungen aufgegeben.",
+  "orders_valid_note": "Diese Liste ist 24 Stunden lang über den gesendeten Link erreichbar. Jede Bestellung behält ihren eigenen Link."
 }

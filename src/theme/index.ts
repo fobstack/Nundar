@@ -25,6 +25,7 @@ import productsLiquid from './layouts/products.liquid';
 import shopCartLiquid from './layouts/shop-cart.liquid';
 import shopCheckoutLiquid from './layouts/shop-checkout.liquid';
 import shopOrderLiquid from './layouts/shop-order.liquid';
+import shopOrdersLiquid from './layouts/shop-orders.liquid';
 import toolLiquid from './layouts/tool.liquid';
 import deJson from './locales/de.json';
 import enJson from './locales/en.json';
@@ -59,6 +60,7 @@ export const nundarTheme = defineTheme(manifest, {
   'layouts/shop-cart.liquid': shopCartLiquid,
   'layouts/shop-checkout.liquid': shopCheckoutLiquid,
   'layouts/shop-order.liquid': shopOrderLiquid,
+  'layouts/shop-orders.liquid': shopOrdersLiquid,
   'partials/header.liquid': headerLiquid,
   'partials/footer.liquid': footerLiquid,
   'partials/card.liquid': cardLiquid,

@@ -290,3 +290,42 @@ describe('an order’s page', () => {
     expect(missing).toContain('This order cannot be shown.');
   });
 });
+
+describe('the page a buyer finds their orders on', () => {
+  it.each([
+    ['asking', ''],
+    ['after a link was asked for', '?sent=1'],
+    ['for a link that opens nothing', `?t=${'A'.repeat(43)}`],
+    ['after too many', '?lookup=too_many'],
+    ['for an address that is not one', '?lookup=invalid'],
+  ])('is whole %s', async (_what, query) => {
+    const page = await html(`${SHOP}/orders${query}`);
+    const main = between(page, '<main', '</main>');
+
+    expect(emptyElements(main)).toEqual([]);
+    expect(page).not.toMatch(/href=""/);
+    expect([...main.matchAll(/<h1\b/g)]).toHaveLength(1);
+  });
+
+  it('carries the server’s rule on its field, and speaks the page’s language', async () => {
+    const page = await html(`${SHOP}/fr/orders`);
+
+    expect(field(page, 'email')).toMatchObject({
+      type: 'email',
+      required: '',
+      pattern: EMAIL_PATTERN_SOURCE,
+      maxlength: '320',
+    });
+    expect(page).toContain('Recevoir un lien');
+    expect(page).toContain(`action="${SHOP}/fr/orders/link"`);
+  });
+
+  it('is offered from the cart, full or empty', async () => {
+    const empty = await html(`${SHOP}/cart`);
+    const full = await html(`${SHOP}/cart`, await cart());
+
+    for (const page of [empty, full]) {
+      expect(page).toContain(`<a href="${SHOP}/orders">Find your orders</a>`);
+    }
+  });
+});

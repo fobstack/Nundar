@@ -1,0 +1,60 @@
+{% layout "layouts/base" %}
+{%- comment -%}
+  A buyer's way back to their orders. What is shown is the shop plugin's
+  (`plugin_page`, described in the plugin's `routes/orders.ts`); how it
+  looks, and every word on it, are this theme's.
+
+  Without a link it is a form: the address the orders were placed with, and
+  a button that emails a link to them. The page says the same afterwards
+  whether or not there were any. With a link it lists the address's orders,
+  each opening its own page.
+{%- endcomment -%}
+{% block title %}{{ t.orders_title }} — {{ site.name }}{% endblock %}
+{% block content %}
+{% assign lookup = plugin_page %}
+<section class="shell detail cart order orders">
+  <header class="detail-head">
+    <h1 class="detail-title">{{ t.orders_title }}</h1>
+  </header>
+
+  {% if lookup.mode == "list" %}
+  <p class="checkout-intro">{{ t.orders_for }} <strong>{{ lookup.email }}</strong></p>
+  {% if lookup.orders.size > 0 %}
+  <ul class="cart-lines checkout-lines">
+    {% for order in lookup.orders %}
+    {% assign status_key = "order_status_" | append: order.status %}
+    <li class="checkout-line">
+      <span class="cart-what">
+        <a class="cart-name" href="{{ order.path }}">{{ order.order_no }}</a>
+        <span class="offer-sku">{{ order.placed_on }} · {{ t[status_key] }}</span>
+      </span>
+      <span class="price">{{ order.total }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="empty">{{ t.orders_none }}</p>
+  {% endif %}
+  <p class="cart-note">{{ t.orders_valid_note }}</p>
+  {% else %}
+  {% if lookup.notice == "sent" %}
+  <div class="cart-sent" role="status"><p>{{ t.orders_sent }}</p></div>
+  {% elsif lookup.notice == "expired" %}
+  <div class="cart-problem" role="alert" data-problem="orders_expired"><p>{{ t.orders_expired }}</p></div>
+  {% endif %}
+  {% if lookup.problem != blank %}
+  {% assign reason = "orders_problem_" | append: lookup.problem %}
+  <div class="cart-problem" role="alert" data-problem="orders_{{ lookup.problem }}"><p>{{ t[reason] }}</p></div>
+  {% endif %}
+  <form class="quote-form" method="post" action="{{ lookup.action }}" aria-labelledby="orders-form-title">
+    <h2 class="quote-form-title" id="orders-form-title">{{ t.orders_form_title }}</h2>
+    <p class="quote-form-intro">{{ t.orders_intro }}</p>
+    <label>{{ t.orders_email }}<input type="email" name="email" required maxlength="{{ lookup.email_max }}" pattern="{{ lookup.email_pattern }}" autocomplete="email"></label>
+    <p class="quote-form-trap" aria-hidden="true"><label>{{ t.quote_leave_empty }}<input type="text" name="website" tabindex="-1" autocomplete="off"></label></p>
+    <button class="btn btn-solid" type="submit">{{ t.orders_send }}</button>
+  </form>
+  {% endif %}
+
+  <p class="cart-back"><a class="btn btn-outline" href="{{ lookup.cart_path }}">{{ t.checkout_back_to_cart }}</a></p>
+</section>
+{% endblock %}

@@ -236,5 +236,18 @@
   "order_tracking": "Tracking number",
   "order_ships_within": "Expected to ship within",
   "order_not_found": "This order cannot be shown. The link may be incomplete: please use the one in your email.",
-  "order_questions": "Questions about this order? Reply to any of our emails about it."
+  "order_questions": "Questions about this order? Reply to any of our emails about it.",
+  "orders_title": "Your orders",
+  "orders_link": "Find your orders",
+  "orders_form_title": "Find the orders you placed",
+  "orders_intro": "Give the email address you ordered with, and we will send it a link to every order placed with it.",
+  "orders_email": "Email",
+  "orders_send": "Email me a link",
+  "orders_sent": "If any orders were placed with that address, a link to them is on its way. It works for 24 hours.",
+  "orders_expired": "That link has expired or is not valid. Ask for a new one below.",
+  "orders_problem_invalid": "Please give the email address you ordered with.",
+  "orders_problem_too_many": "Too many links have been asked for in the last hour. Please try again later.",
+  "orders_for": "Orders placed with",
+  "orders_none": "No paid orders were placed with this address.",
+  "orders_valid_note": "This list opens for 24 hours from the link that was sent. Each order keeps its own link."
 }

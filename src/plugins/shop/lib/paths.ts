@@ -30,6 +30,24 @@ export const ORDER_ROUTE = 'order';
 /** Where Stripe delivers its events. Not a page: no language segment. */
 export const STRIPE_WEBHOOK_ROUTE = 'stripe/webhook';
 
+/** A buyer's way back to their orders: the form, and the list it leads to. */
+export const ORDERS_ROUTE = 'orders';
+
+/** Where the form that asks for a link to one's orders posts. */
+export const ORDERS_LINK_ROUTE = 'orders/link';
+
+/**
+ * The site's own address: its domain when it has one, which a request cannot
+ * choose, else the one the request came to. Buyers are sent back to it and
+ * their emails link to it.
+ */
+export function siteOriginOf(domain: string | null, url: URL): string {
+  const own = domain?.trim() ?? '';
+  return /^[a-z0-9.-]+(:\d+)?$/i.test(own)
+    ? `https://${own.toLowerCase()}`
+    : url.origin;
+}
+
 export function shopPath(
   route: string,
   locale: string,

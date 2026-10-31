@@ -66,6 +66,7 @@ import {
   CART_ROUTE,
   CART_UPDATE_ROUTE,
   CHECKOUT_ROUTE,
+  ORDERS_ROUTE,
   shopPath,
 } from '../lib/paths.js';
 
@@ -296,6 +297,7 @@ export async function cartPage(
       cart_path: cart,
       inquiry_action: inquiry,
       checkout_path: checkout,
+      orders_path: shopPath(ORDERS_ROUTE, ctx.locale, ctx.site.defaultLocale),
       // Offered when every line can be ordered and the shop can take a
       // payment at all; where it ships is the checkout page's question.
       can_check_out: view.orderable && stripeKeys(ctx.secrets) !== null,

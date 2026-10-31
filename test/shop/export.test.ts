@@ -468,6 +468,8 @@ describe('the shop in a site export', () => {
         ...EXPORTED_TABLES,
         'p_shop_cart',
         'p_shop_cart_line',
+        // A day's link to a buyer's orders, holding their address.
+        'p_shop_order_link',
         'p_shop_rate',
         'p_shop_state',
       ].sort(),

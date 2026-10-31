@@ -59,6 +59,7 @@ import { cartPage, cartUpdate } from './routes/cart.js';
 import { checkoutPage, checkoutPlace } from './routes/checkout.js';
 import { cartInquiry } from './routes/inquiry.js';
 import { orderPage } from './routes/order.js';
+import { ordersLink, ordersPage } from './routes/orders.js';
 import { stripeWebhook } from './routes/stripe-webhook.js';
 
 async function scheduled(ctx: PluginContext): Promise<void> {
@@ -111,6 +112,8 @@ export const shop = definePlugin({
     checkout: checkoutPage,
     'checkout/place': checkoutPlace,
     'order/:orderNo': orderPage,
+    orders: ordersPage,
+    'orders/link': ordersLink,
     'stripe/webhook': stripeWebhook,
   },
   jobs: {

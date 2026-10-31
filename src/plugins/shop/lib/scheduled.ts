@@ -15,6 +15,7 @@ import { BASE_CURRENCY, CURRENCIES } from './currency.js';
 import { fetchEcbRates, ratesFromBase } from './ecb.js';
 import { type FollowUpContext, runFollowUps } from './order-follow-up.js';
 import { cancelOrder } from './order-fulfilment.js';
+import { deleteExpiredLookups } from './order-lookup.js';
 import { pricingRulesFromSettings } from './pricing.js';
 import { readRates, repriceChunk, storeRatesStatements } from './rates.js';
 import { productCacheTag, purgeOutcome } from './render-data.js';
@@ -322,6 +323,9 @@ export async function runScheduledTick(
     CART_CLEANUP_INTERVAL_MS
   ) {
     const deleted = await deleteExpiredCarts(db, now, CART_CLEANUP_LIMIT);
+    // And the links to buyers' orders that no longer open anything: each
+    // holds an address.
+    await deleteExpiredLookups(db, now, CART_CLEANUP_LIMIT);
     await setStateStatement(
       db,
       STATE_KEYS.cartsCleanedAt,

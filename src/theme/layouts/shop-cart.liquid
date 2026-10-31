@@ -54,6 +54,7 @@
 
   {% if cart.empty %}
   <p class="empty">{{ t.cart_empty }}</p>
+  {% if cart.orders_path != blank %}<p class="cart-note cart-orders"><a href="{{ cart.orders_path }}">{{ t.orders_link }}</a></p>{% endif %}
   {% if site.kinds.product %}<p class="cart-back"><a class="btn btn-outline" href="{{ site.kinds.product.path }}">{{ t.back_to_catalogue }}</a></p>{% endif %}
   {% else %}
   <ul class="cart-lines">
@@ -109,6 +110,7 @@
     {% endif %}
     {% if cart.subtotal != blank %}<p class="cart-subtotal"><span>{{ t.subtotal }}</span> <span class="price">{{ cart.subtotal }}</span></p>{% endif %}
     <p class="cart-note">{{ t.cart_note }}</p>
+    {% if cart.orders_path != blank %}<p class="cart-note"><a href="{{ cart.orders_path }}">{{ t.orders_link }}</a></p>{% endif %}
     {% if site.kinds.product or cart.can_check_out %}
     <div class="buy-actions">
       {% if site.kinds.product %}<a class="btn btn-outline" href="{{ site.kinds.product.path }}">{{ t.back_to_catalogue }}</a>{% endif %}

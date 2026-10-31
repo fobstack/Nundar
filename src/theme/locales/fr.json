@@ -242,5 +242,18 @@
   "order_tracking": "Numéro de suivi",
   "order_ships_within": "Expédition prévue sous",
   "order_not_found": "Cette commande ne peut pas être affichée. Le lien est peut-être incomplet : utilisez celui de votre e-mail.",
-  "order_questions": "Une question sur cette commande ? Répondez à l’un de nos e-mails à son sujet."
+  "order_questions": "Une question sur cette commande ? Répondez à l’un de nos e-mails à son sujet.",
+  "orders_title": "Vos commandes",
+  "orders_link": "Retrouver vos commandes",
+  "orders_form_title": "Retrouver vos commandes",
+  "orders_intro": "Indiquez l’adresse e-mail utilisée pour commander : nous y enverrons un lien vers toutes les commandes passées avec elle.",
+  "orders_email": "E-mail",
+  "orders_send": "Recevoir un lien",
+  "orders_sent": "Si des commandes ont été passées avec cette adresse, un lien vers elles est en route. Il est valable 24 heures.",
+  "orders_expired": "Ce lien a expiré ou n’est pas valide. Demandez-en un nouveau ci-dessous.",
+  "orders_problem_invalid": "Indiquez l’adresse e-mail utilisée pour commander.",
+  "orders_problem_too_many": "Trop de liens ont été demandés au cours de la dernière heure. Réessayez plus tard.",
+  "orders_for": "Commandes passées avec",
+  "orders_none": "Aucune commande payée n’a été passée avec cette adresse.",
+  "orders_valid_note": "Cette liste s’ouvre pendant 24 heures depuis le lien envoyé. Chaque commande garde son propre lien."
 }

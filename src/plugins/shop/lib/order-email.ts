@@ -47,6 +47,10 @@ interface Copy {
   readonly refundTiming: string;
   readonly cancelSubject: (orderNo: string) => string;
   readonly cancelIntro: string;
+  readonly lookupSubject: string;
+  readonly lookupIntro: string;
+  readonly lookupOpen: string;
+  readonly lookupIgnore: string;
   readonly signOff: string;
 }
 
@@ -72,6 +76,11 @@ const ENGLISH: Copy = {
     'Depending on your bank, it can take a few business days to appear.',
   cancelSubject: (orderNo) => `Order ${orderNo} cancelled`,
   cancelIntro: 'Your order has been cancelled. You have not been charged.',
+  lookupSubject: 'Your orders',
+  lookupIntro:
+    'Here is the link you asked for to the orders placed with this address. It works for 24 hours.',
+  lookupOpen: 'See your orders',
+  lookupIgnore: 'If you did not ask for it, you can ignore this email.',
   signOff: 'If you have any questions, simply reply to this email.',
 };
 
@@ -102,6 +111,12 @@ const COPY: Readonly<Record<string, Copy>> = {
     cancelSubject: (orderNo) => `Bestellung ${orderNo} storniert`,
     cancelIntro:
       'Ihre Bestellung wurde storniert. Ihnen wurde nichts berechnet.',
+    lookupSubject: 'Ihre Bestellungen',
+    lookupIntro:
+      'Hier ist der angeforderte Link zu den Bestellungen mit dieser Adresse. Er gilt 24 Stunden.',
+    lookupOpen: 'Bestellungen ansehen',
+    lookupIgnore:
+      'Wenn Sie ihn nicht angefordert haben, können Sie diese E-Mail ignorieren.',
     signOff: 'Bei Fragen antworten Sie einfach auf diese E-Mail.',
   },
   fr: {
@@ -127,6 +142,12 @@ const COPY: Readonly<Record<string, Copy>> = {
       'Selon votre banque, le remboursement peut mettre quelques jours ouvrés à apparaître.',
     cancelSubject: (orderNo) => `Commande ${orderNo} annulée`,
     cancelIntro: 'Votre commande a été annulée. Aucun montant n’a été débité.',
+    lookupSubject: 'Vos commandes',
+    lookupIntro:
+      'Voici le lien demandé vers les commandes passées avec cette adresse. Il est valable 24 heures.',
+    lookupOpen: 'Voir vos commandes',
+    lookupIgnore:
+      'Si vous ne l’avez pas demandé, vous pouvez ignorer cet e-mail.',
     signOff: 'Pour toute question, répondez simplement à cet e-mail.',
   },
   es: {
@@ -150,6 +171,11 @@ const COPY: Readonly<Record<string, Copy>> = {
     refundTiming: 'Según su banco, puede tardar unos días hábiles en aparecer.',
     cancelSubject: (orderNo) => `Pedido ${orderNo} cancelado`,
     cancelIntro: 'Su pedido ha sido cancelado. No se le ha cobrado nada.',
+    lookupSubject: 'Sus pedidos',
+    lookupIntro:
+      'Aquí tiene el enlace que pidió a los pedidos realizados con esta dirección. Es válido durante 24 horas.',
+    lookupOpen: 'Ver sus pedidos',
+    lookupIgnore: 'Si no lo pidió, puede ignorar este correo.',
     signOff: 'Si tiene alguna pregunta, responda a este correo.',
   },
 };
@@ -417,6 +443,33 @@ export function cancellationEmail(input: {
     subject,
     `<p>${escapeHtml(copy.cancelIntro)}</p>
 <p style="${SIGN_OFF_STYLE}">${escapeHtml(copy.signOff)}</p>`,
+  );
+  return { subject, text, html };
+}
+
+/**
+ * The link to an address's orders, sent to that address because someone
+ * asked for it there. It repeats nothing anyone typed but the address it
+ * goes to.
+ */
+export function orderLookupEmail(input: {
+  readonly locale: string;
+  readonly link: string;
+}): EmailContent {
+  const copy = COPY[languageOf(input.locale)] ?? ENGLISH;
+  const subject = copy.lookupSubject;
+  const text = [
+    copy.lookupIntro,
+    '',
+    `${copy.lookupOpen}: ${input.link}`,
+    '',
+    copy.lookupIgnore,
+  ].join('\n');
+  const html = layout(
+    subject,
+    `<p>${escapeHtml(copy.lookupIntro)}</p>
+${linkHtml(input.link, copy.lookupOpen)}
+<p style="${SIGN_OFF_STYLE}">${escapeHtml(copy.lookupIgnore)}</p>`,
   );
   return { subject, text, html };
 }

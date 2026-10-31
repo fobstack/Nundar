@@ -4,11 +4,7 @@
   "version": "0.1.0",
   "description": "Variants, prices in several currencies, stock, minimum order quantities, a cart, the cart sent as an inquiry, and checkout with Stripe, for a Mallok site.",
   "pluginApi": 2,
-  "hooks": [
-    "scheduled",
-    "renderData",
-    "onContentDelete"
-  ],
+  "hooks": ["scheduled", "renderData", "onContentDelete"],
   "routes": [
     {
       "path": "cart",
@@ -50,6 +46,18 @@
       "path": "stripe/webhook",
       "method": "POST",
       "body": "raw"
+    },
+    {
+      "path": "orders",
+      "method": "GET",
+      "render": "page",
+      "layout": "shop/orders",
+      "rateLimit": "relaxed"
+    },
+    {
+      "path": "orders/link",
+      "method": "POST",
+      "rateLimit": "strict"
     }
   ],
   "settings": {
@@ -75,10 +83,7 @@
       "type": "select",
       "label": "Price rounding",
       "help": "How a converted price is rounded up to a price point: to the next .99, or to the next whole unit.",
-      "choices": [
-        "ending99",
-        "integer"
-      ],
+      "choices": ["ending99", "integer"],
       "default": "ending99",
       "group": "Pricing"
     },
@@ -106,10 +111,7 @@
       "type": "select",
       "label": "Tax",
       "help": "none: prices are without tax and no tax is charged; the buyer settles any import duty and tax. stripe: Stripe Tax calculates tax at checkout where your account is registered to collect it, for a fee Stripe charges per transaction.",
-      "choices": [
-        "none",
-        "stripe"
-      ],
+      "choices": ["none", "stripe"],
       "default": "none",
       "group": "Orders"
     },
@@ -161,13 +163,8 @@
           "type": "datetime"
         }
       ],
-      "search": [
-        "sku"
-      ],
-      "filters": [
-        "status",
-        "stock_policy"
-      ],
+      "search": ["sku"],
+      "filters": ["status", "stock_policy"],
       "orderBy": "updated_at",
       "fields": {
         "sku": {
@@ -184,19 +181,14 @@
         "status": {
           "type": "select",
           "label": "Status",
-          "choices": [
-            "active",
-            "archived"
-          ],
+          "choices": ["active", "archived"],
           "default": "active",
           "help": "An archived variant is on no page, and is taken out of every cart."
         },
         "price": {
           "type": "money",
           "label": "Base price, each",
-          "currencies": [
-            "USD"
-          ],
+          "currencies": ["USD"],
           "help": "Leave empty for a variant that is quoted on request. Other currencies are derived from this at the day's exchange rate."
         },
         "other_prices": {
@@ -208,10 +200,7 @@
             "price": {
               "type": "money",
               "label": "Price, each",
-              "currencies": [
-                "EUR",
-                "GBP"
-              ],
+              "currencies": ["EUR", "GBP"],
               "required": true
             }
           }
@@ -228,10 +217,7 @@
         "stock_policy": {
           "type": "select",
           "label": "Stock policy",
-          "choices": [
-            "track",
-            "made_to_order"
-          ],
+          "choices": ["track", "made_to_order"],
           "default": "track",
           "help": "track: the stock below is a limit. made_to_order: always orderable, and the lead time is what the buyer is told."
         },
@@ -313,15 +299,8 @@
           "sortable": true
         }
       ],
-      "filters": [
-        "status"
-      ],
-      "search": [
-        "inquiry_no",
-        "name",
-        "company",
-        "email"
-      ],
+      "filters": ["status"],
+      "search": ["inquiry_no", "name", "company", "email"],
       "detail": [
         "message",
         "phone",
@@ -414,9 +393,7 @@
           "type": "datetime"
         }
       ],
-      "search": [
-        "name"
-      ],
+      "search": ["name"],
       "orderBy": "updated_at",
       "fields": {
         "name": {
@@ -442,20 +419,12 @@
               "type": "money",
               "label": "Rate",
               "required": true,
-              "currencies": [
-                "USD",
-                "EUR",
-                "GBP"
-              ]
+              "currencies": ["USD", "EUR", "GBP"]
             },
             "free_over": {
               "type": "money",
               "label": "Free from",
-              "currencies": [
-                "USD",
-                "EUR",
-                "GBP"
-              ],
+              "currencies": ["USD", "EUR", "GBP"],
               "help": "Goods coming to this much or more ship free. Empty: never free."
             }
           }
@@ -513,15 +482,8 @@
           "label": "Refunds owed"
         }
       ],
-      "filters": [
-        "status"
-      ],
-      "search": [
-        "order_no",
-        "company",
-        "email",
-        "recipient"
-      ],
+      "filters": ["status"],
+      "search": ["order_no", "company", "email", "recipient"],
       "detail": [
         "recipient",
         "phone",
@@ -583,12 +545,7 @@
             "carrier": {
               "type": "select",
               "label": "Carrier",
-              "choices": [
-                "DHL",
-                "FedEx",
-                "UPS",
-                "Other"
-              ],
+              "choices": ["DHL", "FedEx", "UPS", "Other"],
               "required": true
             },
             "carrier_other": {
@@ -685,13 +642,8 @@
           "label": "Refund"
         }
       ],
-      "filters": [
-        "state"
-      ],
-      "search": [
-        "order_no",
-        "payment_intent_id"
-      ],
+      "filters": ["state"],
+      "search": ["order_no", "payment_intent_id"],
       "detail": [],
       "orderBy": "processed_at",
       "actions": [
@@ -750,13 +702,8 @@
           "sortable": true
         }
       ],
-      "search": [
-        "email",
-        "company"
-      ],
-      "detail": [
-        "first_seen"
-      ],
+      "search": ["email", "company"],
+      "detail": ["first_seen"],
       "orderBy": "last_seen",
       "related": [
         {
@@ -855,9 +802,7 @@
           "label": "Average order"
         }
       ],
-      "filters": [
-        "currency"
-      ],
+      "filters": ["currency"],
       "orderBy": "id"
     },
     {
@@ -893,13 +838,8 @@
           "label": "Takings"
         }
       ],
-      "filters": [
-        "currency"
-      ],
-      "search": [
-        "sku",
-        "name"
-      ],
+      "filters": ["currency"],
+      "search": ["sku", "name"],
       "orderBy": "revenue_minor"
     }
   ],

@@ -3,6 +3,7 @@ import { CHECKOUT_FIELDS } from '../../src/plugins/shop/lib/checkout.js';
 import { CHECKOUT_REFUSALS } from '../../src/plugins/shop/lib/checkout-view.js';
 import { INQUIRY_FIELDS } from '../../src/plugins/shop/lib/inquiries.js';
 import { ORDER_STATUSES } from '../../src/plugins/shop/lib/order-state.js';
+import { ORDER_LOOKUP_PROBLEMS } from '../../src/plugins/shop/routes/orders.js';
 import { INQUIRY_REFUSALS } from '../../src/plugins/shop/routes/inquiry.js';
 import de from '../../src/theme/locales/de.json';
 import en from '../../src/theme/locales/en.json';
@@ -71,6 +72,7 @@ describe('the theme’s language packs', () => {
         ...CHECKOUT_REFUSALS.map((kind) => `checkout_problem_${kind}`),
         ...CHECKOUT_FIELDS.map((field) => `checkout_${field}`),
         ...ORDER_STATUSES.map((status) => `order_status_${status}`),
+        ...ORDER_LOOKUP_PROBLEMS.map((kind) => `orders_problem_${kind}`),
       ];
 
       expect(keys.filter((key) => !(key in pack))).toEqual([]);

@@ -79,6 +79,7 @@ import {
   CHECKOUT_ROUTE,
   orderLink,
   shopPath,
+  siteOriginOf,
 } from '../lib/paths.js';
 import { isCountryCode } from '../lib/shipping.js';
 import {
@@ -233,18 +234,6 @@ async function closeEarlierOrders(
   return 'closed';
 }
 
-/**
- * The site's own address: its domain when it has one, which a request cannot
- * choose, else the one the request came to. The buyer is sent back to it
- * and their emails link to it.
- */
-function siteOriginOf(ctx: PluginRequestContext): string {
-  const domain = ctx.site.domain?.trim() ?? '';
-  return /^[a-z0-9.-]+(:\d+)?$/i.test(domain)
-    ? `https://${domain.toLowerCase()}`
-    : ctx.url.origin;
-}
-
 function addressOf(form: CheckoutForm) {
   return {
     recipient: form.recipient,
@@ -342,7 +331,7 @@ export async function checkoutPlace(
   }
 
   const taxMode = taxModeOf(ctx.settings);
-  const origin = siteOriginOf(ctx);
+  const origin = siteOriginOf(ctx.site.domain, ctx.url);
   let order: { id: string; orderNo: string };
   try {
     order = await createPendingOrder(ctx.db, {

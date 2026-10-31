@@ -26,6 +26,7 @@
  *   carrier, tracking_no              '' until it ships
  *   lead_time_days the business days within which it leaves, or null
  *   cart_path      the cart page
+ *   orders_path    where a buyer finds all the orders they placed
  */
 
 import type {
@@ -36,7 +37,7 @@ import type {
 import { formatMoney } from '../lib/money.js';
 import { existingOrderLinkKey, tokenOpens } from '../lib/order-access.js';
 import { getOrder } from '../lib/orders.js';
-import { CART_ROUTE, shopPath } from '../lib/paths.js';
+import { CART_ROUTE, ORDERS_ROUTE, shopPath } from '../lib/paths.js';
 import { countryName } from '../lib/shipping.js';
 
 /** What an order number looks like: a prefix, a date, eight characters. */
@@ -129,6 +130,7 @@ export async function orderPage(
       tracking_no: order.trackingNo ?? '',
       lead_time_days: order.leadTimeDaysMax,
       cart_path: shopPath(CART_ROUTE, ctx.locale, ctx.site.defaultLocale),
+      orders_path: shopPath(ORDERS_ROUTE, ctx.locale, ctx.site.defaultLocale),
     },
   };
 }

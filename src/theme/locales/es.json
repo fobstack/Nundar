@@ -242,5 +242,18 @@
   "order_tracking": "Número de seguimiento",
   "order_ships_within": "Envío previsto en",
   "order_not_found": "No se puede mostrar este pedido. Puede que el enlace esté incompleto: use el de su correo.",
-  "order_questions": "¿Preguntas sobre este pedido? Responda a cualquiera de nuestros correos sobre él."
+  "order_questions": "¿Preguntas sobre este pedido? Responda a cualquiera de nuestros correos sobre él.",
+  "orders_title": "Sus pedidos",
+  "orders_link": "Encontrar sus pedidos",
+  "orders_form_title": "Encontrar sus pedidos",
+  "orders_intro": "Indique la dirección de correo con la que hizo el pedido y le enviaremos un enlace a todos los pedidos realizados con ella.",
+  "orders_email": "Correo electrónico",
+  "orders_send": "Enviarme un enlace",
+  "orders_sent": "Si se realizaron pedidos con esa dirección, le hemos enviado un enlace a ellos. Es válido durante 24 horas.",
+  "orders_expired": "Ese enlace ha caducado o no es válido. Pida uno nuevo a continuación.",
+  "orders_problem_invalid": "Indique la dirección de correo con la que hizo el pedido.",
+  "orders_problem_too_many": "Se han pedido demasiados enlaces en la última hora. Inténtelo más tarde.",
+  "orders_for": "Pedidos realizados con",
+  "orders_none": "No se realizaron pedidos pagados con esta dirección.",
+  "orders_valid_note": "Esta lista se abre durante 24 horas desde el enlace enviado. Cada pedido conserva su propio enlace."
 }

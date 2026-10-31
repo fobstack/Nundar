@@ -137,3 +137,28 @@ SELECT
   s.currency || ' ' || (SUM(s.minor) / 100) || '.' || substr('0' || (SUM(s.minor) % 100), -2) AS revenue
 FROM sold AS s
 GROUP BY s.sku, s.currency;
+
+-- A link a buyer asked for, to see their orders. The shop has no buyer
+-- accounts: a buyer gives the address they ordered with and is emailed a
+-- link, which opens a list of that address's orders for a day. The link's
+-- secret is not kept, only its SHA-256 digest
+CREATE TABLE IF NOT EXISTS p_shop_order_link (
+  -- Hex SHA-256 of the secret in the link
+  id         TEXT PRIMARY KEY,
+  -- The address asked for, in lower case, as orders are matched
+  email      TEXT NOT NULL,
+  -- One-way, from Mallok: what the limit per visitor counts by. Null when
+  -- the request had no address to hash
+  ip_hash    TEXT,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS p_shop_order_link_email
+  ON p_shop_order_link (email, created_at);
+
+CREATE INDEX IF NOT EXISTS p_shop_order_link_visitor
+  ON p_shop_order_link (ip_hash, created_at);
+
+CREATE INDEX IF NOT EXISTS p_shop_order_link_expiry
+  ON p_shop_order_link (expires_at);

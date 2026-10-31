@@ -35,6 +35,7 @@ describe('the shop schema', () => {
       'p_shop_inquiry_line',
       'p_shop_order',
       'p_shop_order_line',
+      'p_shop_order_link',
       'p_shop_outbox',
       'p_shop_price',
       'p_shop_rate',

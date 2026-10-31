@@ -54,6 +54,7 @@
   {% endif %}
 
   <p class="cart-note order-questions">{{ t.order_questions }}</p>
+  {% if order.orders_path != blank %}<p class="cart-note"><a href="{{ order.orders_path }}">{{ t.orders_link }}</a></p>{% endif %}
   {% else %}
   <header class="detail-head">
     <h1 class="detail-title">{{ t.order_title }}</h1>
