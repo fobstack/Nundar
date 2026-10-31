@@ -33,6 +33,11 @@
  *                    `phone`, `message`, or ''), `empty`, `cart_problem`,
  *                    `too_many`
  *
+ * And for paying for it:
+ *
+ *   checkout_path    the checkout page
+ *   can_check_out    every line can be ordered and the shop takes payments
+ *
  * The form's fields are `name`, `email`, `company`, `phone` and `message`,
  * of which the first two are required, and `website`, which a person must
  * not see: whatever fills it in is not one. `lib/inquiries.ts` has the

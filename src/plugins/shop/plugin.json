@@ -2,7 +2,7 @@
   "id": "shop",
   "name": "Shop",
   "version": "0.1.0",
-  "description": "Variants, prices in several currencies, stock, minimum order quantities, a cart and the cart sent as an inquiry, for a Mallok site.",
+  "description": "Variants, prices in several currencies, stock, minimum order quantities, a cart, the cart sent as an inquiry, and checkout with Stripe, for a Mallok site.",
   "pluginApi": 2,
   "hooks": ["scheduled", "renderData", "onContentDelete"],
   "routes": [
@@ -22,6 +22,30 @@
       "path": "cart/inquiry",
       "method": "POST",
       "rateLimit": "strict"
+    },
+    {
+      "path": "checkout",
+      "method": "GET",
+      "render": "page",
+      "layout": "shop/checkout",
+      "rateLimit": "relaxed"
+    },
+    {
+      "path": "checkout/place",
+      "method": "POST",
+      "rateLimit": "strict"
+    },
+    {
+      "path": "order/:orderNo",
+      "method": "GET",
+      "render": "page",
+      "layout": "shop/order",
+      "rateLimit": "relaxed"
+    },
+    {
+      "path": "stripe/webhook",
+      "method": "POST",
+      "body": "raw"
     }
   ],
   "settings": {
@@ -77,6 +101,12 @@
       "help": "none: prices are without tax and no tax is charged; the buyer settles any import duty and tax. stripe: Stripe Tax calculates tax at checkout where your account is registered to collect it, for a fee Stripe charges per transaction.",
       "choices": ["none", "stripe"],
       "default": "none",
+      "group": "Orders"
+    },
+    "terms_path": {
+      "type": "string",
+      "label": "Terms page",
+      "help": "A page on this site, such as /terms. When set, a buyer ticks that they accept it before paying, and the box links to it.",
       "group": "Orders"
     }
   },
@@ -394,6 +424,229 @@
           "help": "Lower first in the list a buyer chooses a country from."
         }
       }
+    },
+    {
+      "id": "orders",
+      "label": "Orders",
+      "type": "table",
+      "table": "p_shop_order_admin",
+      "columns": [
+        {
+          "field": "order_no",
+          "label": "Number",
+          "sortable": true
+        },
+        {
+          "field": "created_at",
+          "label": "Placed",
+          "type": "datetime",
+          "sortable": true
+        },
+        {
+          "field": "company",
+          "label": "Company",
+          "sortable": true
+        },
+        {
+          "field": "email",
+          "label": "Email",
+          "type": "email"
+        },
+        {
+          "field": "country",
+          "label": "Country"
+        },
+        {
+          "field": "total",
+          "label": "Total"
+        },
+        {
+          "field": "status",
+          "label": "Status",
+          "type": "badge"
+        },
+        {
+          "field": "refunds_owed",
+          "label": "Refunds owed"
+        }
+      ],
+      "filters": ["status"],
+      "search": ["order_no", "company", "email", "recipient"],
+      "detail": [
+        "recipient",
+        "phone",
+        "address",
+        "tax_id",
+        "subtotal",
+        "shipping",
+        "tax",
+        "shipping_zone",
+        "tax_mode",
+        "carrier",
+        "tracking_no",
+        "locale",
+        "stripe_payment_intent_id",
+        "updated_at"
+      ],
+      "orderBy": "created_at",
+      "related": [
+        {
+          "id": "lines",
+          "label": "Lines",
+          "table": "p_shop_order_line_admin",
+          "foreignKey": "order_id",
+          "orderBy": "sku",
+          "columns": [
+            {
+              "field": "sku",
+              "label": "SKU"
+            },
+            {
+              "field": "name",
+              "label": "Product"
+            },
+            {
+              "field": "quantity",
+              "label": "Quantity"
+            },
+            {
+              "field": "unit_price",
+              "label": "Unit price"
+            },
+            {
+              "field": "line_total",
+              "label": "Total"
+            }
+          ]
+        }
+      ],
+      "actions": [
+        {
+          "id": "order_ship",
+          "label": "Mark shipped",
+          "params": {
+            "tracking_no": {
+              "type": "string",
+              "label": "Tracking number",
+              "required": true
+            },
+            "carrier": {
+              "type": "select",
+              "label": "Carrier",
+              "choices": ["DHL", "FedEx", "UPS", "Other"],
+              "required": true
+            },
+            "carrier_other": {
+              "type": "string",
+              "label": "Carrier, if Other",
+              "help": "The carrier's name, when it is not one of the list."
+            }
+          }
+        },
+        {
+          "id": "order_deliver",
+          "label": "Mark delivered"
+        },
+        {
+          "id": "order_fulfil",
+          "label": "Fulfil an oversold order",
+          "params": {
+            "confirm": {
+              "type": "boolean",
+              "label": "The stock is back. Take it for these orders now and make them paid, ready to ship.",
+              "required": true
+            }
+          }
+        },
+        {
+          "id": "order_refund",
+          "label": "Refund in full",
+          "params": {
+            "restock": {
+              "type": "select",
+              "label": "Stock",
+              "choices": [
+                "Back to stock unless it has shipped",
+                "Back to stock",
+                "Leave the stock as it is"
+              ],
+              "default": "Back to stock unless it has shipped",
+              "required": true,
+              "help": "What the order took from stock. Goods that have shipped are usually still with the buyer."
+            },
+            "confirm": {
+              "type": "boolean",
+              "label": "Refund these orders in full at Stripe. This cannot be undone.",
+              "required": true
+            }
+          }
+        },
+        {
+          "id": "order_cancel",
+          "label": "Cancel unpaid",
+          "params": {
+            "confirm": {
+              "type": "boolean",
+              "label": "Cancel these unpaid orders. Their payment pages are closed first, and each buyer is told by email.",
+              "required": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "refused-payments",
+      "label": "Refused payments",
+      "type": "table",
+      "table": "p_shop_refused_payment",
+      "columns": [
+        {
+          "field": "order_no",
+          "label": "Order",
+          "sortable": true
+        },
+        {
+          "field": "processed_at",
+          "label": "Received",
+          "type": "datetime",
+          "sortable": true
+        },
+        {
+          "field": "order_status",
+          "label": "Order status",
+          "type": "badge"
+        },
+        {
+          "field": "payment_intent_id",
+          "label": "Payment"
+        },
+        {
+          "field": "state",
+          "label": "State",
+          "type": "badge"
+        },
+        {
+          "field": "refund_id",
+          "label": "Refund"
+        }
+      ],
+      "filters": ["state"],
+      "search": ["order_no", "payment_intent_id"],
+      "detail": [],
+      "orderBy": "processed_at",
+      "actions": [
+        {
+          "id": "payment_refund",
+          "label": "Refund",
+          "params": {
+            "confirm": {
+              "type": "boolean",
+              "label": "Refund these payments in full at Stripe. This cannot be undone.",
+              "required": true
+            }
+          }
+        }
+      ]
     }
   ],
   "secrets": {

@@ -48,6 +48,7 @@ import {
   type VariantRow,
 } from '../lib/cart-pricing.js';
 import { cartView } from '../lib/cart-view.js';
+import { stripeKeys } from '../lib/checkout.js';
 import { cartCookieHeader, readCartCookie } from '../lib/cookie.js';
 import {
   type Currency,
@@ -64,8 +65,10 @@ import {
   CART_INQUIRY_ROUTE,
   CART_ROUTE,
   CART_UPDATE_ROUTE,
+  CHECKOUT_ROUTE,
   shopPath,
 } from '../lib/paths.js';
+
 import {
   INQUIRY_FIELD_PARAM,
   INQUIRY_PARAM,
@@ -149,12 +152,14 @@ function paths(ctx: PluginRequestContext): {
   cart: string;
   update: string;
   inquiry: string;
+  checkout: string;
 } {
   const { defaultLocale } = ctx.site;
   return {
     cart: shopPath(CART_ROUTE, ctx.locale, defaultLocale),
     update: shopPath(CART_UPDATE_ROUTE, ctx.locale, defaultLocale),
     inquiry: shopPath(CART_INQUIRY_ROUTE, ctx.locale, defaultLocale),
+    checkout: shopPath(CHECKOUT_ROUTE, ctx.locale, defaultLocale),
   };
 }
 
@@ -282,13 +287,18 @@ export async function cartPage(
     currency,
     now,
   });
-  const { cart, update, inquiry } = paths(ctx);
+  const { cart, update, inquiry, checkout } = paths(ctx);
+  const view = cartView(facts, ctx.locale);
   return {
     view: {
-      ...cartView(facts, ctx.locale),
+      ...view,
       action: update,
       cart_path: cart,
       inquiry_action: inquiry,
+      checkout_path: checkout,
+      // Offered when every line can be ordered and the shop can take a
+      // payment at all; where it ships is the checkout page's question.
+      can_check_out: view.orderable && stripeKeys(ctx.secrets) !== null,
       // A cart with a part that has no price can be asked about though it
       // cannot be ordered; one with any other problem has to be put right.
       can_inquire: inquiryLinesOf(facts) !== null,

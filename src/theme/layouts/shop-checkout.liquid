@@ -1,0 +1,127 @@
+{% layout "layouts/base" %}
+{%- comment -%}
+  The checkout page. What is ordered, where it can go and what that costs
+  are the shop plugin's (`plugin_page`, described in the plugin's
+  `lib/checkout-view.ts`); how it looks, and every word on it, are this
+  theme's.
+
+  Two plain forms and no script. The first chooses the country, by GET, and
+  the page comes back with shipping and the total for it; the second, shown
+  once a country is chosen, carries that country and places the order. Each
+  field carries the server's own rule — `required`, the length the plugin
+  allows, the pattern an address or a name is held to — so that a browser
+  refuses what the server would: a refused form comes back empty.
+{%- endcomment -%}
+{% block title %}{{ t.checkout_title }} — {{ site.name }}{% endblock %}
+{% block content %}
+{% assign co = plugin_page %}
+<section class="shell detail cart checkout">
+  <header class="detail-head">
+    <h1 class="detail-title">{{ t.checkout_title }}</h1>
+  </header>
+
+  {%- comment -%}
+    Why the form that was sent placed no order: a kind, and for a field that
+    was wrong, its name. Nothing a person typed comes back.
+  {%- endcomment -%}
+  {% if co.refused %}
+  {% assign reason = "checkout_problem_" | append: co.refused.kind %}
+  <div class="cart-problem" role="alert" data-problem="checkout_{{ co.refused.kind }}">
+    <p><strong>{{ t.checkout_refused }}</strong></p>
+    <p>{{ t[reason] }}{% if co.refused.field != blank %}{% assign label = "checkout_" | append: co.refused.field %} {{ t[label] }}{% endif %}</p>
+  </div>
+  {% endif %}
+
+  {% if co.problem == "empty" %}
+  <p class="empty">{{ t.cart_empty }}</p>
+  <p class="cart-back"><a class="btn btn-outline" href="{{ co.cart_path }}">{{ t.checkout_back_to_cart }}</a></p>
+  {% elsif co.problem == "cart_problem" %}
+  <p class="empty">{{ t.checkout_problem_cart_problem }}</p>
+  <p class="cart-back"><a class="btn btn-outline" href="{{ co.cart_path }}">{{ t.checkout_back_to_cart }}</a></p>
+  {% else %}
+  <p class="checkout-intro">{{ t.checkout_intro }}</p>
+
+  <ul class="cart-lines checkout-lines">
+    {% for line in co.lines %}
+    <li class="checkout-line">
+      <span class="cart-what">
+        <span class="cart-name">{{ line.name }}</span>
+        <span class="offer-sku">{{ line.sku }}</span>
+      </span>
+      <span class="checkout-qty">× {{ line.quantity }}</span>
+      <span class="price">{{ line.line_total }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+
+  {% if co.countries.size == 0 %}
+  <p class="cart-note checkout-nowhere">{{ t.checkout_no_countries }}</p>
+  {% else %}
+  <form class="checkout-country" method="get" action="{{ co.country_action }}">
+    <label>{{ t.checkout_country }}
+      <select name="country" required autocomplete="country">
+        {% if co.country == blank %}<option value="">{{ t.checkout_country_none }}</option>{% endif %}
+        {% for entry in co.countries %}<option value="{{ entry.code }}"{% if entry.selected %} selected{% endif %}>{{ entry.name }}</option>{% endfor %}
+      </select>
+    </label>
+    <button class="btn btn-outline btn-sm" type="submit">{% if co.country == blank %}{{ t.checkout_country_show }}{% else %}{{ t.checkout_change }}{% endif %}</button>
+  </form>
+  {% endif %}
+
+  <dl class="offer-terms checkout-sums">
+    <div><dt>{{ t.checkout_goods }}</dt><dd><span class="price">{{ co.goods }}</span></dd></div>
+    {% if co.shipping != blank %}
+    <div><dt>{{ t.checkout_shipping }}{% if co.zone != blank %} · {{ co.zone }}{% endif %}</dt><dd>{% if co.shipping_free %}{{ t.checkout_shipping_free }}{% else %}<span class="price">{{ co.shipping }}</span>{% endif %}</dd></div>
+    {% endif %}
+    {% if co.total != blank %}
+    <div class="checkout-total"><dt>{{ t.checkout_total }}</dt><dd><span class="price">{{ co.total }}</span></dd></div>
+    {% endif %}
+  </dl>
+  {% if co.free_over != blank %}{% unless co.shipping_free %}<p class="cart-note">{{ t.checkout_free_over }} {{ co.free_over }}</p>{% endunless %}{% endif %}
+  <p class="cart-note">{% if co.tax_mode == "stripe" %}{{ t.checkout_tax_stripe }}{% else %}{{ t.checkout_tax_none }}{% endif %}</p>
+
+  {% if co.payments == false %}
+  <p class="cart-problem checkout-unavailable" role="status">{{ t.checkout_unavailable }}</p>
+  {% elsif co.problem == "too_small" or co.problem == "too_large" %}
+  {% assign reason = "checkout_problem_" | append: co.problem %}
+  <p class="cart-problem" role="status" data-problem="{{ co.problem }}">{{ t[reason] }}</p>
+  {% elsif co.can_place %}
+  {%- comment -%}
+    The order form. The country is the one chosen above, carried as it is;
+    the last field is one no person sees or reaches, and whatever fills it
+    in places no order.
+  {%- endcomment -%}
+  <form class="quote-form checkout-form" method="post" action="{{ co.action }}" aria-labelledby="checkout-form-title">
+    <h2 class="quote-form-title" id="checkout-form-title">{{ t.checkout_details }}</h2>
+    <div class="quote-form-pair">
+      <label>{{ t.checkout_company }}<input type="text" name="company" required pattern="{{ co.name_pattern }}" maxlength="{{ co.limits.company }}" autocomplete="organization"></label>
+      <label>{{ t.checkout_email }}<input type="email" name="email" required maxlength="{{ co.limits.email }}" pattern="{{ co.email_pattern }}" autocomplete="email"></label>
+    </div>
+    <div class="quote-form-pair">
+      <label>{{ t.checkout_recipient }}<input type="text" name="recipient" required pattern="{{ co.name_pattern }}" maxlength="{{ co.limits.recipient }}" autocomplete="name"></label>
+      <label>{{ t.checkout_phone }} <span class="quote-form-optional">{{ t.optional }}</span><input type="tel" name="phone" maxlength="{{ co.limits.phone }}" autocomplete="tel"></label>
+    </div>
+    <label>{{ t.checkout_line1 }}<input type="text" name="line1" required pattern="{{ co.name_pattern }}" maxlength="{{ co.limits.line1 }}" autocomplete="address-line1"></label>
+    <label>{{ t.checkout_line2 }} <span class="quote-form-optional">{{ t.optional }}</span><input type="text" name="line2" maxlength="{{ co.limits.line2 }}" autocomplete="address-line2"></label>
+    <div class="quote-form-pair">
+      <label>{{ t.checkout_postal_code }} <span class="quote-form-optional">{{ t.optional }}</span><input type="text" name="postal_code" maxlength="{{ co.limits.postal_code }}" autocomplete="postal-code"></label>
+      <label>{{ t.checkout_city }}<input type="text" name="city" required pattern="{{ co.name_pattern }}" maxlength="{{ co.limits.city }}" autocomplete="address-level2"></label>
+    </div>
+    <div class="quote-form-pair">
+      <label>{{ t.checkout_state }} <span class="quote-form-optional">{{ t.optional }}</span><input type="text" name="state" maxlength="{{ co.limits.state }}" autocomplete="address-level1"></label>
+      <label>{{ t.checkout_tax_id }} <span class="quote-form-optional">{{ t.optional }}</span><input type="text" name="tax_id" maxlength="{{ co.limits.tax_id }}"></label>
+    </div>
+    <input type="hidden" name="country" value="{{ co.country }}">
+    {% if co.terms_path != blank %}
+    <label class="checkout-terms"><input type="checkbox" name="terms" value="yes" required> {{ t.checkout_terms }} <a href="{{ co.terms_path }}">{{ t.checkout_terms_link }}</a></label>
+    {% endif %}
+    <p class="quote-form-trap" aria-hidden="true"><label>{{ t.quote_leave_empty }}<input type="text" name="website" tabindex="-1" autocomplete="off"></label></p>
+    <button class="btn btn-solid" type="submit">{{ t.checkout_pay }}</button>
+    <p class="cart-note">{{ t.checkout_pay_note }}</p>
+  </form>
+  {% endif %}
+
+  <p class="cart-back"><a class="btn btn-outline" href="{{ co.cart_path }}">{{ t.checkout_back_to_cart }}</a></p>
+  {% endif %}
+</section>
+{% endblock %}

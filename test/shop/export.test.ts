@@ -296,7 +296,6 @@ describe('the shop in a site export', () => {
         'payment-events',
         'SELECT * FROM p_shop_stripe_event ORDER BY processed_at, event_id',
       ],
-      ['outbox', 'SELECT * FROM p_shop_outbox ORDER BY seq'],
       [
         'shipping-zones',
         'SELECT * FROM p_shop_shipping_zone ORDER BY sort_order, name, id',
@@ -323,11 +322,17 @@ describe('the shop in a site export', () => {
       'manual:1',
       'order_paid:o-1:cs-10',
     ]);
-    // An order whole, but for the cart it came from and the digest of the
-    // buyer's link.
+    // What each change still owes, but for whose runner last had it in hand.
+    expect(rowsOf(files, 'outbox')).toEqual(
+      (await table('SELECT * FROM p_shop_outbox ORDER BY seq')).map(
+        ({ claimed_at: _claim, ...kept }) => kept,
+      ),
+    );
+    expect(rowsOf(files, 'outbox')).toHaveLength(2);
+    // An order whole, but for the cart it came from.
     expect(rowsOf(files, 'orders')).toEqual(
       (await table('SELECT * FROM p_shop_order ORDER BY created_at, id')).map(
-        ({ cart_id: _cart, access_hash: _link, ...kept }) => kept,
+        ({ cart_id: _cart, ...kept }) => kept,
       ),
     );
     expect(rowsOf(files, 'orders').map((row) => row.id)).toEqual([
@@ -481,7 +486,7 @@ describe('the shop in a site export', () => {
         'variant_id currency amount_minor source rate_used updated_at',
       p_shop_stock_adjustment: 'id variant_id delta reason ref_id created_at',
       p_shop_order:
-        'id order_no status currency subtotal_minor shipping_minor tax_minor total_minor stripe_session_id stripe_payment_intent_id email shipping_address locale tracking_no created_at updated_at cart_id access_hash company tax_id carrier shipping_zone tax_mode stripe_session_expires_at',
+        'id order_no status currency subtotal_minor shipping_minor tax_minor total_minor stripe_session_id stripe_payment_intent_id email shipping_address locale tracking_no created_at updated_at cart_id site_origin company tax_id carrier shipping_zone tax_mode stripe_session_expires_at',
       p_shop_order_line:
         'id order_id variant_id sku_snapshot name_snapshot unit_price_minor quantity',
       p_shop_stripe_event:
@@ -489,7 +494,8 @@ describe('the shop in a site export', () => {
       p_shop_shipping_zone: 'id name sort_order created_at updated_at',
       p_shop_shipping_country: 'country zone_id',
       p_shop_shipping_rate: 'zone_id currency amount_minor free_over_minor',
-      p_shop_outbox: 'seq id topic order_id ref created_at handled_at',
+      p_shop_outbox:
+        'seq id topic order_id ref created_at handled_at claimed_at',
       p_shop_inquiry:
         'id inquiry_no status name email company phone message locale currency country line_count subtotal_minor subtotal cart_id ip_hash notified_at acknowledged_at created_at updated_at',
       p_shop_inquiry_line:

@@ -139,6 +139,8 @@ export type CancelReason =
   | 'expired'
   /** Stripe would not open a Checkout session for it. */
   | 'failed'
+  /** The buyer checked the same cart out again, and this one gave way. */
+  | 'replaced'
   /** The seller cancelled it. */
   | 'seller';
 

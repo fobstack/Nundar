@@ -1,0 +1,64 @@
+{% layout "layouts/base" %}
+{%- comment -%}
+  One order's page, for its buyer: where Stripe sends them back after
+  paying, and where every email points. What the order holds is the shop
+  plugin's (`plugin_page`, described in the plugin's `routes/order.ts`);
+  how it looks, and every word on it, are this theme's. A link that does
+  not open the order finds nothing, and says only that.
+{%- endcomment -%}
+{% block title %}{{ t.order_title }}{% if plugin_page.found %} {{ plugin_page.order_no }}{% endif %} — {{ site.name }}{% endblock %}
+{% block content %}
+{% assign order = plugin_page %}
+<section class="shell detail cart order">
+  {% if order.found %}
+  <header class="detail-head">
+    <h1 class="detail-title">{{ t.order_title }} <span class="offer-sku">{{ order.order_no }}</span></h1>
+  </header>
+
+  {% assign status_key = "order_status_" | append: order.status %}
+  <dl class="offer-terms order-facts">
+    <div><dt>{{ t.order_placed_on }}</dt><dd>{{ order.placed_on }}</dd></div>
+    <div><dt>{{ t.order_status }}</dt><dd data-status="{{ order.status }}">{{ t[status_key] }}</dd></div>
+    {% if order.carrier != blank %}<div><dt>{{ t.order_carrier }}</dt><dd>{{ order.carrier }}</dd></div>{% endif %}
+    {% if order.tracking_no != blank %}<div><dt>{{ t.order_tracking }}</dt><dd><span class="offer-sku">{{ order.tracking_no }}</span></dd></div>{% endif %}
+  </dl>
+  {% if order.status == "pending" %}<p class="cart-note">{{ t.order_pending_note }}</p>{% endif %}
+  {% if order.status == "paid" and order.lead_time_days %}<p class="cart-note">{{ t.order_ships_within }} {{ order.lead_time_days }} {{ t.business_days }}</p>{% endif %}
+
+  <ul class="cart-lines checkout-lines">
+    {% for line in order.lines %}
+    <li class="checkout-line">
+      <span class="cart-what">
+        <span class="cart-name">{{ line.name }}</span>
+        <span class="offer-sku">{{ line.sku }}</span>
+      </span>
+      <span class="checkout-qty">× {{ line.quantity }}</span>
+      <span class="price">{{ line.line_total }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+
+  <dl class="offer-terms checkout-sums">
+    <div><dt>{{ t.subtotal }}</dt><dd><span class="price">{{ order.subtotal }}</span></dd></div>
+    <div><dt>{{ t.checkout_shipping }}{% if order.zone != blank %} · {{ order.zone }}{% endif %}</dt><dd><span class="price">{{ order.shipping }}</span></dd></div>
+    {% if order.tax != blank %}<div><dt>{{ t.order_tax }}</dt><dd><span class="price">{{ order.tax }}</span></dd></div>{% endif %}
+    <div class="checkout-total"><dt>{{ t.checkout_total }}</dt><dd><span class="price">{{ order.total }}</span></dd></div>
+  </dl>
+
+  {% if order.company != blank or order.address.size > 0 %}
+  <div class="order-address">
+    <h2 class="quote-form-title">{{ t.order_ship_to }}</h2>
+    <p>{% if order.company != blank %}{{ order.company }}{% if order.address.size > 0 %}<br>{% endif %}{% endif %}{% for line in order.address %}{{ line }}{% unless forloop.last %}<br>{% endunless %}{% endfor %}</p>
+    {% if order.tax_id != blank %}<p class="cart-note">{{ t.order_tax_id }}: {{ order.tax_id }}</p>{% endif %}
+  </div>
+  {% endif %}
+
+  <p class="cart-note order-questions">{{ t.order_questions }}</p>
+  {% else %}
+  <header class="detail-head">
+    <h1 class="detail-title">{{ t.order_title }}</h1>
+  </header>
+  <p class="empty">{{ t.order_not_found }}</p>
+  {% endif %}
+</section>
+{% endblock %}

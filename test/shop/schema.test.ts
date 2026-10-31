@@ -119,8 +119,6 @@ describe('the shop schema', () => {
     };
 
     expect(await columns('p_shop_order')).toEqual([
-      // A digest of the secret in the buyer's link, never the secret.
-      'access_hash',
       'carrier',
       'cart_id',
       'company',
@@ -133,6 +131,8 @@ describe('the shop schema', () => {
       'shipping_address',
       'shipping_minor',
       'shipping_zone',
+      // Where the buyer checked out: where their emails' links point.
+      'site_origin',
       'status',
       'stripe_payment_intent_id',
       'stripe_session_expires_at',

@@ -3,14 +3,18 @@
  *
  * Mallok runs one cron for the whole site, and every plugin's `scheduled`
  * hook shares that invocation's CPU budget (10 ms on the Workers Free plan).
- * So a tick does **one** small piece of work and returns: a repricing run in
- * progress goes first, then a rate refresh if one is due, then clearing
- * expired carts. Whatever is left waits for the next minute.
+ * So a tick does **one** small piece of work and returns: what an order's
+ * change still owes and its job left behind goes first, then closing orders
+ * whose payment page lapsed with no word from Stripe, then a repricing run
+ * in progress, then a rate refresh if one is due, then clearing expired
+ * carts. Whatever is left waits for the next minute.
  */
 
 import { deleteExpiredCarts } from './cart.js';
 import { BASE_CURRENCY, CURRENCIES } from './currency.js';
 import { fetchEcbRates, ratesFromBase } from './ecb.js';
+import { type FollowUpContext, runFollowUps } from './order-follow-up.js';
+import { cancelOrder } from './order-fulfilment.js';
 import { pricingRulesFromSettings } from './pricing.js';
 import { readRates, repriceChunk, storeRatesStatements } from './rates.js';
 import { productCacheTag, purgeOutcome } from './render-data.js';
@@ -36,6 +40,28 @@ const REPRICE_CHUNK = 50;
 /** Expired carts deleted per cleanup. */
 const CART_CLEANUP_LIMIT = 50;
 
+/**
+ * How old an outbox row is before the cron takes it up: its own job runs
+ * within a minute or two, and the cron is for what that job left behind.
+ */
+const FOLLOW_UP_GRACE_MS = 5 * 60 * 1000;
+
+/** Outbox rows carried out per tick. Each is a read and an email or two. */
+const FOLLOW_UP_LIMIT = 5;
+
+const ORDER_SWEEP_INTERVAL_MS = 10 * 60 * 1000;
+
+/**
+ * How long after its payment page lapsed an order is closed by the cron.
+ * Stripe's own word — `checkout.session.expired` — closes it sooner; this is
+ * for a word that never came, and leaves time for a payment made in the last
+ * moment whose word is late.
+ */
+const LAPSED_GRACE_MS = 60 * 60 * 1000;
+
+/** Orders closed per sweep. */
+const ORDER_SWEEP_LIMIT = 10;
+
 export type TickOutcome =
   | {
       readonly kind: 'repriced';
@@ -56,6 +82,12 @@ export type TickOutcome =
     }
   | { readonly kind: 'rates_failed'; readonly reason: string }
   | { readonly kind: 'carts_cleaned'; readonly deleted: number }
+  | {
+      readonly kind: 'follow_ups';
+      readonly handled: number;
+      readonly failed: number;
+    }
+  | { readonly kind: 'orders_lapsed'; readonly cancelled: number }
   | { readonly kind: 'idle' };
 
 function elapsed(since: string | undefined, now: Date): number {
@@ -66,12 +98,48 @@ function elapsed(since: string | undefined, now: Date): number {
   return Number.isNaN(then) ? Number.POSITIVE_INFINITY : now.getTime() - then;
 }
 
+/**
+ * Orders still waiting for a payment that can no longer come: their page
+ * lapsed an hour ago, or none was recorded for them and they are two hours
+ * old — a page lives one.
+ */
+async function closeLapsedOrders(db: D1Database, now: Date): Promise<number> {
+  const { results } = await db
+    .prepare(
+      `SELECT id FROM p_shop_order
+       WHERE status = 'pending'
+         AND ((stripe_session_expires_at IS NOT NULL
+               AND stripe_session_expires_at <= ?)
+           OR (stripe_session_expires_at IS NULL AND created_at <= ?))
+       ORDER BY created_at LIMIT ?`,
+    )
+    .bind(
+      new Date(now.getTime() - LAPSED_GRACE_MS).toISOString(),
+      new Date(now.getTime() - 2 * LAPSED_GRACE_MS).toISOString(),
+      ORDER_SWEEP_LIMIT,
+    )
+    .all<{ id: string }>();
+  let cancelled = 0;
+  for (const row of results) {
+    try {
+      await cancelOrder(db, { orderId: row.id, reason: 'expired', now });
+      cancelled += 1;
+    } catch {
+      // Paid meanwhile: it is no longer waiting.
+    }
+  }
+  return cancelled;
+}
+
 export async function runScheduledTick(
   ctx: {
     readonly db: D1Database;
     readonly settings: Readonly<Record<string, unknown>>;
     /** Purges the shop's own cache tags; absent where there is no cache. */
     readonly purgeTags?: (tags: readonly string[]) => Promise<unknown>;
+    /** Sends an email; absent where a tick is run for its pricing only. */
+    readonly sendEmail?: FollowUpContext['sendEmail'];
+    readonly site?: FollowUpContext['site'];
   },
   deps: {
     readonly fetch?: typeof fetch;
@@ -80,9 +148,47 @@ export async function runScheduledTick(
 ): Promise<TickOutcome> {
   const { db } = ctx;
   const now = (deps.now ?? (() => new Date()))();
+
+  // 1. What changes of orders still owe, that their own jobs left behind.
+  if (ctx.sendEmail !== undefined && ctx.site !== undefined) {
+    const outcome = await runFollowUps(
+      {
+        db,
+        settings: ctx.settings,
+        site: ctx.site,
+        sendEmail: ctx.sendEmail,
+        ...(ctx.purgeTags === undefined ? {} : { purgeTags: ctx.purgeTags }),
+      },
+      {
+        now,
+        limit: FOLLOW_UP_LIMIT,
+        committedBefore: new Date(now.getTime() - FOLLOW_UP_GRACE_MS),
+      },
+    );
+    if (outcome.handled + outcome.failed > 0) {
+      return { kind: 'follow_ups', ...outcome };
+    }
+  }
+
   const state = await readState(db);
 
-  // 1. A repricing run in progress: do the next chunk and nothing else.
+  // 2. Orders whose payment page lapsed with no word from Stripe.
+  if (
+    elapsed(state.get(STATE_KEYS.ordersSweptAt), now) >= ORDER_SWEEP_INTERVAL_MS
+  ) {
+    await setStateStatement(
+      db,
+      STATE_KEYS.ordersSweptAt,
+      now.toISOString(),
+      now,
+    ).run();
+    const cancelled = await closeLapsedOrders(db, now);
+    if (cancelled > 0) {
+      return { kind: 'orders_lapsed', cancelled };
+    }
+  }
+
+  // 3. A repricing run in progress: do the next chunk and nothing else.
   const cursor = state.get(STATE_KEYS.repriceCursor);
   if (cursor !== undefined) {
     const result = await repriceChunk(db, {
@@ -125,7 +231,7 @@ export async function runScheduledTick(
     };
   }
 
-  // 2. A rate refresh, when one is due.
+  // 4. A rate refresh, when one is due.
   if (
     elapsed(state.get(STATE_KEYS.ratesAttemptedAt), now) >= RATES_INTERVAL_MS
   ) {
@@ -172,7 +278,7 @@ export async function runScheduledTick(
     }
   }
 
-  // 3. Housekeeping.
+  // 5. Housekeeping.
   if (
     elapsed(state.get(STATE_KEYS.cartsCleanedAt), now) >=
     CART_CLEANUP_INTERVAL_MS

@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { CHECKOUT_FIELDS } from '../../src/plugins/shop/lib/checkout.js';
+import { CHECKOUT_REFUSALS } from '../../src/plugins/shop/lib/checkout-view.js';
 import { INQUIRY_FIELDS } from '../../src/plugins/shop/lib/inquiries.js';
+import { ORDER_STATUSES } from '../../src/plugins/shop/lib/order-state.js';
 import { INQUIRY_REFUSALS } from '../../src/plugins/shop/routes/inquiry.js';
 import de from '../../src/theme/locales/de.json';
 import en from '../../src/theme/locales/en.json';
@@ -63,6 +66,11 @@ describe('the theme’s language packs', () => {
         ...['in_stock', 'made_to_order', 'out_of_stock'].map(
           (state) => `avail_${state}`,
         ),
+        // Why checkout placed no order, which field was wrong, and every
+        // status an order's page can be in.
+        ...CHECKOUT_REFUSALS.map((kind) => `checkout_problem_${kind}`),
+        ...CHECKOUT_FIELDS.map((field) => `checkout_${field}`),
+        ...ORDER_STATUSES.map((status) => `order_status_${status}`),
       ];
 
       expect(keys.filter((key) => !(key in pack))).toEqual([]);

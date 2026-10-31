@@ -128,9 +128,8 @@ const TABLES: readonly ExportedTable[] = [
     name: 'orders',
     table: 'p_shop_order',
     sql: 'SELECT * FROM p_shop_order ORDER BY created_at, id LIMIT ?',
-    // The cart an order came from and the digest of the buyer's link: the
-    // one was a credential, the other is a credential's fingerprint.
-    without: ['cart_id', 'access_hash'],
+    // The cart an order came from: its id was a visitor's credential.
+    without: ['cart_id'],
   },
   {
     name: 'order-lines',
@@ -146,6 +145,8 @@ const TABLES: readonly ExportedTable[] = [
     name: 'outbox',
     table: 'p_shop_outbox',
     sql: 'SELECT * FROM p_shop_outbox ORDER BY seq LIMIT ?',
+    // Whose runner had a row in hand, a moment ago: nothing to carry.
+    without: ['claimed_at'],
   },
   {
     name: 'inquiries',

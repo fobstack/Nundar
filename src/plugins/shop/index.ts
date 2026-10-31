@@ -3,8 +3,9 @@
  *
  * Mallok provides the site: content, languages, SEO, the admin, the edge
  * cache. This plugin adds what makes it a shop: variants, prices in several
- * currencies, stock, minimum order quantities, a cart, and the cart sent as
- * an inquiry.
+ * currencies, stock, minimum order quantities, a cart, the cart sent as an
+ * inquiry, and checkout: shipping zones, the order, payment with Stripe, and
+ * what a seller does with an order afterwards.
  *
  * Everything here is commerce logic. Nothing about pages or rendering belongs
  * in it — that is the theme's side of the boundary.
@@ -22,6 +23,15 @@ import {
   markInquiries,
 } from './lib/inquiry-admin.js';
 import { INQUIRY_EMAILS_JOB, sendInquiryEmails } from './lib/inquiry-jobs.js';
+import {
+  cancelOrders,
+  deliverOrders,
+  fulfilOrders,
+  refundOrders,
+  refundRefusedPayments,
+  shipOrders,
+} from './lib/order-admin.js';
+import { FOLLOW_UP_JOB, followUpJob } from './lib/order-follow-up.js';
 import { renderData } from './lib/render-data.js';
 import { runScheduledTick } from './lib/scheduled.js';
 import {
@@ -29,6 +39,10 @@ import {
   removeShippingZone,
   saveShippingZone,
 } from './lib/shipping-records.js';
+import {
+  checkStripeSecretKey,
+  checkStripeWebhookSecret,
+} from './lib/stripe-check.js';
 import {
   loadVariant,
   onProductDeleted,
@@ -41,7 +55,10 @@ import inquiriesSql from './migrations/0003_inquiries.sql';
 import checkoutSql from './migrations/0004_checkout.sql';
 import manifest from './plugin.json';
 import { cartPage, cartUpdate } from './routes/cart.js';
+import { checkoutPage, checkoutPlace } from './routes/checkout.js';
 import { cartInquiry } from './routes/inquiry.js';
+import { orderPage } from './routes/order.js';
+import { stripeWebhook } from './routes/stripe-webhook.js';
 
 async function scheduled(ctx: PluginContext): Promise<void> {
   const outcome = await runScheduledTick(ctx);
@@ -89,9 +106,19 @@ export const shop = definePlugin({
     cart: cartPage,
     'cart/update': cartUpdate,
     'cart/inquiry': cartInquiry,
+    checkout: checkoutPage,
+    'checkout/place': checkoutPlace,
+    'order/:orderNo': orderPage,
+    'stripe/webhook': stripeWebhook,
   },
   jobs: {
     [INQUIRY_EMAILS_JOB]: (payload, ctx) => sendInquiryEmails(payload, ctx),
+    [FOLLOW_UP_JOB]: (payload, ctx) => followUpJob(payload, ctx),
+  },
+  checkSecrets: {
+    stripe_secret_key: (ctx: PluginContext) => checkStripeSecretKey(ctx),
+    stripe_webhook_secret: (ctx: PluginContext) =>
+      checkStripeWebhookSecret(ctx),
   },
   actions: {
     inquiry_mark_answered: (ids, ctx) => markInquiries(ids, ctx, 'answered'),
@@ -99,5 +126,12 @@ export const shop = definePlugin({
     inquiry_mark_spam: (ids, ctx) => markInquiries(ids, ctx, 'spam'),
     inquiry_export_csv: (ids, ctx) => exportInquiries(ids, ctx),
     inquiry_delete: (ids, ctx, params) => deleteInquiries(ids, ctx, params),
+    order_ship: (ids, ctx, params) => shipOrders(ids, ctx, params),
+    order_deliver: (ids, ctx) => deliverOrders(ids, ctx),
+    order_fulfil: (ids, ctx, params) => fulfilOrders(ids, ctx, params),
+    order_refund: (ids, ctx, params) => refundOrders(ids, ctx, params),
+    order_cancel: (ids, ctx, params) => cancelOrders(ids, ctx, params),
+    payment_refund: (ids, ctx, params) =>
+      refundRefusedPayments(ids, ctx, params),
   },
 });

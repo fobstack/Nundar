@@ -286,8 +286,18 @@ export async function priceCart(
   if (input.lines.length === 0) {
     return { ok: false, issues: [{ kind: 'empty' }] };
   }
-  const facts = await readCartFacts(db, input);
+  return pricedCartOf(await readCartFacts(db, input));
+}
 
+/**
+ * A cart's reading as an order's lines, or its list of problems. Checkout
+ * reads the cart once and turns that same reading into the order, so the
+ * order cannot be priced from anything the page did not show.
+ */
+export function pricedCartOf(facts: CartFacts): PricedCart {
+  if (facts.lines.length === 0) {
+    return { ok: false, issues: [{ kind: 'empty' }] };
+  }
   const issues = facts.lines.flatMap((line) =>
     line.issue === null ? [] : [line.issue],
   );

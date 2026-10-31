@@ -2351,6 +2351,141 @@ p {
   text-align: right;
 }
 
+/* ---------------------------------------------- checkout and an order page */
+
+.checkout-intro {
+  margin: 0 0 1.5rem;
+  color: var(--slate-600);
+}
+
+/* What is ordered, a line each: name and SKU, quantity, line total. */
+.checkout-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--slate-100);
+}
+
+.checkout-line:first-child {
+  border-top: 0;
+}
+
+.checkout-line .cart-what {
+  display: grid;
+  gap: 0.125rem;
+}
+
+.checkout-line .offer-sku {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.checkout-qty {
+  color: var(--slate-600);
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.checkout-country {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin: 1.5rem 0 0;
+}
+
+.checkout-country label,
+.checkout-form .checkout-terms {
+  color: var(--slate-700);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.checkout-country select {
+  display: block;
+  min-width: 16rem;
+  max-width: 100%;
+  margin-top: 0.375rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--slate-500);
+  border-radius: var(--radius-lg);
+  background: var(--white);
+  color: var(--slate-900);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.checkout-sums {
+  margin: 1.5rem 0 0.75rem auto;
+  max-width: 24rem;
+}
+
+.checkout-total dt,
+.checkout-total dd {
+  color: var(--slate-900);
+  font-weight: 700;
+}
+
+.checkout-total .price {
+  font-size: 1.25rem;
+}
+
+.checkout .cart-note,
+.order .cart-note {
+  margin-top: 0.5rem;
+}
+
+.checkout-unavailable {
+  margin-top: 1.5rem;
+}
+
+/* A box and its words on one line, not a field under a label. */
+.checkout-form .checkout-terms {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
+.checkout-form .checkout-terms input[type="checkbox"] {
+  display: inline-block;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--accent);
+}
+
+.checkout-form .checkout-terms a {
+  color: var(--accent-strong);
+}
+
+.order-facts {
+  margin-bottom: 1rem;
+}
+
+.order-address {
+  margin-top: 2rem;
+}
+
+.order-address p {
+  margin: 0.5rem 0 0;
+}
+
+.order-questions {
+  margin-top: 2rem;
+}
+
 .spec-card {
   padding: 1.25rem;
   border: 1px solid var(--slate-200);

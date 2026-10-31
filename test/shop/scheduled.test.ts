@@ -366,3 +366,159 @@ describe('the scheduled tick', () => {
     expect(lines.results.map((row) => row.cart_id)).toEqual(['b'.repeat(32)]);
   });
 });
+
+describe('the scheduled tick, for orders', () => {
+  beforeAll(ensureSite);
+  beforeEach(clearShopTables);
+
+  /** An order written straight into the table, as old as the test says. */
+  async function pendingOrder(
+    id: string,
+    createdAt: Date,
+    sessionLapsesAt: Date | null,
+  ): Promise<void> {
+    await db()
+      .prepare(
+        `INSERT INTO p_shop_order
+           (id, order_no, status, currency, subtotal_minor, shipping_minor,
+            tax_minor, total_minor, email, shipping_address, locale,
+            stripe_session_expires_at, created_at, updated_at)
+         VALUES (?, ?, 'pending', 'USD', 1000, 0, 0, 1000, 'a@b.example', '{}',
+                 'en', ?, ?, ?)`,
+      )
+      .bind(
+        id,
+        `ND-261001-${id.toUpperCase().padEnd(8, 'X').slice(0, 8)}`,
+        sessionLapsesAt?.toISOString() ?? null,
+        createdAt.toISOString(),
+        createdAt.toISOString(),
+      )
+      .run();
+  }
+
+  async function statuses(): Promise<Record<string, string>> {
+    const { results } = await db()
+      .prepare('SELECT id, status FROM p_shop_order ORDER BY id')
+      .all<{ id: string; status: string }>();
+    return Object.fromEntries(results.map((row) => [row.id, row.status]));
+  }
+
+  const quiet = (() => {
+    throw new Error('No fetch in these ticks');
+  }) as unknown as typeof fetch;
+
+  it('closes an order whose payment page lapsed an hour ago and never heard back', async () => {
+    const now = minutesAfter(0)();
+    const hour = 60 * 60 * 1000;
+    await pendingOrder(
+      'lapsed',
+      new Date(now.getTime() - 3 * hour),
+      new Date(now.getTime() - hour - 1),
+    );
+    await pendingOrder(
+      'fresh',
+      new Date(now.getTime() - hour),
+      new Date(now.getTime() - 60_000),
+    );
+    await pendingOrder(
+      'unrecorded',
+      new Date(now.getTime() - 2 * hour - 1),
+      null,
+    );
+    await pendingOrder('young', new Date(now.getTime() - hour), null);
+    await db()
+      .prepare(
+        "INSERT INTO p_shop_state (key, value, updated_at) VALUES ('rates_attempted_at', ?, ?)",
+      )
+      .bind(now.toISOString(), now.toISOString())
+      .run();
+
+    const outcome = await runScheduledTick(
+      { db: db(), settings: {} },
+      { fetch: quiet, now: () => now },
+    );
+
+    expect(outcome).toEqual({ kind: 'orders_lapsed', cancelled: 2 });
+    expect(await statuses()).toEqual({
+      fresh: 'pending',
+      lapsed: 'cancelled',
+      unrecorded: 'cancelled',
+      young: 'pending',
+    });
+    // Lapsed: nobody is written to about it.
+    const refs = await db()
+      .prepare('SELECT ref FROM p_shop_outbox ORDER BY seq')
+      .all<{ ref: string }>();
+    expect(refs.results.map((row) => row.ref)).toEqual(['expired', 'expired']);
+  });
+
+  it('looks for lapsed orders every ten minutes, not every one', async () => {
+    const start = minutesAfter(0)();
+    await db()
+      .prepare(
+        "INSERT INTO p_shop_state (key, value, updated_at) VALUES ('rates_attempted_at', ?, ?)",
+      )
+      .bind(start.toISOString(), start.toISOString())
+      .run();
+
+    await runScheduledTick(
+      { db: db(), settings: {} },
+      { fetch: quiet, now: () => start },
+    );
+    await pendingOrder(
+      'lapsed',
+      new Date(start.getTime() - 4 * 60 * 60 * 1000),
+      new Date(start.getTime() - 2 * 60 * 60 * 1000),
+    );
+
+    await runScheduledTick(
+      { db: db(), settings: {} },
+      { fetch: quiet, now: minutesAfter(5) },
+    );
+    expect((await statuses()).lapsed).toBe('pending');
+    const later = await runScheduledTick(
+      { db: db(), settings: {} },
+      { fetch: quiet, now: minutesAfter(10) },
+    );
+    expect(later).toEqual({ kind: 'orders_lapsed', cancelled: 1 });
+  });
+
+  it('carries out what an order owes once its own job has had five minutes', async () => {
+    const now = minutesAfter(0)();
+    await pendingOrder('cancelled-one', now, null);
+    await db()
+      .prepare(
+        `INSERT INTO p_shop_outbox (id, topic, order_id, ref, created_at)
+         VALUES ('order.cancelled:recent', 'order.cancelled', 'cancelled-one', 'seller', ?),
+                ('order.cancelled:old', 'order.cancelled', 'cancelled-one', 'seller', ?)`,
+      )
+      .bind(
+        new Date(now.getTime() - 60_000).toISOString(),
+        new Date(now.getTime() - 6 * 60_000).toISOString(),
+      )
+      .run();
+    const sent: string[] = [];
+
+    const outcome = await runScheduledTick(
+      {
+        db: db(),
+        settings: {},
+        site: { defaultLocale: 'en' },
+        sendEmail: async (message) => {
+          sent.push(message.subject);
+          return 'job';
+        },
+      },
+      { fetch: quiet, now: () => now },
+    );
+
+    expect(outcome).toEqual({ kind: 'follow_ups', handled: 1, failed: 0 });
+    expect(sent).toEqual(['Order ND-261001-CANCELLE cancelled']);
+    const left = await db()
+      .prepare('SELECT id FROM p_shop_outbox WHERE handled_at IS NULL')
+      .all<{ id: string }>();
+    expect(left.results.map((row) => row.id)).toEqual([
+      'order.cancelled:recent',
+    ]);
+  });
+});

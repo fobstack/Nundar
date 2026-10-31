@@ -793,3 +793,157 @@ export function holdWrites(
 /** The batch that stores an inquiry, for {@link holdWrites}. */
 export const INQUIRY_WRITE = (sql: string): boolean =>
   sql.includes('INSERT INTO p_shop_inquiry\n');
+
+/**
+ * Sets the shop's secrets through Mallok's API, as the admin does. A value of
+ * null removes one.
+ */
+export async function setShopSecrets(
+  values: Readonly<Record<string, string | null>>,
+): Promise<void> {
+  const response = await api(
+    'PUT',
+    '/_mallok/api/plugins/shop/secrets',
+    values,
+  );
+  if (!response.ok) {
+    throw new Error(`Secrets were refused: ${await response.text()}`);
+  }
+}
+
+/** The shop's settings, through Mallok's API; what is not named is kept. */
+export async function setShopSettings(
+  values: Readonly<Record<string, unknown>>,
+): Promise<void> {
+  const listed = (await (await api('GET', '/_mallok/api/plugins')).json()) as {
+    plugins: { id: string; values: Record<string, unknown> }[];
+  };
+  const known =
+    listed.plugins.find((plugin) => plugin.id === 'shop')?.values ?? {};
+  const response = await api('PATCH', '/_mallok/api/plugins/shop/settings', {
+    ...known,
+    ...values,
+  });
+  if (!response.ok) {
+    throw new Error(`Settings were refused: ${await response.text()}`);
+  }
+}
+
+/** One call the stand-in for Stripe received. */
+export interface StripeCall {
+  readonly path: string;
+  readonly method: string;
+  readonly body: URLSearchParams;
+  readonly headers: Headers;
+}
+
+/**
+ * Stands in for Stripe's API in place of the global `fetch`, which is the
+ * one the Worker under test reaches Stripe through: tests and the Worker run
+ * in the same isolate. Anything not for `api.stripe.com` goes to the real
+ * `fetch`. `fail` answers a path with an error instead; `restore` puts the
+ * real `fetch` back.
+ */
+export function stubStripe(
+  options: {
+    readonly fail?: (
+      path: string,
+    ) =>
+      | { status: number; body: unknown }
+      | null
+      | Promise<{ status: number; body: unknown } | null>;
+  } = {},
+): { calls: StripeCall[]; restore: () => void } {
+  const calls: StripeCall[] = [];
+  let sessions = 0;
+  const real = globalThis.fetch;
+  const stub = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init);
+    const url = new URL(request.url);
+    if (url.hostname !== 'api.stripe.com') {
+      return real(input, init);
+    }
+    const body = new URLSearchParams(
+      request.method === 'GET' ? '' : await request.text(),
+    );
+    const path = url.pathname;
+    calls.push({
+      path,
+      method: request.method,
+      body,
+      headers: request.headers,
+    });
+    const failure = (await options.fail?.(path)) ?? null;
+    if (failure !== null) {
+      return Response.json(failure.body, { status: failure.status });
+    }
+    if (path === '/v1/checkout/sessions') {
+      sessions += 1;
+      return Response.json({
+        id: `cs_test_${sessions}`,
+        url: `https://checkout.stripe.com/c/pay/cs_test_${sessions}`,
+      });
+    }
+    const expire = /^\/v1\/checkout\/sessions\/([^/]+)\/expire$/.exec(path);
+    if (expire !== null) {
+      return Response.json({ id: expire[1], status: 'expired' });
+    }
+    if (path === '/v1/customers') {
+      return Response.json({ id: `cus_test_${calls.length}` });
+    }
+    if (path === '/v1/refunds') {
+      return Response.json({
+        id: `re_test_${calls.length}`,
+        status: 'succeeded',
+      });
+    }
+    if (path === '/v1/balance') {
+      return Response.json({ object: 'balance' });
+    }
+    return Response.json(
+      { error: { type: 'invalid_request_error' } },
+      { status: 404 },
+    );
+  });
+  vi.stubGlobal('fetch', stub);
+  return {
+    calls,
+    restore: () => {
+      vi.stubGlobal('fetch', real);
+    },
+  };
+}
+
+/** A shipping zone, written as the admin's panel would through its handler. */
+export async function createShippingZone(input: {
+  readonly name: string;
+  readonly countries: readonly string[];
+  readonly rates: readonly {
+    readonly currency: Currency;
+    readonly amountMinor: number;
+    readonly freeOverMinor?: number;
+  }[];
+}): Promise<string> {
+  const response = await api(
+    'POST',
+    '/_mallok/api/plugins/shop/panels/shipping/records',
+    {
+      values: {
+        name: input.name,
+        countries: input.countries,
+        rates: input.rates.map((rate) => ({
+          price: { amount: rate.amountMinor, currency: rate.currency },
+          free_over:
+            rate.freeOverMinor === undefined
+              ? null
+              : { amount: rate.freeOverMinor, currency: rate.currency },
+        })),
+        sort_order: 0,
+      },
+    },
+  );
+  if (response.status !== 201) {
+    throw new Error(`The zone was refused: ${await response.text()}`);
+  }
+  return ((await response.json()) as { id: string }).id;
+}

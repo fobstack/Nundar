@@ -110,8 +110,8 @@ export async function createPendingOrder(
     readonly taxId?: string;
     readonly shippingZone?: string;
     readonly taxMode?: TaxMode;
-    /** The digest of the secret in the buyer's link to their order. */
-    readonly accessHash?: string | null;
+    /** The site's address as the buyer checked out on it. */
+    readonly siteOrigin?: string;
     readonly orderNoPrefix?: string;
   },
 ): Promise<{ id: string; orderNo: string; totalMinor: number }> {
@@ -156,7 +156,7 @@ export async function createPendingOrder(
         `INSERT INTO p_shop_order
            (id, order_no, status, currency, subtotal_minor, shipping_minor,
             tax_minor, total_minor, email, shipping_address, locale,
-            cart_id, company, tax_id, shipping_zone, tax_mode, access_hash,
+            cart_id, company, tax_id, shipping_zone, tax_mode, site_origin,
             created_at, updated_at)
          VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
@@ -176,7 +176,7 @@ export async function createPendingOrder(
         input.taxId ?? '',
         input.shippingZone ?? '',
         input.taxMode ?? 'none',
-        input.accessHash ?? null,
+        input.siteOrigin ?? '',
         nowIso,
         nowIso,
       ),
@@ -240,6 +240,8 @@ export interface OrderDetail {
   readonly cartId: string | null;
   readonly stripePaymentIntentId: string | null;
   readonly stripeSessionId: string | null;
+  /** The site's address as the buyer checked out on it; '' when unknown. */
+  readonly siteOrigin: string;
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly lines: readonly OrderLine[];
@@ -271,6 +273,7 @@ interface OrderRow {
   cart_id: string | null;
   stripe_payment_intent_id: string | null;
   stripe_session_id: string | null;
+  site_origin: string;
   created_at: string;
   updated_at: string;
 }
@@ -320,7 +323,7 @@ export async function getOrder(
                 tax_minor, total_minor, email, shipping_address, locale,
                 tracking_no, carrier, company, tax_id, shipping_zone,
                 tax_mode, cart_id, stripe_payment_intent_id,
-                stripe_session_id, created_at, updated_at
+                stripe_session_id, site_origin, created_at, updated_at
          FROM p_shop_order WHERE ${column} = ?`,
       )
       .bind(key),
@@ -377,6 +380,7 @@ export async function getOrder(
     cartId: row.cart_id,
     stripePaymentIntentId: row.stripe_payment_intent_id,
     stripeSessionId: row.stripe_session_id,
+    siteOrigin: row.site_origin,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     lines: ((lineResult?.results ?? []) as LineRow[]).map((line) => ({
@@ -601,6 +605,30 @@ function variantsOfOrder(db: D1Database, orderId: string): D1PreparedStatement {
     .bind(orderId);
 }
 
+/**
+ * Takes what was ordered out of the cart the order came from, once the
+ * payment is in (design §20, D10): not before, so that a payment that fails
+ * does not cost the buyer their cart, and not after, so that a buyer who
+ * comes back from paying does not find the same lines waiting to be bought
+ * again. Only the order's own variants: what was added since stays.
+ */
+function emptyOrderedCart(
+  db: D1Database,
+  orderId: string,
+  condition: SqlCondition,
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `DELETE FROM p_shop_cart_line
+       WHERE cart_id = (SELECT cart_id FROM p_shop_order WHERE id = ?)
+         AND variant_id IN (
+           SELECT variant_id FROM p_shop_order_line WHERE order_id = ?
+         )
+         AND ${condition.sql}`,
+    )
+    .bind(orderId, orderId, ...condition.binds);
+}
+
 /** The record that a payment was acted on, and how. */
 function recordEvent(
   db: D1Database,
@@ -627,7 +655,7 @@ function recordEvent(
 }
 
 /**
- * The payment itself: five writes between two readings of the stock.
+ * The payment itself: six writes between two readings of the stock.
  *
  * Returns null when the order had already left `from` by the time the batch
  * ran — a delivery racing this one got there first — in which case nothing
@@ -687,6 +715,7 @@ async function writePaid(
       .bind(nowIso, orderId, orderId, from),
     // What is owed because of this payment, committed with it.
     orderChangedOutbox(db, { orderId, from, to: 'paid', now: input.now }),
+    emptyOrderedCart(db, orderId, stillInStatus),
     // Last: every statement above tests the status this one changes.
     db
       .prepare(
@@ -702,7 +731,7 @@ async function writePaid(
     variantsOfOrder(db, orderId),
   ]);
 
-  if ((results[5]?.results ?? []).length === 0) {
+  if ((results[6]?.results ?? []).length === 0) {
     return null;
   }
   return {
@@ -710,7 +739,7 @@ async function writePaid(
     status: 'paid',
     availabilityChanged: changedProductGroups(
       (results[0]?.results ?? []) as unknown as StockRow[],
-      (results[6]?.results ?? []) as unknown as StockRow[],
+      (results[7]?.results ?? []) as unknown as StockRow[],
     ),
   };
 }
@@ -750,6 +779,11 @@ async function writeOversold(
       now: input.now,
       andIf: stillShort,
     }),
+    // Paid for, so it is out of the cart as a paid order's would be.
+    emptyOrderedCart(db, orderId, {
+      sql: `${ORDER_STILL_IN_STATUS} AND ${ORDER_SHORT_OF_STOCK}`,
+      binds: [orderId, from, orderId],
+    }),
     db
       .prepare(
         `UPDATE p_shop_order
@@ -765,7 +799,7 @@ async function writeOversold(
         orderId,
       ),
   ]);
-  return (results[2]?.results ?? []).length > 0;
+  return (results[3]?.results ?? []).length > 0;
 }
 
 /**

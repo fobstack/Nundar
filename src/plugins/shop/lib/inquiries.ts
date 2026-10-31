@@ -104,8 +104,9 @@ export type InquiryField = (typeof INQUIRY_FIELDS)[number];
  * becomes one space, rather than being refused: a browser lets a person type
  * or paste it, and a form the server refuses comes back empty. What is
  * stored is one line either way, which is what an email's subject needs.
+ * Checkout's fields follow the same rule.
  */
-function oneLine(max: number, min = 0) {
+export function oneLine(max: number, min = 0) {
   return z
     .string()
     .default('')

@@ -3,7 +3,8 @@
  *
  * It exists for the scheduled work, which runs once a minute and has to
  * remember across ticks when rates were last tried and where a chunked
- * repricing run has got to.
+ * repricing run has got to — and to keep the key buyers' order links are
+ * signed with, which a site export leaves behind with the rest of it.
  */
 
 export const STATE_KEYS = {
@@ -13,6 +14,10 @@ export const STATE_KEYS = {
   repriceCursor: 'reprice_cursor',
   /** ISO time expired carts were last cleared. */
   cartsCleanedAt: 'carts_cleaned_at',
+  /** The key buyers' order links are signed with (`order-access.ts`). */
+  orderLinkKey: 'order_link_key',
+  /** ISO time orders whose payment page lapsed were last looked for. */
+  ordersSweptAt: 'orders_swept_at',
 } as const;
 
 export async function readState(

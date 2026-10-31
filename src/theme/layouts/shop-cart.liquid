@@ -109,9 +109,10 @@
     {% endif %}
     {% if cart.subtotal != blank %}<p class="cart-subtotal"><span>{{ t.subtotal }}</span> <span class="price">{{ cart.subtotal }}</span></p>{% endif %}
     <p class="cart-note">{{ t.cart_note }}</p>
-    {% if site.kinds.product %}
+    {% if site.kinds.product or cart.can_check_out %}
     <div class="buy-actions">
-      <a class="btn btn-outline" href="{{ site.kinds.product.path }}">{{ t.back_to_catalogue }}</a>
+      {% if site.kinds.product %}<a class="btn btn-outline" href="{{ site.kinds.product.path }}">{{ t.back_to_catalogue }}</a>{% endif %}
+      {% if cart.can_check_out %}<a class="btn btn-solid" href="{{ cart.checkout_path }}">{{ t.checkout }}</a>{% endif %}
     </div>
     {% endif %}
   </div>

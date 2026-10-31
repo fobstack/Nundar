@@ -1131,6 +1131,89 @@ describe('markOrderPaid', () => {
     expect(row.total_minor).toBe(99_000);
   });
 
+  describe('the cart the order came from', () => {
+    /** A cart holding the order's lines and one more, and an order from it. */
+    async function orderFromCart(): Promise<string> {
+      await db().batch([
+        db()
+          .prepare(
+            `INSERT INTO p_shop_cart (id, created_at, updated_at, expires_at)
+             VALUES ('cart-1', ?, ?, '2099-01-01T00:00:00.000Z')`,
+          )
+          .bind(NOW.toISOString(), NOW.toISOString()),
+        db().prepare(
+          `INSERT INTO p_shop_cart_line (cart_id, variant_id, quantity)
+           VALUES ('cart-1', 'dn50', 10), ('cart-1', 'dn80', 3)`,
+        ),
+      ]);
+      const order = await createPendingOrder(db(), {
+        cart: await pricedCart([{ variantId: 'dn50', quantity: 10 }]),
+        locale: 'en',
+        email: EMAIL,
+        shippingAddress: ADDRESS,
+        cartId: 'cart-1',
+        now: NOW,
+      });
+      return order.id;
+    }
+
+    async function cartLines(): Promise<string[]> {
+      const { results } = await db()
+        .prepare(
+          "SELECT variant_id FROM p_shop_cart_line WHERE cart_id = 'cart-1' ORDER BY variant_id",
+        )
+        .all<{ variant_id: string }>();
+      return results.map((row) => row.variant_id);
+    }
+
+    it('keeps its lines while the order waits for its payment', async () => {
+      await orderFromCart();
+
+      expect(await cartLines()).toEqual(['dn50', 'dn80']);
+    });
+
+    it('loses what was ordered, and keeps the rest, when the payment is in', async () => {
+      const orderId = await orderFromCart();
+
+      await pay(orderId);
+
+      expect(await cartLines()).toEqual(['dn80']);
+    });
+
+    it('loses what was ordered when it was paid for after the stock had gone', async () => {
+      const orderId = await orderFromCart();
+      await setStock('dn50', 0);
+
+      expect((await pay(orderId)).outcome).toBe('oversold');
+
+      expect(await cartLines()).toEqual(['dn80']);
+    });
+
+    it('keeps its lines when the payment is one the order cannot take', async () => {
+      const orderId = await orderFromCart();
+      await cancelOrder(db(), { orderId, now: NOW });
+
+      expect((await pay(orderId)).outcome).toBe('refused');
+
+      expect(await cartLines()).toEqual(['dn50', 'dn80']);
+    });
+
+    it('keeps its lines when the payment loses a race and writes nothing', async () => {
+      const orderId = await orderFromCart();
+      const database = interceptBatches({
+        before: async (index) => {
+          if (index === 1) {
+            await cancelOrder(db(), { orderId, now: NOW });
+          }
+        },
+      });
+
+      await pay(orderId, 'evt_1', 'pi_1', database);
+
+      expect(await cartLines()).toEqual(['dn50', 'dn80']);
+    });
+  });
+
   it('reports the product whose availability the payment changed', async () => {
     // 15 in stock with a minimum order of 10 is orderable; 5 is not. That is
     // the moment the product's pages have to be purged.
