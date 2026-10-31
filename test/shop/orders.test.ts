@@ -10,6 +10,7 @@ import {
   getOrder,
   markOrderPaid,
   OrderNotFoundError,
+  OrderNotPlacedError,
   type ShippingAddress,
 } from '../../src/plugins/shop/lib/orders.js';
 import {
@@ -1129,6 +1130,130 @@ describe('markOrderPaid', () => {
     const row = await orderRow(order.id);
     expect(row.tax_minor).toBe(0);
     expect(row.total_minor).toBe(99_000);
+  });
+
+  describe('a second payment for an oversold order', () => {
+    async function oversold(): Promise<string> {
+      const order = await pendingOrder();
+      await setStock('dn50', 0);
+      expect((await pay(order.id, 'evt_a', 'pi_a')).outcome).toBe('oversold');
+      return order.id;
+    }
+
+    it('is refused and owed back while the stock is still short', async () => {
+      const orderId = await oversold();
+
+      const result = await pay(orderId, 'evt_b', 'pi_b');
+
+      expect(result.outcome).toBe('refused');
+      const row = await orderRow(orderId);
+      expect(row.status).toBe('oversold');
+      expect(row.stripe_payment_intent_id).toBe('pi_a');
+      expect(
+        (await outboxRows())
+          .filter((entry) => entry.topic === 'payment.refused')
+          .map((entry) => entry.ref),
+      ).toEqual(['pi_b']);
+    });
+
+    it('is refused and owed back once the stock is back, and does not pay the order', async () => {
+      const orderId = await oversold();
+      await setStock('dn50', 100);
+
+      const result = await pay(orderId, 'evt_b', 'pi_b');
+
+      expect(result.outcome).toBe('refused');
+      const row = await orderRow(orderId);
+      expect(row.status).toBe('oversold');
+      // The first payment is still the one to refund or fulfil.
+      expect(row.stripe_payment_intent_id).toBe('pi_a');
+      expect(await stockOf('dn50')).toBe(100);
+    });
+  });
+
+  it('keeps the tax Stripe calculated on an order paid for after its stock had gone', async () => {
+    const order = await createPendingOrder(db(), {
+      cart: await pricedCart(),
+      locale: 'en',
+      email: EMAIL,
+      shippingAddress: ADDRESS,
+      shippingMinor: 1500,
+      taxMode: 'stripe',
+      now: NOW,
+    });
+    await setStock('dn50', 0);
+
+    const result = await markOrderPaid(db(), {
+      orderId: order.id,
+      eventId: 'evt_1',
+      paymentIntentId: 'pi_1',
+      amountMinor: 100_500 + 20_100,
+      currency: 'usd',
+      now: LATER,
+    });
+
+    expect(result.outcome).toBe('oversold');
+    const row = await orderRow(order.id);
+    expect(row.tax_minor).toBe(20_100);
+    expect(row.total_minor).toBe(120_600);
+  });
+
+  describe('checkout’s guard', () => {
+    async function guarded(
+      cartId: string,
+      ipHash: string | null,
+      maxPerHour = 3,
+    ): Promise<{ id: string }> {
+      return createPendingOrder(db(), {
+        cart: await pricedCart(),
+        locale: 'en',
+        email: EMAIL,
+        shippingAddress: ADDRESS,
+        cartId,
+        now: NOW,
+        guard: { ipHash, maxPerHour },
+      });
+    }
+
+    it('places no second order from a cart while one is waiting for its payment', async () => {
+      await guarded('cart-a', 'visitor-1');
+
+      await expect(guarded('cart-a', 'visitor-1')).rejects.toEqual(
+        new OrderNotPlacedError('in_progress'),
+      );
+      expect(await count('p_shop_order')).toBe(1);
+      expect(await count('p_shop_order_line')).toBe(1);
+      // Another cart, and the same one once its order is not waiting.
+      await guarded('cart-b', 'visitor-1');
+      await db().prepare("UPDATE p_shop_order SET status = 'cancelled'").run();
+      await guarded('cart-a', 'visitor-1');
+      expect(await count('p_shop_order')).toBe(3);
+    });
+
+    it('counts a visitor’s orders of the last hour, and those of requests with no mark together', async () => {
+      for (const cart of ['c1', 'c2', 'c3']) {
+        await guarded(cart, 'visitor-1');
+      }
+
+      await expect(guarded('c4', 'visitor-1')).rejects.toEqual(
+        new OrderNotPlacedError('too_many'),
+      );
+      await guarded('c4', 'visitor-2');
+      for (const cart of ['n1', 'n2', 'n3']) {
+        await guarded(cart, null);
+      }
+      await expect(guarded('n4', null)).rejects.toEqual(
+        new OrderNotPlacedError('too_many'),
+      );
+      expect(await count('p_shop_order')).toBe(7);
+      // An hour later the count starts again.
+      await db()
+        .prepare(
+          "UPDATE p_shop_order SET created_at = '2026-10-05T06:00:00.000Z'",
+        )
+        .run();
+      await guarded('c5', 'visitor-1');
+    });
   });
 
   describe('the cart the order came from', () => {

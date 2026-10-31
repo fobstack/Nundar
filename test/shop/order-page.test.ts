@@ -191,9 +191,11 @@ describe('an order’s page', () => {
     expect(html).toContain('$1,039.00');
     expect(html).toContain('Analytical Engines Ltd');
     expect(html).toContain('Germany');
-    // Never kept, never indexed: it is one buyer's.
+    // Never kept, never indexed: it is one buyer's. And its address, which
+    // carries the secret, is passed to no other site.
     expect(response.headers.get('cache-control')).toContain('no-store');
     expect(response.headers.get('x-robots-tag')).toContain('noindex');
+    expect(response.headers.get('referrer-policy')).toBe('no-referrer');
   });
 
   it('opens in the language the order was placed in', async () => {
@@ -219,6 +221,7 @@ describe('an order’s page', () => {
       const response = await SELF.fetch(url);
       const html = await response.text();
       expect(response.status, url.toString()).toBe(404);
+      expect(response.headers.get('referrer-policy')).toBe('no-referrer');
       expect(html).toContain('This order cannot be shown');
       expect(html).not.toContain('HB-M8');
     }

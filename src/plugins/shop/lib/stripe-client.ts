@@ -95,23 +95,32 @@ export class StripeRequestError extends Error {
   }
 }
 
+/**
+ * One request to Stripe. A POST that creates something carries an
+ * idempotency key built from what it is for, so that asking twice creates it
+ * once. Stripe keeps the first answer under a key for a day, failures that
+ * began executing included, so a call that Stripe's own state already makes
+ * safe to repeat — refunding what is fully refunded, expiring what is not
+ * open — carries none, and can be tried again at once after a failure.
+ */
 async function stripeRequest<T>(
   secretKey: string,
   path: string,
-  body: Readonly<Record<string, string>>,
-  idempotencyKey: string,
+  body: Readonly<Record<string, string>> | null,
+  idempotencyKey: string | null,
   fetchImpl: typeof fetch,
 ): Promise<T> {
   const response = await fetchImpl(`${API_BASE}${path}`, {
-    method: 'POST',
+    method: body === null ? 'GET' : 'POST',
     headers: {
       Authorization: `Bearer ${secretKey}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
       'Stripe-Version': STRIPE_API_VERSION,
-      // What stops a retried request from charging, or refunding, twice.
-      'Idempotency-Key': idempotencyKey,
+      ...(body === null
+        ? {}
+        : { 'Content-Type': 'application/x-www-form-urlencoded' }),
+      ...(idempotencyKey === null ? {} : { 'Idempotency-Key': idempotencyKey }),
     },
-    body: new URLSearchParams(body).toString(),
+    ...(body === null ? {} : { body: new URLSearchParams(body).toString() }),
   });
 
   // A proxy's outage page is HTML, not Stripe's JSON; that is a failure to
@@ -344,9 +353,11 @@ export async function createTaxCustomer(
  * Expires an open Checkout session, so that it can no longer be paid: done
  * before an order is cancelled, never after.
  *
- * A session that is no longer open — paid, or expired already — is refused
- * by Stripe; that is reported as `not_open` for the caller to look into the
- * order, not thrown.
+ * A session Stripe will not expire — 400, it is not open; 404, it is not
+ * there — is reported as `not_open`, not thrown. **Not open may mean paid**:
+ * a caller that would cancel the order asks `closeCheckoutSession`, which
+ * finds out which. Anything else — a bad key, a limit, an outage — throws.
+ * No idempotency key: expiring is safe to repeat by itself.
  */
 export async function expireCheckoutSession(
   secretKey: string,
@@ -358,22 +369,70 @@ export async function expireCheckoutSession(
       secretKey,
       `/checkout/sessions/${encodeURIComponent(sessionId)}/expire`,
       {},
-      `expire:${sessionId}`,
+      null,
       fetchImpl,
     );
     return 'expired';
   } catch (error) {
     if (
       error instanceof StripeRequestError &&
-      error.status >= 400 &&
-      error.status < 500 &&
-      error.status !== 401 &&
-      error.status !== 429
+      (error.status === 400 || error.status === 404)
     ) {
       return 'not_open';
     }
     throw error;
   }
+}
+
+/** A Checkout session's state, as Stripe has it now. */
+export async function retrieveCheckoutSession(
+  secretKey: string,
+  sessionId: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<{ readonly id: string; readonly status: string | null }> {
+  return stripeRequest<{ id: string; status: string | null }>(
+    secretKey,
+    `/checkout/sessions/${encodeURIComponent(sessionId)}`,
+    null,
+    null,
+    fetchImpl,
+  );
+}
+
+/**
+ * Makes sure a Checkout session can no longer be paid, and says whether it
+ * was: `closed` when it is expired now or is not there, `paid` when Stripe
+ * has it complete — its payment is in, or on its way, and its order must not
+ * be cancelled. Throws when it is still open after all, or Stripe could not
+ * be asked.
+ */
+export async function closeCheckoutSession(
+  secretKey: string,
+  sessionId: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<'closed' | 'paid'> {
+  if (
+    (await expireCheckoutSession(secretKey, sessionId, fetchImpl)) === 'expired'
+  ) {
+    return 'closed';
+  }
+  let status: string | null;
+  try {
+    status = (await retrieveCheckoutSession(secretKey, sessionId, fetchImpl))
+      .status;
+  } catch (error) {
+    if (error instanceof StripeRequestError && error.status === 404) {
+      return 'closed';
+    }
+    throw error;
+  }
+  if (status === 'expired') {
+    return 'closed';
+  }
+  if (status === 'complete') {
+    return 'paid';
+  }
+  throw new Error('The Checkout session is still open and was not expired');
 }
 
 export interface Refund {
@@ -385,11 +444,14 @@ export interface Refund {
 export type RefundReason = 'duplicate' | 'fraudulent' | 'requested_by_customer';
 
 /**
- * Refunds a payment. No amount is sent, so the whole payment is refunded
- * (design §20, D11).
+ * Refunds a payment. No amount is sent, so all that is left of it is
+ * refunded (design §20, D11).
  *
- * Keyed on the payment intent: asking twice, because the first answer was
- * lost on the way back, must not refund twice.
+ * No idempotency key. A payment refunded in full cannot be refunded again —
+ * Stripe raises `charge_already_refunded` — so asking twice, because the
+ * first answer was lost, refunds once; and a key would hold a failure for a
+ * day, so that a refund Stripe could not make for want of balance could not
+ * be asked again until the next.
  */
 export async function createRefund(
   secretKey: string,
@@ -406,11 +468,5 @@ export async function createRefund(
     body.reason = input.reason;
   }
 
-  return stripeRequest<Refund>(
-    secretKey,
-    '/refunds',
-    body,
-    `refund:${input.paymentIntentId}`,
-    fetchImpl,
-  );
+  return stripeRequest<Refund>(secretKey, '/refunds', body, null, fetchImpl);
 }

@@ -521,4 +521,86 @@ describe('the scheduled tick, for orders', () => {
       'order.cancelled:recent',
     ]);
   });
+
+  it('asks Stripe before closing an order with a page, and leaves one Stripe has paid', async () => {
+    const now = minutesAfter(0)();
+    const hour = 60 * 60 * 1000;
+    for (const id of ['paid-late', 'expired', 'no-answer']) {
+      await pendingOrder(
+        id,
+        new Date(now.getTime() - 3 * hour),
+        new Date(now.getTime() - 2 * hour),
+      );
+      await db()
+        .prepare('UPDATE p_shop_order SET stripe_session_id = ? WHERE id = ?')
+        .bind(`cs_${id}`, id)
+        .run();
+    }
+    await db()
+      .prepare(
+        "INSERT INTO p_shop_state (key, value, updated_at) VALUES ('rates_attempted_at', ?, ?)",
+      )
+      .bind(now.toISOString(), now.toISOString())
+      .run();
+    const asked: string[] = [];
+    const stripe = (async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      asked.push(url.pathname);
+      if (url.pathname.endsWith('/expire')) {
+        return Response.json(
+          { error: { type: 'invalid_request_error' } },
+          { status: 400 },
+        );
+      }
+      if (url.pathname.endsWith('cs_no-answer')) {
+        return new Response('', { status: 503 });
+      }
+      return Response.json({
+        id: 'x',
+        status: url.pathname.endsWith('cs_paid-late') ? 'complete' : 'expired',
+      });
+    }) as unknown as typeof fetch;
+
+    const outcome = await runScheduledTick(
+      {
+        db: db(),
+        settings: {},
+        secrets: { stripe_secret_key: 'sk_test_sweep' },
+      },
+      { fetch: stripe, now: () => now },
+    );
+
+    expect(outcome).toEqual({ kind: 'orders_lapsed', cancelled: 1 });
+    expect(await statuses()).toEqual({
+      expired: 'cancelled',
+      'no-answer': 'pending',
+      'paid-late': 'pending',
+    });
+    expect(asked).toContain('/v1/checkout/sessions/cs_paid-late');
+  });
+
+  it('leaves an order with a page alone when there is no key to ask Stripe with', async () => {
+    const now = minutesAfter(0)();
+    await pendingOrder(
+      'keyless',
+      new Date(now.getTime() - 4 * 60 * 60 * 1000),
+      new Date(now.getTime() - 3 * 60 * 60 * 1000),
+    );
+    await db()
+      .prepare("UPDATE p_shop_order SET stripe_session_id = 'cs_keyless'")
+      .run();
+    await db()
+      .prepare(
+        "INSERT INTO p_shop_state (key, value, updated_at) VALUES ('rates_attempted_at', ?, ?)",
+      )
+      .bind(now.toISOString(), now.toISOString())
+      .run();
+
+    await runScheduledTick(
+      { db: db(), settings: {} },
+      { fetch: quiet, now: () => now },
+    );
+
+    expect(await statuses()).toEqual({ keyless: 'pending' });
+  });
 });

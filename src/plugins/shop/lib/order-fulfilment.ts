@@ -268,11 +268,17 @@ export async function refundOrder(
      * unless the caller says otherwise.
      */
     readonly restock?: boolean;
+    /**
+     * The status the caller decided `restock` on. The refund is then written
+     * only if the order is still in it: an order that shipped meanwhile
+     * must not have its goods put back on the strength of "not shipped".
+     */
+    readonly expectedStatus?: OrderStatus;
   },
 ): Promise<{ availabilityChanged: readonly string[] }> {
   const { orderId } = input;
   const nowIso = input.now.toISOString();
-  const from = await statusOf(db, orderId);
+  const from = input.expectedStatus ?? (await statusOf(db, orderId));
   assertTransition(from, 'refunded');
   // Bound into the two stock statements: with 0 they match no row, and the
   // refund is recorded with the stock left as it is.

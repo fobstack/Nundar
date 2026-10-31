@@ -27,11 +27,7 @@ import type { PricedCart } from './cart-pricing.js';
 import { type Currency, isCurrency } from './currency.js';
 import { sumMinor } from './money.js';
 import { ORDER_STILL_IN_STATUS, type SqlCondition } from './order-guard.js';
-import {
-  assertTransition,
-  canTransition,
-  type OrderStatus,
-} from './order-state.js';
+import { assertTransition, type OrderStatus } from './order-state.js';
 import { orderChangedOutbox, paymentRefusedOutbox } from './outbox.js';
 import { newReference } from './reference.js';
 
@@ -113,6 +109,17 @@ export async function createPendingOrder(
     /** The site's address as the buyer checked out on it. */
     readonly siteOrigin?: string;
     readonly orderNoPrefix?: string;
+    /**
+     * Checkout's guard, asked inside the write: no other order from this
+     * cart may be waiting for its payment, and the visitor — by Mallok's
+     * one-way mark of their address; requests without one count together —
+     * may have placed fewer than `maxPerHour` in the last hour. When either
+     * fails nothing is written and `OrderNotPlacedError` is thrown.
+     */
+    readonly guard?: {
+      readonly ipHash: string | null;
+      readonly maxPerHour: number;
+    };
   },
 ): Promise<{ id: string; orderNo: string; totalMinor: number }> {
   const { cart } = input;
@@ -149,16 +156,39 @@ export async function createPendingOrder(
   );
   const totalMinor = sumMinor([subtotalMinor, shippingMinor, taxMinor]);
   const nowIso = input.now.toISOString();
+  const hourAgo = new Date(input.now.getTime() - 60 * 60 * 1000).toISOString();
+  const guard = input.guard;
+  // Without a guard the condition holds for every row; with one, it is the
+  // guard, counted as the row is written so that two at once cannot both
+  // pass it.
+  const condition =
+    guard === undefined
+      ? { sql: '1 = 1', binds: [] as (string | number | null)[] }
+      : {
+          sql: `NOT EXISTS (
+                  SELECT 1 FROM p_shop_order
+                  WHERE cart_id = ? AND status = 'pending'
+                )
+                AND (SELECT COUNT(*) FROM p_shop_order
+                     WHERE ip_hash IS ? AND created_at > ?) < ?`,
+          binds: [
+            input.cartId ?? null,
+            guard.ipHash,
+            hourAgo,
+            guard.maxPerHour,
+          ],
+        };
 
-  await db.batch([
+  const [written] = await db.batch([
     db
       .prepare(
         `INSERT INTO p_shop_order
            (id, order_no, status, currency, subtotal_minor, shipping_minor,
             tax_minor, total_minor, email, shipping_address, locale,
             cart_id, company, tax_id, shipping_zone, tax_mode, site_origin,
-            created_at, updated_at)
-         VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            ip_hash, created_at, updated_at)
+         SELECT ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+         WHERE ${condition.sql}`,
       )
       .bind(
         id,
@@ -177,8 +207,10 @@ export async function createPendingOrder(
         input.shippingZone ?? '',
         input.taxMode ?? 'none',
         input.siteOrigin ?? '',
+        guard?.ipHash ?? null,
         nowIso,
         nowIso,
+        ...condition.binds,
       ),
     db
       .prepare(
@@ -189,7 +221,8 @@ export async function createPendingOrder(
                 json_extract(value, '$.v'), json_extract(value, '$.s'),
                 json_extract(value, '$.n'), json_extract(value, '$.p'),
                 json_extract(value, '$.q')
-         FROM json_each(?)`,
+         FROM json_each(?)
+         WHERE EXISTS (SELECT 1 FROM p_shop_order WHERE id = ?)`,
       )
       .bind(
         id,
@@ -203,10 +236,39 @@ export async function createPendingOrder(
             q: line.quantity,
           })),
         ),
+        id,
       ),
   ]);
 
+  if (guard !== undefined && (written?.meta.changes ?? 0) === 0) {
+    // Which of the two it was, read from the table as it is now.
+    const counted = await db
+      .prepare(
+        `SELECT COUNT(*) AS n FROM p_shop_order
+         WHERE ip_hash IS ? AND created_at > ?`,
+      )
+      .bind(guard.ipHash, hourAgo)
+      .first<{ n: number }>();
+    throw new OrderNotPlacedError(
+      (counted?.n ?? 0) >= guard.maxPerHour ? 'too_many' : 'in_progress',
+    );
+  }
   return { id, orderNo, totalMinor };
+}
+
+/** Why checkout's guard placed no order (`createPendingOrder`). */
+export class OrderNotPlacedError extends Error {
+  readonly reason: 'too_many' | 'in_progress';
+
+  constructor(reason: 'too_many' | 'in_progress') {
+    super(
+      reason === 'too_many'
+        ? 'Too many orders were placed from here in the last hour'
+        : 'Another order from this cart is waiting for its payment',
+    );
+    this.name = 'OrderNotPlacedError';
+    this.reason = reason;
+  }
 }
 
 export interface OrderLine {
@@ -759,6 +821,8 @@ async function writeOversold(
   db: D1Database,
   input: PaymentInput,
   from: OrderStatus,
+  /** The tax the payment carries, as for a paid order; null to leave it. */
+  taxMinor: number | null = null,
 ): Promise<boolean> {
   assertTransition(from, 'oversold');
   const { orderId } = input;
@@ -787,13 +851,18 @@ async function writeOversold(
     db
       .prepare(
         `UPDATE p_shop_order
-         SET status = 'oversold', stripe_payment_intent_id = ?, updated_at = ?
+         SET status = 'oversold', stripe_payment_intent_id = ?, updated_at = ?,
+             tax_minor = COALESCE(?, tax_minor),
+             total_minor = COALESCE(? + subtotal_minor + shipping_minor,
+                                    total_minor)
          WHERE id = ? AND status = ? AND ${ORDER_SHORT_OF_STOCK}
          RETURNING id`,
       )
       .bind(
         input.paymentIntentId,
         input.now.toISOString(),
+        taxMinor,
+        taxMinor,
         orderId,
         from,
         orderId,
@@ -880,8 +949,12 @@ export async function markOrderPaid(
       return { outcome: 'duplicate', status: from, availabilityChanged: [] };
     }
 
+    // Only an order waiting for its payment takes one. An oversold order
+    // has its payment already, and may become `paid` again only by being
+    // restocked (`fulfilOversold`): another payment for it is a second one,
+    // to be refunded, whatever the state machine allows the order.
     const action: PaymentAction =
-      !canTransition(from, 'paid') || !amountFits(state.order, input)
+      from !== 'pending' || !amountFits(state.order, input)
         ? 'refuse'
         : state.shortOfStock
           ? 'oversold'
@@ -904,7 +977,9 @@ export async function markOrderPaid(
           return paid;
         }
       } else if (action === 'oversold') {
-        if (await writeOversold(db, input, from)) {
+        if (
+          await writeOversold(db, input, from, paidTaxMinor(state.order, input))
+        ) {
           return {
             outcome: 'oversold',
             status: 'oversold',

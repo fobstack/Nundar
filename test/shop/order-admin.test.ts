@@ -353,7 +353,9 @@ describe('cancelling', () => {
     expect(await statusOf(placed.id)).toBe('pending');
   });
 
-  it('cancels nothing that was paid as the page was being closed', async () => {
+  it('cancels nothing Stripe has paid, though its word has not arrived here yet', async () => {
+    // The page will not expire: Stripe has it complete. The order here still
+    // says pending, because the payment's delivery is on its way.
     const placed = await order();
     await recordCheckoutSession(db(), {
       orderId: placed.id,
@@ -363,24 +365,14 @@ describe('cancelling', () => {
     });
     stripe?.restore();
     stripe = stubStripe({
-      fail: async (path) => {
-        if (!path.endsWith('/expire')) {
-          return null;
-        }
-        // Paid at Stripe a moment before the seller pressed the button.
-        await markOrderPaid(db(), {
-          orderId: placed.id,
-          eventId: 'evt_moment',
-          paymentIntentId: 'pi_moment',
-          now: NOW,
-        });
-        return {
-          status: 400,
-          body: { error: { type: 'invalid_request_error' } },
-        };
-      },
+      fail: (path) =>
+        path.endsWith('/expire')
+          ? { status: 400, body: { error: { type: 'invalid_request_error' } } }
+          : null,
+      sessionStatus: () => 'complete',
     });
     const { ctx } = context();
+
     const response = await cancelOrders(
       [placed.id],
       ctx,
@@ -388,8 +380,37 @@ describe('cancelling', () => {
       LATER,
     );
 
-    expect(await errorOf(response)).toMatch(/paid meanwhile/);
-    expect(await statusOf(placed.id)).toBe('paid');
+    expect(await errorOf(response)).toMatch(/has been paid at Stripe/);
+    expect(await statusOf(placed.id)).toBe('pending');
+    expect(await outboxRows()).toEqual([]);
+  });
+
+  it('cancels an order whose page had expired already', async () => {
+    const placed = await order();
+    await recordCheckoutSession(db(), {
+      orderId: placed.id,
+      sessionId: 'cs_admin',
+      expiresAt: LATER,
+      now: NOW,
+    });
+    stripe?.restore();
+    stripe = stubStripe({
+      fail: (path) =>
+        path.endsWith('/expire')
+          ? { status: 400, body: { error: { type: 'invalid_request_error' } } }
+          : null,
+      sessionStatus: () => 'expired',
+    });
+
+    const response = await cancelOrders(
+      [placed.id],
+      context().ctx,
+      { confirm: true },
+      LATER,
+    );
+
+    expect(response).toBeUndefined();
+    expect(await statusOf(placed.id)).toBe('cancelled');
   });
 
   it('asks for the box, for Stripe’s key when there is a page to close, and refuses a paid or oversold order', async () => {
@@ -473,6 +494,32 @@ describe('refunding', () => {
       { confirm: true, restock: RESTOCK_CHOICES[1] },
       LATER,
     );
+    expect(await stockOf('hb-m8')).toBe(900);
+  });
+
+  it('writes no refund, and puts nothing back, for an order that shipped while Stripe refunded it', async () => {
+    const placed = await paid();
+    stripe?.restore();
+    stripe = stubStripe({
+      fail: async (path) => {
+        if (path === '/v1/refunds') {
+          await shipOrder(db(), {
+            orderId: placed.id,
+            trackingNo: 'T',
+            now: NOW,
+          });
+        }
+        return null;
+      },
+    });
+
+    const message = await errorOf(
+      await refundOrders([placed.id], context().ctx, { confirm: true }, LATER),
+    );
+
+    expect(message).toMatch(/refund it again to record it/);
+    expect(await statusOf(placed.id)).toBe('shipped');
+    // Decided for "not shipped", so not applied to a shipped order.
     expect(await stockOf('hb-m8')).toBe(900);
   });
 

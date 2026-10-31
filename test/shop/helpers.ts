@@ -852,6 +852,8 @@ export function stubStripe(
       | { status: number; body: unknown }
       | null
       | Promise<{ status: number; body: unknown } | null>;
+    /** What Stripe says a session is when asked; `expired` unless told. */
+    readonly sessionStatus?: (id: string) => string;
   } = {},
 ): { calls: StripeCall[]; restore: () => void } {
   const calls: StripeCall[] = [];
@@ -882,6 +884,14 @@ export function stubStripe(
       return Response.json({
         id: `cs_test_${sessions}`,
         url: `https://checkout.stripe.com/c/pay/cs_test_${sessions}`,
+      });
+    }
+    const session = /^\/v1\/checkout\/sessions\/([^/]+)$/.exec(path);
+    if (session !== null && request.method === 'GET') {
+      const id = session[1] ?? '';
+      return Response.json({
+        id,
+        status: options.sessionStatus?.(id) ?? 'expired',
       });
     }
     const expire = /^\/v1\/checkout\/sessions\/([^/]+)\/expire$/.exec(path);

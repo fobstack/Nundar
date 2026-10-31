@@ -42,11 +42,22 @@ import { countryName } from '../lib/shipping.js';
 /** What an order number looks like: a prefix, a date, eight characters. */
 const ORDER_NO_SHAPE = /^[A-Z0-9]{1,6}-\d{6}-[0-9A-Z]{8}$/;
 
+/**
+ * The page's address carries its secret, so no link on it may pass the
+ * address on: a browser's default sends another site the origin alone, and
+ * this says so whatever the browser's default is.
+ */
+const NO_REFERRER = { 'referrer-policy': 'no-referrer' };
+
 export async function orderPage(
   input: RouteInput,
   ctx: PluginRequestContext,
 ): Promise<PluginPageResult> {
-  const notFound: PluginPageResult = { status: 404, view: { found: false } };
+  const notFound: PluginPageResult = {
+    status: 404,
+    view: { found: false },
+    headers: NO_REFERRER,
+  };
   const orderNo = input.params.orderNo ?? '';
   const token = ctx.url.searchParams.get('k') ?? '';
   if (!ORDER_NO_SHAPE.test(orderNo) || token === '') {
@@ -82,6 +93,7 @@ export async function orderPage(
 
   return {
     title: order.orderNo,
+    headers: NO_REFERRER,
     view: {
       found: true,
       order_no: order.orderNo,

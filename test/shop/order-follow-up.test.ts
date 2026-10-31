@@ -440,4 +440,37 @@ describe('carrying the rows out', () => {
 
     expect(sent).toEqual([]);
   });
+
+  it('holds an order’s later rows back while another runner has an earlier one in hand', async () => {
+    const placed = await order();
+    await pay(placed.id);
+    await shipOrder(db(), { orderId: placed.id, trackingNo: 'T-1', now: NOW });
+    await db()
+      .prepare(
+        "UPDATE p_shop_outbox SET claimed_at = ? WHERE topic = 'order.paid'",
+      )
+      .bind(LATER.toISOString())
+      .run();
+    const { ctx, sent } = context();
+
+    await runFollowUps(ctx, { now: LATER, limit: 10 });
+
+    // "Shipped" waits for "confirmed", which another runner is sending.
+    expect(sent).toEqual([]);
+  });
+
+  it('sends again only what a row had not handed over when it failed', async () => {
+    const placed = await order();
+    await pay(placed.id);
+    const failing = context({ failOn: (message) => message.to === SELLER });
+
+    await runFollowUps(failing.ctx, { now: LATER, limit: 10 });
+    const { ctx, sent } = context();
+    await runFollowUps(ctx, { now: LATER, limit: 10 });
+
+    expect(failing.sent.map((message) => message.to)).toEqual([BUYER]);
+    // The buyer was written to once, in the first run.
+    expect(sent.map((message) => message.to)).toEqual([SELLER]);
+    expect(await handled()).toEqual([LATER.toISOString()]);
+  });
 });

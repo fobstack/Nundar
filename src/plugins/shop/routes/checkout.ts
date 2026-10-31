@@ -23,7 +23,18 @@
  * One open payment per cart: placing the order again — a second tab, a
  * buyer who came back from Stripe's page and changed the cart — first
  * closes the session of any order from the same cart still waiting, so the
- * same goods cannot be paid for twice.
+ * same goods cannot be paid for twice. A session Stripe has complete is
+ * paid, whatever the order says yet — its word may be on its way — and is
+ * never closed: the buyer is told their order is being confirmed. The order
+ * is then written only if no other from the cart is waiting, which two
+ * placements at the same moment cannot both pass, and a placement whose
+ * order was closed by another while it opened its session closes that
+ * session again rather than send the buyer to it.
+ *
+ * And a limit per visitor, counted in the order's own write
+ * (`MAX_CHECKOUTS_PER_HOUR`): each placement writes an order and asks Stripe
+ * for a session, and a public form must not be a way to make either without
+ * end. Mallok's rate limit is in front of it, and is best-effort.
  */
 
 import type {
@@ -58,6 +69,7 @@ import { orderLinkKey, orderToken } from '../lib/order-access.js';
 import { cancelOrder } from '../lib/order-fulfilment.js';
 import {
   createPendingOrder,
+  OrderNotPlacedError,
   orderNoPrefixOf,
   recordCheckoutSession,
 } from '../lib/orders.js';
@@ -71,11 +83,14 @@ import {
 import { isCountryCode } from '../lib/shipping.js';
 import {
   CHECKOUT_LIFETIME_MS,
+  closeCheckoutSession,
   createCheckoutSession,
   createTaxCustomer,
-  expireCheckoutSession,
   StripeRequestError,
 } from '../lib/stripe-client.js';
+
+/** The most orders one visitor may place in an hour. */
+export const MAX_CHECKOUTS_PER_HOUR = 10;
 
 /** The checkout page's address carries a refusal as these parameters. */
 export const CHECKOUT_PARAM = 'checkout';
@@ -178,7 +193,12 @@ export async function checkoutPage(
 /**
  * Closes every order from this cart still waiting for its payment, so that
  * the order about to be placed is the only one that can be paid. Stripe is
- * asked to expire a session before its order is cancelled, never after.
+ * asked to close a session before its order is cancelled, never after.
+ *
+ * Answers `paid` when Stripe has one complete: it is not closed and its order
+ * is left to its payment, and no new order may be placed. An order with no
+ * session yet is another placement's, opening one now: it is cancelled, and
+ * that placement closes its session when it finds its order gone.
  *
  * Throws when Stripe could not be asked: an order whose session cannot be
  * closed must not be left open beside a new one.
@@ -188,7 +208,7 @@ async function closeEarlierOrders(
   cartId: string,
   secretKey: string,
   now: Date,
-): Promise<void> {
+): Promise<'closed' | 'paid'> {
   const { results } = await ctx.db
     .prepare(
       `SELECT id, stripe_session_id FROM p_shop_order
@@ -198,8 +218,11 @@ async function closeEarlierOrders(
     .bind(cartId)
     .all<{ id: string; stripe_session_id: string | null }>();
   for (const row of results) {
-    if (row.stripe_session_id !== null) {
-      await expireCheckoutSession(secretKey, row.stripe_session_id);
+    if (
+      row.stripe_session_id !== null &&
+      (await closeCheckoutSession(secretKey, row.stripe_session_id)) === 'paid'
+    ) {
+      return 'paid';
     }
     try {
       await cancelOrder(ctx.db, { orderId: row.id, reason: 'replaced', now });
@@ -207,6 +230,19 @@ async function closeEarlierOrders(
       // Paid, or closed, meanwhile: either way no longer waiting.
     }
   }
+  return 'closed';
+}
+
+/**
+ * The site's own address: its domain when it has one, which a request cannot
+ * choose, else the one the request came to. The buyer is sent back to it
+ * and their emails link to it.
+ */
+function siteOriginOf(ctx: PluginRequestContext): string {
+  const domain = ctx.site.domain?.trim() ?? '';
+  return /^[a-z0-9.-]+(:\d+)?$/i.test(domain)
+    ? `https://${domain.toLowerCase()}`
+    : ctx.url.origin;
 }
 
 function addressOf(form: CheckoutForm) {
@@ -294,30 +330,46 @@ export async function checkoutPlace(
   }
 
   try {
-    await closeEarlierOrders(ctx, cart.cartId, keys.secretKey, now);
+    if (
+      (await closeEarlierOrders(ctx, cart.cartId, keys.secretKey, now)) ===
+      'paid'
+    ) {
+      return refuse('paid_meanwhile', withCountry);
+    }
   } catch (error) {
     logFailure('close_earlier', error);
     return refuse('payments_unavailable', withCountry);
   }
 
   const taxMode = taxModeOf(ctx.settings);
-  const order = await createPendingOrder(ctx.db, {
-    cart: priced,
-    locale: ctx.locale,
-    email: form.email,
-    shippingAddress: addressOf(form),
-    shippingMinor: reading.quote.shippingMinor,
-    taxMinor: 0,
-    now,
-    cartId: cart.cartId,
-    company: form.company,
-    taxId: form.tax_id,
-    shippingZone: reading.rate.zoneName,
-    taxMode,
-    siteOrigin: ctx.url.origin,
-    orderNoPrefix: orderNoPrefixOf(ctx.settings.order_no_prefix),
-  });
+  const origin = siteOriginOf(ctx);
+  let order: { id: string; orderNo: string };
+  try {
+    order = await createPendingOrder(ctx.db, {
+      cart: priced,
+      locale: ctx.locale,
+      email: form.email,
+      shippingAddress: addressOf(form),
+      shippingMinor: reading.quote.shippingMinor,
+      taxMinor: 0,
+      now,
+      cartId: cart.cartId,
+      company: form.company,
+      taxId: form.tax_id,
+      shippingZone: reading.rate.zoneName,
+      taxMode,
+      siteOrigin: origin,
+      orderNoPrefix: orderNoPrefixOf(ctx.settings.order_no_prefix),
+      guard: { ipHash: ctx.ipHash, maxPerHour: MAX_CHECKOUTS_PER_HOUR },
+    });
+  } catch (error) {
+    if (error instanceof OrderNotPlacedError) {
+      return refuse(error.reason, withCountry);
+    }
+    throw error;
+  }
 
+  let opened: string | null = null;
   try {
     const token = await orderToken(await orderLinkKey(ctx.db, now), order.id);
     const expiresAt = new Date(now.getTime() + CHECKOUT_LIFETIME_MS);
@@ -345,28 +397,35 @@ export async function checkoutPlace(
         amountMinor: reading.quote.shippingMinor,
       },
       successUrl: orderLink({
-        origin: ctx.url.origin,
+        origin,
         orderNo: order.orderNo,
         token,
         locale: ctx.locale,
         defaultLocale: ctx.site.defaultLocale,
       }),
-      cancelUrl: `${ctx.url.origin}${routes.checkout}?${new URLSearchParams(withCountry).toString()}`,
+      cancelUrl: `${origin}${routes.checkout}?${new URLSearchParams(withCountry).toString()}`,
       locale: ctx.locale,
       expiresAt,
       ...(taxCustomer === null
         ? { customerEmail: form.email }
         : { taxCustomerId: taxCustomer.id }),
     });
+    opened = session.id;
     if (!session.url.startsWith('https://')) {
       throw new Error('Stripe answered with no page to pay on');
     }
-    await recordCheckoutSession(ctx.db, {
-      orderId: order.id,
-      sessionId: session.id,
-      expiresAt,
-      now,
-    });
+    // Closed by another placement while this one opened its session: the
+    // session must not be paid for an order that is no longer waiting.
+    if (
+      !(await recordCheckoutSession(ctx.db, {
+        orderId: order.id,
+        sessionId: session.id,
+        expiresAt,
+        now,
+      }))
+    ) {
+      throw new OrderNotPlacedError('in_progress');
+    }
     console.log(
       JSON.stringify({ event: 'shop_checkout', orderId: order.id, taxMode }),
     );
@@ -375,6 +434,16 @@ export async function checkoutPlace(
       headers: { location: session.url },
     });
   } catch (error) {
+    // A session this placement opened is closed again, whatever went wrong
+    // after it was opened.
+    if (opened !== null) {
+      await closeCheckoutSession(keys.secretKey, opened).catch(
+        (closing: unknown) => logFailure('close_opened', closing, order.id),
+      );
+    }
+    if (error instanceof OrderNotPlacedError) {
+      return refuse(error.reason, withCountry);
+    }
     logFailure('session', error, order.id);
     // Nothing was paid: the order is closed, quietly, and the buyer told
     // that payments are not available now.

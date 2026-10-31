@@ -126,6 +126,8 @@ describe('the shop schema', () => {
       'currency',
       'email',
       'id',
+      // Mallok's one-way mark of the visitor, for checkout's limit.
+      'ip_hash',
       'locale',
       'order_no',
       'shipping_address',

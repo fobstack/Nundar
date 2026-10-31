@@ -35,6 +35,16 @@ ALTER TABLE p_shop_order ADD COLUMN tax_mode TEXT NOT NULL DEFAULT 'none';
 -- When the Checkout session the order was sent to stops taking payment
 ALTER TABLE p_shop_order ADD COLUMN stripe_session_expires_at TEXT;
 
+-- One-way, from Mallok: what checkout's limit per visitor counts by. Null
+-- when the request had no address to hash
+ALTER TABLE p_shop_order ADD COLUMN ip_hash TEXT;
+
+CREATE INDEX IF NOT EXISTS p_shop_order_visitor
+  ON p_shop_order (ip_hash, created_at);
+
+CREATE INDEX IF NOT EXISTS p_shop_order_cart
+  ON p_shop_order (cart_id, status);
+
 -- For a payment the shop had to refuse: the refund a person made of it
 ALTER TABLE p_shop_stripe_event ADD COLUMN refund_id TEXT;
 
@@ -77,6 +87,11 @@ CREATE TABLE IF NOT EXISTS p_shop_shipping_rate (
 -- row is claimed before its follow-up runs, and a claim is let go after ten
 -- minutes in case its runner stopped
 ALTER TABLE p_shop_outbox ADD COLUMN claimed_at TEXT;
+
+-- What of a row's follow-up has been handed over already, a word a step:
+-- a row that owes two emails and fails at the second does not send the
+-- first again
+ALTER TABLE p_shop_outbox ADD COLUMN progress TEXT NOT NULL DEFAULT '';
 
 -- The orders as the admin lists them. A table panel shows a column as it is
 -- stored, so the amounts are spelled out here, in whole minor units divided

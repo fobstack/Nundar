@@ -4,13 +4,16 @@ import {
   existingOrderLinkKey,
   tokenOpens,
 } from '../../src/plugins/shop/lib/order-access.js';
+import { MAX_CHECKOUTS_PER_HOUR } from '../../src/plugins/shop/routes/checkout.js';
 import {
+  api,
   clearShopTables,
   createProduct,
   createShippingZone,
   createVariant,
   db,
   ensureSite,
+  holdWrites,
   ORIGIN,
   outboxRows,
   type StripeCall,
@@ -35,11 +38,13 @@ function post(
   path: string,
   fields: Record<string, string>,
   cookie?: string,
+  visitor = '203.0.113.20',
 ): Promise<Response> {
   return SELF.fetch(`${ORIGIN}${SHOP}${path}`, {
     method: 'POST',
     headers: {
       'content-type': 'application/x-www-form-urlencoded',
+      'cf-connecting-ip': visitor,
       ...(cookie === undefined ? {} : { cookie }),
     },
     body: new URLSearchParams(fields).toString(),
@@ -81,8 +86,9 @@ function place(
   cookie: string | undefined,
   fields: Record<string, string> = BUYER,
   locale = '',
+  visitor?: string,
 ): Promise<Response> {
-  return post(`${locale}/checkout/place`, fields, cookie);
+  return post(`${locale}/checkout/place`, fields, cookie, visitor);
 }
 
 /** Where a response sends the buyer, taken apart. */
@@ -534,5 +540,123 @@ describe('placing an order', () => {
 
     expect(landing(response).searchParams.get('checkout')).toBe('too_large');
     expect(await orders()).toEqual([]);
+  });
+
+  it('places no new order while an earlier one from the cart is paid at Stripe and not yet confirmed here', async () => {
+    const cookie = await cartWith(100);
+    await place(cookie);
+    stripe?.restore();
+    stripe = stubStripe({
+      fail: (path) =>
+        path.endsWith('/expire')
+          ? { status: 400, body: { error: { type: 'invalid_request_error' } } }
+          : null,
+      sessionStatus: () => 'complete',
+    });
+
+    const again = await place(cookie);
+
+    expect(landing(again).searchParams.get('checkout')).toBe('paid_meanwhile');
+    const [first, ...rest] = await orders();
+    // Left to its payment, whose word is on its way.
+    expect(first?.status).toBe('pending');
+    expect(rest).toEqual([]);
+    expect(await outboxRows()).toEqual([]);
+  });
+
+  it('closes again a session opened for an order another placement closed meanwhile', async () => {
+    const cookie = await cartWith(100);
+    stripe?.restore();
+    stripe = stubStripe({
+      // While this placement waits for its session, another one closes its
+      // order, as the second tab of the same cart does.
+      fail: async (path) => {
+        if (path === '/v1/checkout/sessions') {
+          await db()
+            .prepare("UPDATE p_shop_order SET status = 'cancelled'")
+            .run();
+        }
+        return null;
+      },
+    });
+
+    const response = await place(cookie);
+
+    expect(landing(response).searchParams.get('checkout')).toBe('in_progress');
+    expect(stripe?.calls.map((call) => call.path)).toEqual([
+      '/v1/checkout/sessions',
+      '/v1/checkout/sessions/cs_test_1/expire',
+    ]);
+  });
+
+  it('opens one order, and one payment page, when the same cart is placed twice at the same moment', async () => {
+    const cookie = await cartWith(100);
+    const gate = holdWrites((sql) =>
+      sql.includes('INSERT INTO p_shop_order\n'),
+    );
+    try {
+      const both = Promise.all([place(cookie), place(cookie)]);
+      await gate.arrived(2);
+      gate.open();
+      const answers = await both;
+
+      const kinds = answers
+        .map((answer) =>
+          answer.headers
+            .get('location')
+            ?.startsWith('https://checkout.stripe.com/')
+            ? 'stripe'
+            : landing(answer).searchParams.get('checkout'),
+        )
+        .sort();
+      expect(kinds).toEqual(['in_progress', 'stripe']);
+      const pending = (await orders()).filter(
+        (order) => order.status === 'pending',
+      );
+      expect(pending).toHaveLength(1);
+      expect(sessionCalls()).toHaveLength(1);
+    } finally {
+      gate.restore();
+    }
+  });
+
+  it('lets one visitor place a few orders an hour, counted where the order is written', async () => {
+    const cookie = await cartWith(100);
+    for (let attempt = 0; attempt < MAX_CHECKOUTS_PER_HOUR; attempt += 1) {
+      const response = await place(cookie, BUYER, '', '198.51.100.7');
+      expect(response.headers.get('location')).toMatch(
+        /^https:\/\/checkout\.stripe\.com\//,
+      );
+    }
+
+    const over = await place(cookie, BUYER, '', '198.51.100.7');
+    const another = await place(cookie, BUYER, '', '198.51.100.8');
+
+    expect(landing(over).searchParams.get('checkout')).toBe('too_many');
+    expect(another.headers.get('location')).toMatch(
+      /^https:\/\/checkout\.stripe\.com\//,
+    );
+    expect(await orders()).toHaveLength(MAX_CHECKOUTS_PER_HOUR + 1);
+  });
+
+  it('sends the buyer back to the site’s own domain, whatever the request was addressed to', async () => {
+    const settings = await api('PATCH', '/_mallok/api/settings', {
+      domain: 'shop.example',
+    });
+    try {
+      expect(settings.ok).toBe(true);
+      const cookie = await cartWith(100);
+
+      await place(cookie);
+
+      const body = sessionCalls()[0]?.body ?? new URLSearchParams();
+      expect(new URL(body.get('success_url') ?? '').origin).toBe(
+        'https://shop.example',
+      );
+      expect(body.get('cancel_url')).toMatch(/^https:\/\/shop\.example\//);
+      expect((await orders())[0]?.site_origin).toBe('https://shop.example');
+    } finally {
+      await api('PATCH', '/_mallok/api/settings', { domain: null });
+    }
   });
 });

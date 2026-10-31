@@ -13,10 +13,12 @@
  * that meet over it do not both send its email; a claim older than ten
  * minutes is taken to belong to a runner that stopped. A row whose follow-up
  * fails is let go and stops the rest of its order's rows: "shipped" must not
- * reach the buyer before "confirmed". A row is marked handled once
- * everything it owed has been handed over — to Mallok's email queue, which
- * retries delivery itself — so it can be handled twice only if the marking
- * is what fails, and then one email arrives twice; it is never lost.
+ * reach the buyer before "confirmed", and a row another runner holds holds
+ * its order's later rows back too. Each email a row owes is marked on the
+ * row once handed over — to Mallok's email queue, which retries delivery
+ * itself — and the row is marked handled once all of them are: a row run
+ * again sends only what it had not, and an email arrives twice only if a
+ * marking itself is what fails. None is lost.
  *
  * What each topic owes:
  *
@@ -70,6 +72,34 @@ interface Row {
   topic: OutboxTopic;
   order_id: string;
   ref: string | null;
+  /** The steps handed over already, a word each, comma-separated. */
+  progress: string;
+}
+
+/**
+ * Sends one email a row owes, unless a run before this one handed it over
+ * already, and marks it handed over. So a row that owes two and fails at the
+ * second sends only the second when it is run again.
+ */
+async function once(
+  ctx: FollowUpContext,
+  row: Row,
+  step: string,
+  send: () => Promise<unknown>,
+): Promise<void> {
+  if (row.progress.split(',').includes(step)) {
+    return;
+  }
+  await send();
+  await ctx.db
+    .prepare(
+      `UPDATE p_shop_outbox
+       SET progress = CASE WHEN progress = '' THEN ? ELSE progress || ',' || ? END
+       WHERE id = ?`,
+    )
+    .bind(step, step, row.id)
+    .run();
+  row.progress = row.progress === '' ? step : `${row.progress},${step}`;
 }
 
 /** Where the seller is told; null when the shop has nowhere to tell them. */
@@ -201,12 +231,16 @@ async function perform(
   switch (row.topic) {
     case 'order.paid': {
       const link = await linkOf(ctx, order, now);
-      await ctx.sendEmail(
-        message(order.email, orderConfirmationEmail(order, link)),
+      await once(ctx, row, 'buyer', () =>
+        ctx.sendEmail(
+          message(order.email, orderConfirmationEmail(order, link)),
+        ),
       );
       if (seller !== null && !(await wasOversold(ctx, order.id))) {
-        await ctx.sendEmail(
-          message(seller, sellerNewOrderEmail(order), order.email),
+        await once(ctx, row, 'seller', () =>
+          ctx.sendEmail(
+            message(seller, sellerNewOrderEmail(order), order.email),
+          ),
         );
       }
       await purgeOrderProducts(ctx, order.id);
@@ -214,53 +248,63 @@ async function perform(
     }
     case 'order.oversold':
       if (seller !== null) {
-        await ctx.sendEmail(
-          message(seller, sellerOversoldEmail(order), order.email),
-        );
-      }
-      return;
-    case 'payment.refused':
-      if (seller !== null && row.ref !== null) {
-        await ctx.sendEmail(
-          message(
-            seller,
-            sellerRefundOwedEmail({
-              orderNo: order.orderNo,
-              paymentIntentId: row.ref,
-              because: refusedBecause(order, row.ref),
-            }),
+        await once(ctx, row, 'seller', () =>
+          ctx.sendEmail(
+            message(seller, sellerOversoldEmail(order), order.email),
           ),
         );
       }
       return;
+    case 'payment.refused': {
+      const paymentIntentId = row.ref;
+      if (seller !== null && paymentIntentId !== null) {
+        await once(ctx, row, 'seller', () =>
+          ctx.sendEmail(
+            message(
+              seller,
+              sellerRefundOwedEmail({
+                orderNo: order.orderNo,
+                paymentIntentId,
+                because: refusedBecause(order, paymentIntentId),
+              }),
+            ),
+          ),
+        );
+      }
+      return;
+    }
     case 'order.shipped': {
       const link = await linkOf(ctx, order, now);
-      await ctx.sendEmail(
-        message(
-          order.email,
-          shippingNotificationEmail({
-            orderNo: order.orderNo,
-            locale: order.locale,
-            trackingNo: order.trackingNo,
-            carrier: order.carrier,
-            ...(link === undefined ? {} : { orderUrl: link }),
-          }),
+      await once(ctx, row, 'buyer', () =>
+        ctx.sendEmail(
+          message(
+            order.email,
+            shippingNotificationEmail({
+              orderNo: order.orderNo,
+              locale: order.locale,
+              trackingNo: order.trackingNo,
+              carrier: order.carrier,
+              ...(link === undefined ? {} : { orderUrl: link }),
+            }),
+          ),
         ),
       );
       return;
     }
     case 'order.refunded': {
       const link = await linkOf(ctx, order, now);
-      await ctx.sendEmail(
-        message(
-          order.email,
-          refundNotificationEmail({
-            orderNo: order.orderNo,
-            locale: order.locale,
-            currency: order.currency,
-            totalMinor: order.totalMinor,
-            ...(link === undefined ? {} : { orderUrl: link }),
-          }),
+      await once(ctx, row, 'buyer', () =>
+        ctx.sendEmail(
+          message(
+            order.email,
+            refundNotificationEmail({
+              orderNo: order.orderNo,
+              locale: order.locale,
+              currency: order.currency,
+              totalMinor: order.totalMinor,
+              ...(link === undefined ? {} : { orderUrl: link }),
+            }),
+          ),
         ),
       );
       await purgeOrderProducts(ctx, order.id);
@@ -268,10 +312,15 @@ async function perform(
     }
     case 'order.cancelled':
       if (row.ref === 'seller') {
-        await ctx.sendEmail(
-          message(
-            order.email,
-            cancellationEmail({ orderNo: order.orderNo, locale: order.locale }),
+        await once(ctx, row, 'buyer', () =>
+          ctx.sendEmail(
+            message(
+              order.email,
+              cancellationEmail({
+                orderNo: order.orderNo,
+                locale: order.locale,
+              }),
+            ),
           ),
         );
       }
@@ -325,15 +374,15 @@ export async function runFollowUps(
   const { now } = input;
   const { results } = await ctx.db
     .prepare(
-      `SELECT id, topic, order_id, ref FROM p_shop_outbox
+      // Rows another runner has in hand are read too: a claim that fails
+      // below holds back its order's later rows, which must not overtake it.
+      `SELECT id, topic, order_id, ref, progress FROM p_shop_outbox
        WHERE handled_at IS NULL
-         AND (claimed_at IS NULL OR claimed_at <= ?)
          AND (? IS NULL OR order_id = ?)
          AND (? IS NULL OR created_at <= ?)
        ORDER BY seq LIMIT ?`,
     )
     .bind(
-      new Date(now.getTime() - CLAIM_HOLD_MS).toISOString(),
       input.orderId ?? null,
       input.orderId ?? null,
       input.committedBefore?.toISOString() ?? null,

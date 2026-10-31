@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  closeCheckoutSession,
   createCheckoutSession,
   createRefund,
   createTaxCustomer,
@@ -413,7 +414,7 @@ describe('createRefund', () => {
     expect(refund).toEqual({ id: 're_1', status: 'succeeded' });
   });
 
-  it('keys idempotency on the payment intent, so a retry cannot refund twice', async () => {
+  it('carries no idempotency key: a full refund cannot be made twice, and a failure must not be held for a day', async () => {
     const { impl, calls } = recordingFetch({ id: 're_1', status: 'succeeded' });
 
     await createRefund(
@@ -423,8 +424,39 @@ describe('createRefund', () => {
     );
 
     const call = only(calls);
-    expect(headersOf(call)['Idempotency-Key']).toBe('refund:pi_9');
+    expect(headersOf(call)['Idempotency-Key']).toBeUndefined();
+    expect(bodyOf(call).has('amount')).toBe(false);
     expect(bodyOf(call).get('reason')).toBe('requested_by_customer');
+  });
+
+  it('keeps keys for what creates something: a session and a customer, keyed on the order', async () => {
+    const session = recordingFetch({ id: 'cs_1', url: 'https://x' });
+    const customer = recordingFetch({ id: 'cus_1' });
+
+    await createCheckoutSession('sk_test_123', SESSION, session.impl);
+    await createTaxCustomer(
+      'sk_test_123',
+      {
+        orderId: 'order-1',
+        email: 'b@example.com',
+        company: 'Acme',
+        address: {
+          recipient: 'B',
+          line1: '1 Road',
+          city: 'Town',
+          postalCode: '1',
+          country: 'DE',
+        },
+      },
+      customer.impl,
+    );
+
+    expect(headersOf(only(session.calls))['Idempotency-Key']).toBe(
+      'checkout:order-1',
+    );
+    expect(headersOf(only(customer.calls))['Idempotency-Key']).toBe(
+      'customer:order-1',
+    );
   });
 });
 
@@ -479,7 +511,9 @@ describe('expireCheckoutSession', () => {
     expect(call.url).toBe(
       'https://api.stripe.com/v1/checkout/sessions/cs_1/expire',
     );
-    expect(headersOf(call)['Idempotency-Key']).toBe('expire:cs_1');
+    expect(call.init.method).toBe('POST');
+    // Expiring is safe to repeat by itself; a key would hold a failure.
+    expect(headersOf(call)['Idempotency-Key']).toBeUndefined();
   });
 
   it('reports a session that is no longer open, rather than throwing', async () => {
@@ -498,12 +532,96 @@ describe('expireCheckoutSession', () => {
     );
   });
 
-  it('throws for what a later try could change: a bad key, a limit, an outage', async () => {
-    for (const status of [401, 429, 500, 503]) {
+  it('throws for anything but a session that is not open or not there', async () => {
+    for (const status of [401, 403, 409, 429, 500, 503]) {
       const { impl } = recordingFetch({ error: { type: 'api_error' } }, status);
       await expect(
         expireCheckoutSession('sk_test_123', 'cs_1', impl),
       ).rejects.toThrow(new RegExp(`status ${status}`));
     }
+  });
+});
+
+describe('closeCheckoutSession', () => {
+  /** A fetch answering the expiry and the lookup as told. */
+  function stripeSays(
+    expire: { status: number; body: unknown },
+    lookup: { status: number; body: unknown },
+  ) {
+    const calls: Captured[] = [];
+    const impl = (async (url: string, init: RequestInit) => {
+      calls.push({ url, init });
+      const answer = url.endsWith('/expire') ? expire : lookup;
+      return new Response(JSON.stringify(answer.body), {
+        status: answer.status,
+      });
+    }) as unknown as typeof fetch;
+    return { impl, calls };
+  }
+
+  const notOpen = {
+    status: 400,
+    body: { error: { type: 'invalid_request_error' } },
+  };
+
+  it('closes an open session, and asks nothing more', async () => {
+    const { impl, calls } = stripeSays(
+      { status: 200, body: { id: 'cs_1', status: 'expired' } },
+      { status: 500, body: {} },
+    );
+
+    expect(await closeCheckoutSession('sk_test_123', 'cs_1', impl)).toBe(
+      'closed',
+    );
+    expect(calls).toHaveLength(1);
+  });
+
+  it('says a session that will not expire was paid when Stripe has it complete', async () => {
+    const { impl, calls } = stripeSays(notOpen, {
+      status: 200,
+      body: { id: 'cs_1', status: 'complete' },
+    });
+
+    expect(await closeCheckoutSession('sk_test_123', 'cs_1', impl)).toBe(
+      'paid',
+    );
+    const [, lookup] = calls;
+    expect(lookup?.url).toBe(
+      'https://api.stripe.com/v1/checkout/sessions/cs_1',
+    );
+    expect(lookup?.init.method).toBe('GET');
+  });
+
+  it('says closed for one that expired already, or is not there', async () => {
+    const expired = stripeSays(notOpen, {
+      status: 200,
+      body: { id: 'cs_1', status: 'expired' },
+    });
+    const missing = stripeSays(
+      { status: 404, body: { error: { type: 'invalid_request_error' } } },
+      { status: 404, body: { error: { type: 'invalid_request_error' } } },
+    );
+
+    expect(
+      await closeCheckoutSession('sk_test_123', 'cs_1', expired.impl),
+    ).toBe('closed');
+    expect(
+      await closeCheckoutSession('sk_test_123', 'cs_1', missing.impl),
+    ).toBe('closed');
+  });
+
+  it('throws for one still open, or when Stripe cannot be asked', async () => {
+    const open = stripeSays(notOpen, {
+      status: 200,
+      body: { id: 'cs_1', status: 'open' },
+    });
+    const down = stripeSays(notOpen, { status: 503, body: {} });
+
+    await expect(
+      closeCheckoutSession('sk_test_123', 'cs_1', open.impl),
+    ).rejects.toThrow(/still open/);
+    await expect(
+      closeCheckoutSession('sk_test_123', 'cs_1', down.impl),
+    ).rejects.toThrow(/status 503/);
   });
 });

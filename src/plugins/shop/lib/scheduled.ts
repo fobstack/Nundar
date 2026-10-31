@@ -24,6 +24,7 @@ import {
   STATE_KEYS,
   setStateStatement,
 } from './state.js';
+import { closeCheckoutSession } from './stripe-client.js';
 
 /**
  * How often the rates are fetched. The ECB publishes once per working day, so
@@ -59,8 +60,8 @@ const ORDER_SWEEP_INTERVAL_MS = 10 * 60 * 1000;
  */
 const LAPSED_GRACE_MS = 60 * 60 * 1000;
 
-/** Orders closed per sweep. */
-const ORDER_SWEEP_LIMIT = 10;
+/** Orders closed per sweep: each may be a request to Stripe. */
+const ORDER_SWEEP_LIMIT = 5;
 
 export type TickOutcome =
   | {
@@ -99,14 +100,24 @@ function elapsed(since: string | undefined, now: Date): number {
 }
 
 /**
- * Orders still waiting for a payment that can no longer come: their page
- * lapsed an hour ago, or none was recorded for them and they are two hours
- * old — a page lives one.
+ * Orders still waiting for a payment that has not come: their page lapsed an
+ * hour ago, or none was recorded for them and they are two hours old — a
+ * page lives one.
+ *
+ * Stripe is asked first about an order with a page. One Stripe has complete
+ * was paid, and its word is late — a webhook that failed and is being
+ * delivered again — so it is left to that word. Without the secret key
+ * nothing can be asked, and such an order is left as it is.
  */
-async function closeLapsedOrders(db: D1Database, now: Date): Promise<number> {
+async function closeLapsedOrders(
+  db: D1Database,
+  now: Date,
+  secretKey: string | null,
+  fetchImpl: typeof fetch,
+): Promise<number> {
   const { results } = await db
     .prepare(
-      `SELECT id FROM p_shop_order
+      `SELECT id, stripe_session_id FROM p_shop_order
        WHERE status = 'pending'
          AND ((stripe_session_expires_at IS NOT NULL
                AND stripe_session_expires_at <= ?)
@@ -118,9 +129,28 @@ async function closeLapsedOrders(db: D1Database, now: Date): Promise<number> {
       new Date(now.getTime() - 2 * LAPSED_GRACE_MS).toISOString(),
       ORDER_SWEEP_LIMIT,
     )
-    .all<{ id: string }>();
+    .all<{ id: string; stripe_session_id: string | null }>();
   let cancelled = 0;
   for (const row of results) {
+    if (row.stripe_session_id !== null) {
+      if (secretKey === null) {
+        continue;
+      }
+      try {
+        if (
+          (await closeCheckoutSession(
+            secretKey,
+            row.stripe_session_id,
+            fetchImpl,
+          )) === 'paid'
+        ) {
+          continue;
+        }
+      } catch {
+        // Stripe could not say: asked again at the next sweep.
+        continue;
+      }
+    }
     try {
       await cancelOrder(db, { orderId: row.id, reason: 'expired', now });
       cancelled += 1;
@@ -140,6 +170,8 @@ export async function runScheduledTick(
     /** Sends an email; absent where a tick is run for its pricing only. */
     readonly sendEmail?: FollowUpContext['sendEmail'];
     readonly site?: FollowUpContext['site'];
+    /** The shop's secrets: the Stripe key the sweep asks Stripe with. */
+    readonly secrets?: Readonly<Record<string, string>>;
   },
   deps: {
     readonly fetch?: typeof fetch;
@@ -182,7 +214,13 @@ export async function runScheduledTick(
       now.toISOString(),
       now,
     ).run();
-    const cancelled = await closeLapsedOrders(db, now);
+    const key = ctx.secrets?.stripe_secret_key ?? '';
+    const cancelled = await closeLapsedOrders(
+      db,
+      now,
+      key === '' ? null : key,
+      deps.fetch ?? fetch,
+    );
     if (cancelled > 0) {
       return { kind: 'orders_lapsed', cancelled };
     }

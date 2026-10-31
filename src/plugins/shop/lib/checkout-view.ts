@@ -25,7 +25,10 @@
  *   refused        null, or `kind` and `field`: why the form that was sent
  *                  placed no order — `invalid` (with the field), `empty`,
  *                  `cart_problem`, `no_shipping`, `too_small`, `too_large`,
- *                  `payments_unavailable`
+ *                  `payments_unavailable`; `paid_meanwhile` (an earlier
+ *                  order from this cart is paid at Stripe and being
+ *                  confirmed), `in_progress` (another checkout of this cart
+ *                  is under way), `too_many` (the visitor's limit an hour)
  *   terms_path     a page the buyer must accept to order, or ''
  *   country_action where the form that chooses a country is sent, by GET
  *   action         where the order form posts
@@ -61,6 +64,9 @@ export const CHECKOUT_REFUSALS = [
   'too_small',
   'too_large',
   'payments_unavailable',
+  'paid_meanwhile',
+  'in_progress',
+  'too_many',
 ] as const;
 
 export type CheckoutRefusal = (typeof CHECKOUT_REFUSALS)[number];

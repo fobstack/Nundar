@@ -325,14 +325,14 @@ describe('the shop in a site export', () => {
     // What each change still owes, but for whose runner last had it in hand.
     expect(rowsOf(files, 'outbox')).toEqual(
       (await table('SELECT * FROM p_shop_outbox ORDER BY seq')).map(
-        ({ claimed_at: _claim, ...kept }) => kept,
+        ({ claimed_at: _claim, progress: _progress, ...kept }) => kept,
       ),
     );
     expect(rowsOf(files, 'outbox')).toHaveLength(2);
-    // An order whole, but for the cart it came from.
+    // An order whole, but for the cart it came from and who placed it.
     expect(rowsOf(files, 'orders')).toEqual(
       (await table('SELECT * FROM p_shop_order ORDER BY created_at, id')).map(
-        ({ cart_id: _cart, ...kept }) => kept,
+        ({ cart_id: _cart, ip_hash: _mark, ...kept }) => kept,
       ),
     );
     expect(rowsOf(files, 'orders').map((row) => row.id)).toEqual([
@@ -486,7 +486,7 @@ describe('the shop in a site export', () => {
         'variant_id currency amount_minor source rate_used updated_at',
       p_shop_stock_adjustment: 'id variant_id delta reason ref_id created_at',
       p_shop_order:
-        'id order_no status currency subtotal_minor shipping_minor tax_minor total_minor stripe_session_id stripe_payment_intent_id email shipping_address locale tracking_no created_at updated_at cart_id site_origin company tax_id carrier shipping_zone tax_mode stripe_session_expires_at',
+        'id order_no status currency subtotal_minor shipping_minor tax_minor total_minor stripe_session_id stripe_payment_intent_id email shipping_address locale tracking_no created_at updated_at cart_id site_origin company tax_id carrier shipping_zone tax_mode stripe_session_expires_at ip_hash',
       p_shop_order_line:
         'id order_id variant_id sku_snapshot name_snapshot unit_price_minor quantity',
       p_shop_stripe_event:
@@ -495,7 +495,7 @@ describe('the shop in a site export', () => {
       p_shop_shipping_country: 'country zone_id',
       p_shop_shipping_rate: 'zone_id currency amount_minor free_over_minor',
       p_shop_outbox:
-        'seq id topic order_id ref created_at handled_at claimed_at',
+        'seq id topic order_id ref created_at handled_at claimed_at progress',
       p_shop_inquiry:
         'id inquiry_no status name email company phone message locale currency country line_count subtotal_minor subtotal cart_id ip_hash notified_at acknowledged_at created_at updated_at',
       p_shop_inquiry_line:

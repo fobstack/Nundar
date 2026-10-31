@@ -25,8 +25,8 @@ import {
 } from './order-fulfilment.js';
 import type { OrderStatus } from './order-state.js';
 import {
+  closeCheckoutSession,
   createRefund,
-  expireCheckoutSession,
   StripeRequestError,
 } from './stripe-client.js';
 
@@ -197,9 +197,10 @@ export async function deliverOrders(
 
 /**
  * Cancels orders still waiting for their payment. Each one's Checkout
- * session is expired at Stripe first, so it cannot be paid once cancelled;
- * one that Stripe says is no longer open is looked at again — it may have
- * just been paid — before anything is written.
+ * session is closed at Stripe first, so it cannot be paid once cancelled.
+ * One that Stripe has complete is paid, though its word may not have
+ * arrived yet — the order here still reads `pending` — and is not
+ * cancelled.
  */
 export async function cancelOrders(
   ids: readonly string[],
@@ -235,16 +236,14 @@ export async function cancelOrders(
         continue;
       }
       try {
-        const closed = await expireCheckoutSession(
-          secretKey,
-          order.stripe_session_id,
-        );
-        if (closed === 'not_open') {
-          const [now2] = await readOrders(ctx.db, [order.id]);
-          if (now2 === undefined || now2.status !== 'pending') {
-            problems.push(`${order.order_no} was paid meanwhile.`);
-            continue;
-          }
+        if (
+          (await closeCheckoutSession(secretKey, order.stripe_session_id)) ===
+          'paid'
+        ) {
+          problems.push(
+            `${order.order_no} has been paid at Stripe; its confirmation is on its way.`,
+          );
+          continue;
         }
       } catch (error) {
         problems.push(
@@ -328,6 +327,9 @@ export async function refundOrders(
       await refundOrder(ctx.db, {
         orderId: order.id,
         restock: restockFor(params.restock, order.status),
+        // The stock was decided for this status: if the order shipped
+        // meanwhile, nothing is written and the seller decides again.
+        expectedStatus: order.status,
         now,
       });
       done += 1;
