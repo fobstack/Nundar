@@ -41,9 +41,11 @@ security document describes each. Nundar implements none of them again.
 
 | Data | Where it lives | Notes |
 |---|---|---|
-| Card numbers, CVV | **Nowhere in Nundar** | Payment goes through Stripe's hosted checkout, so card data never reaches this code. A test lists the columns an order may have. No checkout route exists yet. |
-| Buyer email and shipping address | D1, on the order | Written when an order is placed, which nothing can do yet: the order logic is built and has no route. Never written to a log. |
-| Stripe keys and the webhook signing secret | Not stored yet | They will be plugin secrets, which Mallok encrypts. No code path reads them today. |
+| Card numbers, CVV | **Nowhere in Nundar** | Payment goes through Stripe's hosted checkout, so card data never reaches this code. A test lists the columns an order may have. |
+| Buyer email, company, tax number and shipping address | D1, on the order | Written when checkout places an order, before the buyer is sent to Stripe. Never written to a log or put in an address. Read in the admin by a signed-in administrator, or a token with `export`. With Stripe Tax on, the address, company and email are also sent to Stripe as a customer of the seller's account. |
+| A mark of the visitor who placed an order | D1, on the order | Mallok's one-way hash of the connecting address, which checkout's limit per visitor counts by. Not in an export. |
+| Stripe keys and the webhook signing secret | Plugin secrets | Encrypted by Mallok; never logged, never returned by any endpoint. The admin's **Test** buttons return only a verdict. |
+| The key orders' links are signed with | D1, in the shop's state | Made once, at random. Anyone who can read the database can open every order's page — which shows nothing the database does not already hold. Not in an export. Deleting it withdraws every link at once. |
 | What a buyer says of themselves in an inquiry: name, email address, company, phone, message | D1, on the inquiry | Written when a cart is sent as a request for a quote. It is the first personal data the shop holds. Read in the admin by a signed-in administrator, or a token with `export`; deleted there. Never written to a log or put in an address, and the job the plugin queues carries an id only. **The email is another matter**: once handed to Mallok it sits, whole, in Mallok's own queue — see the residual risks. |
 | A mark of the visitor who sent an inquiry | D1, on the inquiry | Mallok's one-way hash of the connecting address, which is what the limit per visitor counts by. The address itself is never stored, and the admin's list does not show the mark. |
 | The shop's part of a site export | Not stored: built when asked | Mallok's export, which needs a signed-in administrator or a token with `export`, includes every order and inquiry — names, email addresses, phone numbers, companies, countries, shipping addresses, messages — as files under `shop/`, and the shop's settings, among them the address inquiries are announced to. Whoever holds an export holds that. It leaves out a cart's id and the mark of an inquiry's sender. |
@@ -187,51 +189,52 @@ risks — has no challenge in front of it. What is in its place:
   at least once, and nearly always once: a Worker stopped between the two
   sends that email again. The mark means handed to Mallok, not delivered.
 
-### Payment, built and not yet reachable
-
-The order and payment logic is in the repository with its tests, and no route
-calls it yet. These controls are in that code now, so that they are not left
-to be remembered when the routes are written:
+### Payment
 
 - **A payment is believed only with Stripe's signature** over the bytes as
-  received, compared in constant time, and only within five minutes of the
-  time Stripe signed it. Only the `v1` scheme is read. With no signing secret
-  configured, everything is refused.
-- **No amount comes from a client.** An order's lines are priced by the
-  server, and the call that opens a Checkout session takes a single amount,
-  the order's total, rather than line items a client could have shaped.
-- **Stock is taken when a payment is confirmed, never before.** Taking it when
-  an order is placed would let scripted, unpaid orders empty the catalogue.
-- **A payment takes stock once**, whether Stripe delivers the event twice,
-  sends two events for one payment, or delivers twice at the same moment.
-  Every write is conditional on the order's status, and tests run the
-  deliveries in parallel.
-- **A payment is all or nothing.** The event, the stock, the ledger, what is
-  owed afterwards and the order's status are one D1 batch. An order whose
-  stock has gone is marked `oversold` with nothing taken, for a person to
-  refund.
-- **Money taken is never left without a trace.** A payment for an order that
-  cannot take it — a cancelled one, or one another payment has settled — is
-  recorded with the payment to refund, and the order and the stock are left
-  alone.
-- **A webhook fails only for what a retry could fix.** Anything else answered
-  with an error would be redelivered for three days. A payment naming an
-  order this shop does not have is answered and not acted on: every shop on a
-  Stripe account sees every payment of that account.
-- **Money is a whole number at the database too.** The order tables check the
-  storage type of every amount, so a fraction of a minor unit cannot be
-  stored even by code that forgot to round.
-- **A Stripe error never carries what was sent.** It is described by Stripe's
-  own identifiers and the HTTP status. The free-text message is dropped:
-  nothing rules out its repeating a value that was sent, such as an email
-  address.
-- **An order's status moves only as the state machine allows**, and only if
-  the order is still where it was read. An oversold order cannot ship.
-- **Order lines are snapshots.** A later change to a product cannot alter what
-  a past order says was bought, or for how much.
-- **Emails escape everything a person typed** — product names, SKUs, tracking
-  numbers — before it becomes markup in a buyer's inbox.
-- **A failure reason never carries personal data.** It names the order by id.
+  received — Mallok hands the route the raw body — compared in constant time,
+  and only within five minutes of the time Stripe signed it. Only the `v1`
+  scheme is read. Until the signing secret is set, every delivery is answered
+  503 and nothing is read: Stripe keeps it and delivers it again.
+- **No amount comes from a client.** Checkout prices the cart from the
+  database at the moment it places the order, and the Checkout session is
+  opened for the order's own lines and shipping. Stripe's currency
+  conversion is switched off for every session.
+- **A payment is held to its order.** Its currency and the amount received
+  must come to the order's total — or, with Stripe Tax, to at least its goods
+  and shipping, the rest being the tax. One that does not is recorded for a
+  refund and the order is not paid.
+- **Only an order waiting for its payment takes one.** A second payment, for
+  an order paid or oversold already, is recorded for a refund.
+- **Stock is taken when a payment is confirmed, never before**, and once,
+  however Stripe reports it; the payment is one D1 batch.
+- **A paid session is never cancelled.** Before an order is cancelled — by a
+  new checkout of the same cart, by the seller, by the cron — its Checkout
+  session is closed at Stripe; one Stripe has complete is left to its
+  payment, whose word may still be on its way.
+- **One open payment per cart**, and an order written only while no other
+  from its cart is waiting, asked inside the write.
+- **A limit on placing orders**: ten an hour from one visitor, counted in the
+  order's own write, behind Mallok's strict rate limit. Each placement writes
+  an order and asks Stripe for a session.
+- **Money moves at Stripe before the books do.** A refund is made at Stripe
+  and then recorded; a refund already made in Stripe's dashboard is
+  recorded when the admin is asked to make it.
+- **An order's page opens only with its link's secret**, an HMAC of the
+  order's id; a wrong one, none and an unknown order all answer the same
+  404. The page sends no referrer, and writes nothing.
+- **Redirects** go to the shop's own paths, or to the page Stripe's API
+  returned for the session.
+- **Links point at the site's own domain** when it has one, never at the
+  host a request named.
+- **A Stripe error never carries what was sent.** It is described by
+  Stripe's identifiers and the HTTP status; the free-text message is dropped.
+- **The emails escape everything a person typed**, and the buyer is written
+  to only once a payment is in, or by the seller's own action: never because
+  a form was filled in with their address.
+- **Logs carry no personal data**: kinds, statuses and order ids. A database
+  failure answering a webhook with 500 is logged with D1's message, which
+  names a constraint and never a value.
 
 ## Known residual risks
 
@@ -313,25 +316,28 @@ Stated plainly rather than left for an auditor to find:
   describes a supplier that does not exist: its certifications, test figures
   and compliance statements are illustrative, and a real site must replace
   them with its own before it is published.
-- **Nobody is told about a payment that has to be refunded.** An oversold
-  order, and a payment for an order that was cancelled while its buyer was
-  still on Stripe's page, are both recorded with a row in the outbox — and
-  nothing reads the outbox yet. Until something does, a person finds them
-  only by looking. Cancelling an order should also expire its Checkout
-  session, so that the second case cannot arise; that is not built either.
-- **The amount Stripe reports is not compared with the order's total.** The
-  session is opened for the order's total by the server, so they agree unless
-  something on the Stripe side changes what the buyer pays. Not yet decided;
-  see the design's §14.
-- **Orders that are never paid stay in the database as `pending`**, with the
-  buyer's email and address, until something removes them. Nothing does yet.
-- **An order that costs nothing cannot be completed.** Stripe is never asked
-  to charge zero, and nothing confirms a free order without it yet.
+- **Checkout has no challenge in front of it**, for the reason the inquiry
+  form has none. Ten orders an hour a visitor bound what one address can
+  make; many addresses together can make many pending orders and Stripe
+  sessions, and with Stripe Tax as many Stripe customers, which nothing
+  deletes. A pending order is cancelled an hour after its page lapses, and
+  stays in the database, cancelled, with the email and address typed in.
+- **An order's link does not expire.** Whoever has it — a forwarded email —
+  sees the order's address, company and tax number. It cannot be withdrawn
+  for one order; deleting the key in the shop's state withdraws them all.
+- **Orders are not deleted.** A cancelled or refunded order keeps the
+  buyer's details, as records of a sale are usually kept; there is no
+  retention period and no erasure in the admin.
+- **The order emails go through Mallok's queue as the inquiry's do**, and
+  stay in its `job` table as described above.
+- **A purchase in Stripe's test mode has not been run end to end** on a real
+  Stripe account. Everything above is tested against a stand-in for Stripe's
+  API built from its documentation.
 
 ## Dependency posture
 
 Runtime dependencies are deliberately minimal: `mallok` and `zod`. The ECB feed
-is called over plain `fetch`. Every dependency is attack surface that a
+and Stripe's API are called over plain `fetch`, with no SDK. Every dependency is attack surface that a
 self-hosted shop inherits.
 
 Before adding one, ask whether the platform or Mallok already provides it.

@@ -5,7 +5,7 @@
 [![CI](https://github.com/fobstack/Nundar/actions/workflows/ci.yml/badge.svg)](https://github.com/fobstack/Nundar/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](LICENSE)
 
-> **Status: in development.** Nundar is being rebuilt on Mallok. The catalogue side works today. Prices and a cart are on the pages, and a cart can be sent as a request for a quote; checkout is not there yet — see [What works today](#what-works-today). It is not ready to run a real shop.
+> **Status: in development.** Nundar is being rebuilt on Mallok. The catalogue, the cart, requests for a quote and checkout with Stripe work locally; a purchase at Stripe has not been run end to end yet, and nothing has been deployed — see [What works today](#what-works-today). It is not ready to run a real shop.
 
 ---
 
@@ -42,8 +42,8 @@ Nundar is not a second application beside Mallok. A shop is a Mallok site with t
 
 | Part | Where | What it owns |
 |---|---|---|
-| **Shop plugin** | `src/plugins/shop/` | Variants, prices per currency, stock, minimum order quantities, the cart, the cart sent as an inquiry, exchange-rate repricing |
-| **Commerce theme** | `src/theme/` | How the home page, the specification finder and the product, application, collection, case study, question and reference pages look, in four languages |
+| **Shop plugin** | `src/plugins/shop/` | Variants, prices per currency, stock, minimum order quantities, the cart, the cart sent as an inquiry, exchange-rate repricing, shipping zones, checkout with Stripe, orders and their emails |
+| **Commerce theme** | `src/theme/` | How the home page, the specification finder and the product, application, collection, case study, question, reference, cart, checkout and order pages look, in four languages |
 | **Sample content** | `content/`, `seed/`, `site.json` | A titanium fastener catalogue in four languages: six products in five collections, five industry pages, four case studies, questions and answers, reference pages, and the site's own copy |
 
 Mallok provides everything else: content and its editor, languages and `hreflang`, the sitemap, the admin and sign-in, media, the edge cache, email. That boundary is deliberate — commerce logic lives only in the plugin, and nothing about pages is reimplemented here.
@@ -59,10 +59,12 @@ Nundar builds on `mallok@0.1.0-rc.11`, the first release with the plugin API the
 | **Pages** | A home page with a specification finder; product pages with their sizes and SKUs, and for each size its price, minimum order, availability and lead time, read from the shop while the page is rendered and cached with it; the same offers in the page's `Product` structured data; a starting price under each product in the finder and the catalogue; collection, industry, case study, question, engineering reference and contact pages — all in English, German, French and Spanish, with `hreflang`, canonicals, sitemap and FAQ structured data; self-hosted fonts; prices in US dollars on English pages and in euros on the others, with a switch to any currency the shop prices in; no client JavaScript except three small scripts, each added to a page that is complete without it: filters for the finder, the currency switch, and calculators on the engineering reference page | Prices beside the products a collection page lists (Mallok does not yet tell a plugin which products a content page shows) |
 | **Catalogue data** | Variants, prices as integer minor units, stock, MOQ, lead time, a made-to-order policy — edited in the admin, in a form under each product's editor; every change of stock goes into a ledger; a deleted product takes its variants with it | |
 | **Pricing** | USD base price; EUR and GBP derived from ECB rates with a buffer, rounding to a price point and a drift threshold; manual prices never overwritten; the pages of a product are purged from the cache when one of its prices moves | |
-| **Cart** | A form beside each size on a product page, and a cart page in the site's own design and language: set a quantity, remove a line, choose a currency. No script anywhere in it. MOQ, stock and the most a line may hold (500) are enforced by the server, which says what it refused on the cart page | Checkout |
+| **Cart** | A form beside each size on a product page, and a cart page in the site's own design and language: set a quantity, remove a line, choose a currency. No script anywhere in it. MOQ, stock and the most a line may hold (500) are enforced by the server, which says what it refused on the cart page | |
 | **Inquiries** | The cart sent as one request for a quote, from a form on the cart page: who to answer, and a message. A size with no price can go in the cart to be asked about. The buyer lands on the inquiry's number; the seller is told by email, answerable straight to the buyer, and finds every inquiry in the admin with its lines — to mark, export as CSV, or delete | A challenge in front of the form (it waits for Mallok), which is why the email confirming to the buyer is off unless switched on |
 | **Taking your data with you** | What the shop holds is in the site's export (`mallok export`), beside the content: variants, prices, the stock ledger, orders, payment events, inquiries and the shop's settings, a JSON file each under `shop/`, as stored | An import of those files; an export of a table too large for one request (both wait for Mallok) |
-| **Orders and payment** | The logic, tested and not yet reachable: orders with line snapshots, a payment that takes stock exactly once however often Stripe reports it, oversold orders, refunds that return stock, Stripe signature checks, order emails in four languages | The checkout and order pages, the webhook route, and order handling in the admin |
+| **Shipping** | Zones set in the admin: the countries each covers, a fixed rate in each currency, and an amount from which it ships free. A country in no zone is not offered at checkout | Rates by weight |
+| **Checkout and payment** | A checkout page in the site's own design and language, with no script: the country the order goes to, shipping and the total for it, the buyer's company and address, then Stripe's hosted page to pay — by card, or Link, at the shop's own prices with Stripe's currency conversion off. Tax is not charged unless the shop switches Stripe Tax on. An order's own page, opened by the signed link Stripe returns the buyer to and every email carries. A payment takes stock exactly once however often Stripe reports it, is held to the order's total, and empties what was ordered from the cart; an unpaid order is cancelled an hour after its payment page lapses | A purchase made at Stripe in test mode has not been run yet (it needs a shop's own test keys); buyer accounts; invoices of the shop's own; partial refunds |
+| **Orders in the admin** | Every order with its lines, its address and its amounts: mark shipped (tracking number and carrier), delivered, cancel one that was not paid, refund in full — at Stripe first, then the books, with the stock back unless the goods have shipped — or fulfil one that was paid for after its stock had gone, once restocked. Payments the shop could not keep are listed to refund. The buyer is written to in their language when an order is confirmed, shipped, refunded or cancelled; the seller is told of every new order and every refund owed | |
 
 The reasoning and the plan are in [`docs/superpowers/specs/2026-09-30-nundar-on-mallok-design.md`](docs/superpowers/specs/2026-09-30-nundar-on-mallok-design.md).
 
@@ -78,6 +80,9 @@ The reasoning and the plan are in [`docs/superpowers/specs/2026-09-30-nundar-on-
 - A public page is the same for every visitor and stays in the cache: nothing about a cart is in it, and the cart's cookie is sent only to the shop's own routes.
 - Stock carries a database constraint, so a payment's decrement cannot go negative: a test proves the whole D1 batch rolls back.
 - Stock comes off when a payment is confirmed, never before, and once: tests deliver the same payment twice at the same moment.
+- A payment is checked against its order's currency and total; one that does not fit is kept for a refund, not taken for the order.
+- Money moves at Stripe before the shop's books do: a refund is made at Stripe before the order says refunded, and a payment page is closed at Stripe before its order is cancelled. A cart has one payment page open at a time.
+- An order's page opens only with the secret its link carries, never with its number alone.
 - A payment is believed only with Stripe's signature on the exact bytes received, and only for five minutes.
 - A manually set price is never overwritten by an exchange-rate refresh.
 - Language is decided by the URL alone, never by the visitor's IP.
@@ -97,7 +102,9 @@ In about a minute `preview` prints the address of a local shop with the sample c
 
 It is a throwaway. The database lives in a temporary directory and goes when you stop the command with Ctrl+C; the next run starts clean, with a new login. Use `npm run preview -- --port 8800` if port 8799 is taken.
 
-To see the same shop checked rather than shown — every kind of page, every navigation link in every language, the cart — run `npm run smoke:shop`.
+To see the same shop checked rather than shown — every kind of page, every navigation link in every language, the cart, the checkout page — run `npm run smoke:shop`.
+
+The preview takes no payments: it has no Stripe keys, so its cart offers no checkout and its checkout page says payment is not available. [Taking payments](#taking-payments) says how to give it some.
 
 ### A local site that keeps its data
 
@@ -134,6 +141,18 @@ The sample is a supplier of titanium fasteners that does not exist. Its products
 - **Variants and prices** are in `seed/shop-sample.sql`, one variant for each SKU a product page lists, each with a US dollar base price and a euro and a sterling price entered by hand. Leave a currency out and the shop derives its price from the base price and the day's exchange rate.
 - **Fonts** are served from the site itself (`src/theme/assets/fonts/`), under the SIL Open Font License; the licence texts and the source of each file are beside them. The theme loads nothing from a third party.
 
+## Taking payments
+
+The shop takes payments through Stripe's hosted checkout, on your own Stripe account. Until both of its Stripe secrets are set, it takes none, and says so.
+
+1. **Shipping zones.** In the admin, under the shop's **Shipping zones**, add a zone for each group of countries you ship to, with its rate in each currency you sell in. A country in no zone cannot be checked out to. The sample has four (`seed/shop-sample.sql`).
+2. **The secret key.** In Stripe's dashboard, under Developers → API keys, copy the secret key — `sk_test_…` while you try it out — and enter it in the admin as the shop's **Stripe secret key**. The **Test** button beside it asks Stripe whether it accepts the key.
+3. **The webhook endpoint.** In Stripe, add an endpoint at `https://<your site>/_mallok/p/shop/stripe/webhook` for the events `payment_intent.succeeded` and `checkout.session.expired`, on API version `2026-10-28.endive` — the version this code was written against. Stripe's dashboard creates an endpoint on the latest version; for another, create it through Stripe's API with `api_version`. Enter the endpoint's signing secret (`whsec_…`) as the shop's **Stripe webhook signing secret**. Until it is set, the shop answers Stripe's deliveries with 503, and Stripe keeps them and delivers them again for up to three days.
+4. **The notification address.** The shop's **Notification email** setting is where new orders, refunds owed and inquiries are announced. Email goes through the site's own email settings (Settings → Email).
+5. **Optional.** **Tax** set to `stripe` has Stripe Tax add tax at payment, wherever your Stripe account is registered to collect it, for Stripe's fee; it is `none` by default, and prices are without tax. **Terms page** names a page a buyer ticks that they accept. **Order number prefix** is `ND` unless you set another.
+
+To try it on a local site (`npm run dev`), Stripe's command-line tool can forward test events to it — `stripe listen --forward-to http://localhost:8787/_mallok/p/shop/stripe/webhook --events payment_intent.succeeded,checkout.session.expired --latest` — and prints the signing secret to enter. Without `--latest`, it sends events at your account's default API version. Pay on Stripe's page with one of Stripe's test cards.
+
 ## Commands
 
 | Command | What it does |
@@ -149,7 +168,7 @@ The sample is a supplier of titanium fasteners that does not exist. Its products
 
 ## Deploying
 
-Not yet. A deployed shop today would show a catalogue with prices and a cart that can be sent as a request for a quote and cannot be paid for: there is no checkout. Nothing here has been measured on a real Cloudflare account either. When Nundar is ready, deployment is Mallok's own: `npx mallok create . --slug <slug>`, which creates the Worker, the D1 database and the R2 bucket on your own Cloudflare account. That path has not been run for this repository.
+Not yet. The shop can take payments now, and a purchase in Stripe's test mode has still to be run end to end on a real Stripe account before anyone relies on it. Nothing here has been measured on a real Cloudflare account either. When Nundar is ready, deployment is Mallok's own: `npx mallok create . --slug <slug>`, which creates the Worker, the D1 database and the R2 bucket on your own Cloudflare account. That path has not been run for this repository.
 
 ## Languages and currencies
 

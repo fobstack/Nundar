@@ -180,6 +180,8 @@ Timestamps are ISO text, as everywhere in the plugin.
 
 ### 5.3 Checkout
 
+As built, with the owner's decisions, in §20. The plan was:
+
 1. The checkout page (theme layout, plugin route) collects the address. The POST is validated with the same schema as today.
 2. The server reprices the cart. This is `priceCart`, ported. It rechecks availability, MOQ and stock, but reserves nothing (2026-09-03 §6.3).
 3. One D1 batch writes the order and its line snapshots, with status `pending`.
@@ -307,6 +309,7 @@ The phases follow Mallok's own roadmap (`mallok: docs/PRODUCT_VISION.md §9`: 0.
 
 **Phase 2: payment (Mallok 0.3)**
 - *Built ahead, 2026-10-05 (§14):* everything below that needs no Mallok extension point — the order tables, placing an order, the payment batch, refunds, the webhook's decision, the Stripe calls and the order emails. Not built: every route, page and admin screen.
+- *Built 2026-10-31 (§20), locally:* shipping zones, the checkout and order pages, the webhook route, the follow-ups, the order panels and their actions, on the owner's nineteen decisions. Of the exit criteria below, the first two hold; the test-mode purchase waits for the owner's Stripe test keys, and the quotas for a deployment (the owner waived measuring CPU now).
 - Mallok: API-5, 6 (actions with parameters) and 8.
 - Shop plugin:
   - Stripe Checkout and the webhook;
@@ -740,3 +743,83 @@ A site export is how an operator leaves with what is theirs: `mallok export` wri
 4. *An operator is not told why the shop's export failed*, and is advised to switch the plugin off. Written up.
 3. *Mallok's own inquiry plugin exports its newest thousand rows and no more*, without saying so — found by reading it, while deciding what this export should do past its limit. Written up.
 
+
+## 20. What phase 2 changed or found (2026-10-31)
+
+Phase 2 (§9): checkout and payment, on `mallok@0.1.0-rc.11` as it shipped. The owner was given a sheet of nineteen decisions on 2026-10-31, asked that the whole of it be built locally before anything is deployed, and changed none of them; each was taken as proposed, and each is listed below with what was built for it. **Nothing was deployed and nothing was measured on a Cloudflare account**: the owner said the CPU use of the pages had been looked at before and was not to be measured again now (2026-10-31), so the exit criteria that need a real account are open (below).
+
+**What a buyer does.** From a cart whose every line can be ordered, goes to checkout; chooses the country the order goes to and sees shipping and the total for it; gives a company, an address and an email; and is sent to Stripe's hosted page to pay. Coming back, they land on their order's own page, which opens with a signed link and with nothing else, and are written to when it is confirmed, shipped, refunded or cancelled by the seller.
+
+**What a seller does.** Sets shipping zones in the admin; sets the two Stripe secrets; and works orders from a panel that lists them with their lines: ship (tracking number and carrier), mark delivered, cancel one that was not paid, refund in full, or fulfil an oversold one once restocked. Payments the shop could not keep are listed in a panel of their own, to refund. The notification address that was the inquiries' is the shop's now: new orders, oversold ones and refunds owed are sent there.
+
+**The decisions, as taken.**
+
+| | Decision | Built as |
+|---|---|---|
+| D1 | Sell to businesses | A company is required at checkout |
+| D2 | No buyer accounts | An order opens with a signed link (`lib/order-access.ts`): an HMAC of its id under a key the shop makes once and keeps in its state |
+| D3 | Only methods that settle at once | `allowed_payment_method_types` card and Link. Apple Pay and Google Pay are card wallets with no type of their own; whether a buyer sees them is Stripe's and the account's |
+| D4 | A fixed rate per zone, free past an amount | `p_shop_shipping_zone`, `_country`, `_rate`; a records panel; one rate per currency per zone |
+| D5 | Ship only to a zone's countries | A country in no zone is not offered and not taken |
+| D6 | No tax by default, Stripe Tax as a setting | `tax_mode`. With `stripe`, a Stripe customer is made per order holding the address the order ships to, which is what Checkout works tax out from when it collects no address itself; prices and shipping are `exclusive`; the order's tax is what the payment came to beyond goods and shipping |
+| D7 | A tax number, optional, recorded | On the order, its page and the seller's email. Not sent to Stripe |
+| D8 | Stripe's own currency conversion off | `adaptive_pricing[enabled]=false` on every session |
+| D9 | An hour to pay, then the order is cancelled | `expires_at`; `checkout.session.expired` cancels the order; the cron cancels one Stripe never spoke for, an hour after its page lapsed |
+| D10 | The cart emptied when the payment is in | In the payment's own batch, of the order's variants only, for a paid and an oversold order alike |
+| D11 | Full refunds only; stock back as chosen | The refund action asks: back to stock unless it has shipped (the default), back to stock, or left as it is |
+| D12 | An oversold order is refunded, or restocked and fulfilled | `oversold → paid` by `fulfilOversold`, which takes the stock then; `oversold → cancelled` is gone from the state machine |
+| D13 | The order number's prefix a setting | `order_no_prefix`, up to six capitals or digits, `ND` by default |
+| D14 | No checkout for a total too small to charge | `too_small` below Stripe's least (0.50 USD or EUR, 0.30 GBP), a total of nothing included; the buyer is pointed to the inquiry |
+| D15 | No invoices of the shop's own | Whatever receipt the seller's Stripe account sends, and the shop's confirmation |
+| D16 | One notification address for the shop | The setting that was the inquiries' recipient, relabelled |
+| D17 | Four buyer emails, in four languages | Confirmed, shipped, refunded, cancelled by the seller — not for a payment page the buyer let lapse: the address was never proven to be theirs |
+| D18 | A tracking number required, a carrier from a list | DHL, FedEx, UPS, or Other with its name |
+| D19 | Terms to accept when the shop names a page | `terms_path`; a box the form requires, linking to it |
+
+And the ones the sheet did not ask about: the Stripe API version is pinned (`2026-10-28.endive`), and the webhook endpoint a seller creates is to be set to the same; every payment is held to its order's currency and total, and one that does not fit is refused and owed a refund (`amountFits`); a Checkout session is expired at Stripe before its order is cancelled, never after; what a change owes is carried out by a Mallok job, with the cron behind it; the order records the cart it came from; a payment for an order this database does not have is still answered 200 and left; no coupons, no stock held for a pending order, no payment on account — a quote is what an inquiry is for; email goes through Mallok's site settings.
+
+**What building it found.**
+
+1. *Stripe's current API names the payment methods differently.* `payment_method_types` is not among the create parameters of a Checkout session at `2026-10-28.endive`; `allowed_payment_method_types` filters the methods Stripe would offer. Read on 2026-10-31.
+2. *Stripe Tax needs an address the session can see.* Checkout works tax out from an address it collects, or from its customer's saved one. Collecting it again on Stripe's page would make the buyer type it twice and let the two differ — the tax would be for one place and the goods go to another. So the shop gives Stripe a customer holding the address the buyer gave here: one per order, because there are no accounts to keep one on. Stripe's documentation also says Google Pay is offered with Stripe Tax only when a shipping address is collected or the customer has one saved; this satisfies that.
+3. *A job has no request to take the site's address from.* The emails' links are written by the follow-up job, later. So an order records the address its buyer checked out on (`site_origin`), and the link's secret is an HMAC, which a job can compute again, rather than a random token, which it could not without keeping it readable. The key is in the shop's state, which an export leaves behind: an export opens no order, and a site restored from one gives its old links up.
+4. *A job and the cron can meet over one outbox row.* Each row is claimed before its follow-up runs (`claimed_at`); a claim older than ten minutes is taken to belong to a runner that stopped. A row that fails is let go and holds its order's later rows back, so "shipped" never reaches a buyer before "confirmed".
+5. *A table panel lists what is stored.* So the orders and the refused payments are listed from read-only views (`p_shop_order_admin`, `p_shop_order_line_admin`, `p_shop_refused_payment`) that spell amounts out from minor units without a float. A view has no `rowid`, which is what Mallok orders related rows by when told nothing, so the lines name their order.
+6. *A refund already made in Stripe's dashboard* is refused by Stripe as `charge_already_refunded`. The admin takes that as done and records the refund, rather than leaving an order that can never be marked refunded.
+7. *One open payment per cart.* A buyer who comes back from Stripe's page, changes the cart and checks out again would otherwise leave the first page payable. Placing an order first expires the session of every order still waiting from the same cart.
+8. *The most one payment can carry* is eight digits of minor units for a payment that is not by card — the strictest of the methods offered — so a larger total is refused (`too_large`) and pointed to the inquiry. The least is Stripe's for the charge's currency; Stripe holds a converted charge to the least of the account's settlement currency, which the shop cannot know, and a session Stripe refuses for it closes the order and tells the buyer that payment is not available.
+9. *Until the signing secret is set, Stripe's deliveries are answered 503*, so that Stripe keeps them and delivers again, for up to three days, rather than having them answered 200 and lost.
+
+**§14's open items, now.** 1, the outbox: drained (finding 4). 2, a payment for a cancelled order: the session is expired first. 3, orders never paid: cancelled (D9). 4, orders that cost nothing: refused (D14). 5 and 6, Adaptive Pricing and the amount: off, and checked. 7, the cart: emptied (D10). 8, refunds: Stripe first, `charge_already_refunded` taken as done, stock as chosen; an order whose first session Stripe failed is closed, and the buyer places a new one. 9: gone (D12). 10: pinned. 11: site email. 12: a setting. 13, a payment for an unknown order: unchanged, still logged and left. 14, a variant deleted outright: still open; nothing deletes a variant that is on an order.
+
+**What two independent reviews then found.** The code was given to two reviewers, one for commerce correctness and one for security, with the rules it must keep and no account of how it keeps them. Fourteen things, each checked here before it was acted on, and each fixed with a test that fails without the fix:
+
+1. *A second payment for an oversold order was taken.* `oversold → paid` (D12) made `canTransition` say yes to it: with the stock still short the webhook failed with an illegal transition for three days and left the money untraced; with the stock back it paid the order and wrote the second payment over the first. Only a `pending` order takes a payment now; another for an oversold one is refused and owed back.
+2. *"Not open" was taken for "closed".* A session Stripe would not expire may be one that was paid a moment ago, its word not yet arrived — the order here still `pending`. A new checkout from the same cart, the admin's cancel and the cron's sweep all cancelled it, and the payment then arrived for a cancelled order. Stripe is asked now (`closeCheckoutSession`), and an order it has complete is left to its payment: the new checkout is refused with `paid_meanwhile`.
+3. *Two placements of one cart could both stay payable.* Closing earlier orders and writing the new one are separate steps. The order is written now only if no other from its cart is waiting, asked inside the write; and a placement whose order was closed by another while it opened its session closes that session again, rather than send the buyer to pay for a cancelled order.
+4. *Checkout had no limit of its own.* Each placement writes an order, asks Stripe for a session and, with Stripe Tax, makes a Stripe customer; Mallok's rate limit is best-effort. Ten orders an hour a visitor now, counted in the order's write (`MAX_CHECKOUTS_PER_HOUR`).
+5. *An oversold order lost Stripe's tax*: the oversold write did not record it, as the paid write does. It does.
+6. *A refund decided its stock on a status read before Stripe was asked.* An order that shipped in between had its goods put back. The refund is now written only if the order is still in the status the choice was made on.
+7. *A row another runner held did not hold its order back*: the runner did not read claimed rows, so "shipped" could go out while "confirmed" was in another's hands. Claimed rows are read and hold their order.
+8. *A row that owed two emails and failed at the second sent the first again.* Each email is marked on the row as it is handed over (`progress`).
+9. *The cron cancelled a lapsed order without asking Stripe.* A payment made in the last moment whose word was delayed past the hour was then refused. The cron asks Stripe first, and without the secret key leaves such an order as it is.
+10. *A refund or an expiry that failed could not be asked again for a day*: Stripe keeps the answer to an idempotency key, failures included. Neither carries a key now — a refund of the whole payment cannot be made twice, and expiring is safe to repeat — so the admin's "try again" is true.
+11. *The links were built from the request's host.* The site's own domain is used when it has one.
+12. *The order page's address carries its secret.* It now says `Referrer-Policy: no-referrer`.
+13. *Stripe's answer "not open" was read from every 4xx*, a bad permission included. Only 400 and 404 now.
+14. *The webhook logs the message of a database failure*, where checkout logs only an error's kind. Kept: the messages are D1's, which name a constraint and never a value, and a 5xx a seller cannot diagnose is worse. Recorded in `SECURITY.md`.
+
+**How it was verified.** All of it in workerd, against the site's own Worker: 1,017 tests in `test/shop` and `test/theme`, 206 more than before phase 2 — the checkout page and its form through `SELF.fetch` with a stand-in for Stripe's API in place of the global `fetch`; a payment delivered signed to the real webhook route and carried through Mallok's own scheduled handler to the buyer's and the seller's emails in Mallok's queue; the order page's link, wrong, missing and for another order; every admin action, through its function and once through Mallok's panel API; the follow-up runner with a recording email context, two runners at the same moment, a failing email holding later rows back; the cron's sweep and fallback; the four languages of both pages, every field's attributes held to the server's constants, and both pages whole in every state. Forty-one guards were broken one at a time, before and after the reviews, and each turned a test red — the races on every one of three runs. `npm run smoke:shop` goes from the cart to the German checkout page of a real local Worker with the sample's shipping zones, sees shipping to Germany quoted, and sees that with no Stripe keys no payment is offered, no order placed and a delivery from Stripe answered 503.
+
+**Not verified.** No payment was made at Stripe, in test mode or otherwise: that needs the owner's test keys, and is the next step. Everything about Stripe here was read in its documentation on 2026-10-31 and run against a stand-in; how Stripe's page looks with these parameters, whether it shows Apple Pay or Google Pay, and what Stripe Tax computes with real registrations were not seen. Emails were seen handed to Mallok's queue, not delivered. Nothing was deployed, and no figure was taken on a Cloudflare account (above).
+
+**Left open.**
+
+1. *A Stripe test-mode purchase, end to end*, on the owner's keys: phase 2's last exit criterion.
+2. *Partial refunds, invoices, buyer accounts* — not in phase 2 by decision (D11, D15, D2).
+3. *A payment for an order this database does not have* is still left with a log line (§14, item 13).
+4. *A form the server refuses comes back empty* (M33), which at checkout is an address typed again. The fields carry the server's rules, and the only refusals a browser cannot foresee are a cart that changed and Stripe being unavailable.
+5. *With Stripe Tax, each order makes a Stripe customer, and nothing deletes it* — one per order, since there are no accounts; the limit per visitor bounds how many a stranger can make.
+6. *An order's link does not expire*, and cannot be withdrawn for one order: only by deleting the key, which withdraws them all.
+7. *That the terms were accepted is not recorded* with the order — when, and which version of the page.
+8. *The admin cannot say "done" with a message* (M43): an action that changed some orders and not others answers as a refusal that says which.
