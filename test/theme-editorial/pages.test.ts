@@ -60,6 +60,44 @@ function expectWhole(path: string, html: string): void {
 let paths: string[] = [];
 
 /**
+ * Every status an order's page can show, with what changes beside it: a
+ * carrier and a tracking number once it ships, tax when Stripe added it, a
+ * buyer who gave no company and no tax number.
+ */
+const ORDER_STATES: readonly (readonly [
+  string,
+  {
+    status: string;
+    carrier?: string;
+    trackingNo?: string;
+    company?: string;
+    taxId?: string;
+    taxMinor?: number;
+  },
+  readonly string[],
+])[] = [
+  ['paid', { status: 'paid' }, ['Analytical Engines Ltd', 'DE123456789']],
+  [
+    'shipped',
+    { status: 'shipped', carrier: 'DHL', trackingNo: 'JD014600003828' },
+    ['DHL', 'JD014600003828'],
+  ],
+  [
+    'delivered',
+    { status: 'delivered', carrier: 'UPS', trackingNo: '1Z999' },
+    ['UPS'],
+  ],
+  ['refunded', { status: 'refunded' }, []],
+  ['cancelled', { status: 'cancelled' }, []],
+  ['oversold', { status: 'oversold' }, []],
+  [
+    'paid with tax, for a buyer who gave no company or tax number',
+    { status: 'paid', company: '', taxId: '', taxMinor: 3515 },
+    ['$35.15'],
+  ],
+];
+
+/**
  * Importing the sample and walking every page of it take several seconds,
  * longer still beside the rest of the suite: past vitest's default of five.
  */
@@ -272,4 +310,59 @@ describe('the editorial theme’s shop pages', () => {
     expectWhole('orders', lookup.html);
     expect(lookup.html).toContain(`action="${SHOP}/orders/link"`);
   });
+
+  it.each(ORDER_STATES)(
+    'draws an order whole when it is %s',
+    async (_what, change, words) => {
+      const placed = await SELF.fetch(`${ORIGIN}${SHOP}/checkout/place`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded',
+          cookie,
+        },
+        body: new URLSearchParams({
+          email: 'ada@buyer.example',
+          company: 'Analytical Engines Ltd',
+          tax_id: 'DE123456789',
+          recipient: 'Ada Lovelace',
+          line1: 'Hafenstraße 1',
+          city: 'Hamburg',
+          country: 'DE',
+        }).toString(),
+        redirect: 'manual',
+      });
+      expect(placed.status).toBe(303);
+      const session = stripe?.calls
+        .filter((call) => call.path === '/v1/checkout/sessions')
+        .at(-1);
+      const link = new URL(session?.body.get('success_url') ?? `${ORIGIN}/`);
+      const orderNo = decodeURIComponent(link.pathname.split('/').at(-1) ?? '');
+      await db()
+        .prepare(
+          `UPDATE p_shop_order
+           SET status = ?, carrier = ?, tracking_no = ?, company = ?,
+               tax_id = ?, tax_minor = ?, total_minor = total_minor + ?
+           WHERE order_no = ?`,
+        )
+        .bind(
+          change.status,
+          change.carrier ?? null,
+          change.trackingNo ?? null,
+          change.company ?? 'Analytical Engines Ltd',
+          change.taxId ?? 'DE123456789',
+          change.taxMinor ?? 0,
+          change.taxMinor ?? 0,
+          orderNo,
+        )
+        .run();
+
+      const order = await get(`${link.pathname}${link.search}`);
+
+      expect(order.status).toBe(200);
+      expectWhole(`order ${change.status}`, order.html);
+      for (const word of words) {
+        expect(order.html).toContain(word);
+      }
+    },
+  );
 });

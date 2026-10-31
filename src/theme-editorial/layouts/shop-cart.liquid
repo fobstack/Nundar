@@ -41,8 +41,9 @@
       {% for line in cart.lines %}
       <tr role="row">
         <th scope="row" role="rowheader">
-          {% if line.name != blank %}{% if line.path != blank %}<a href="{{ line.path }}">{{ line.name }}</a>{% else %}{{ line.name }}{% endif %}<br>{% endif %}
-          <span class="sku">{{ line.sku }}</span>
+          {%- comment -%} A line whose size has since been deleted has no SKU. {%- endcomment -%}
+          {% if line.name != blank %}{% if line.path != blank %}<a href="{{ line.path }}">{{ line.name }}</a>{% else %}{{ line.name }}{% endif %}{% if line.sku != blank %}<br>{% endif %}{% endif %}
+          {% if line.sku != blank %}<span class="sku">{{ line.sku }}</span>{% endif %}
           {% if line.problem != blank %}{% assign reason = "problem_" | append: line.problem %}<br><span class="small" data-problem="{{ line.problem }}">{{ t[reason] }}{% if line.problem == "below_moq" %} {{ line.moq }}{% elsif line.problem == "insufficient_stock" %} {{ line.available }}{% elsif line.problem == "quantity_too_large" %} {{ cart.max_quantity }}{% endif %}</span>{% endif %}
         </th>
         <td role="cell" data-label="{{ t.unit_price }}">{% if line.unit_price != blank %}<span class="price">{{ line.unit_price }}</span>{% else %}{{ t.price_on_request }}{% endif %}</td>
@@ -52,13 +53,13 @@
             <input type="hidden" name="action" value="set">
             <input type="hidden" name="variant" value="{{ line.variant_id }}">
             <label><span class="visually-hidden">{{ t.quantity }} {{ line.sku }}</span><input type="number" name="quantity" min="{{ line.moq }}" step="1"{% if cart.max_quantity %} max="{{ cart.max_quantity }}"{% endif %} value="{{ line.quantity }}" required inputmode="numeric"></label>
-            <button type="submit">{{ t.update }}<span class="visually-hidden"> {{ line.sku }}</span></button>
+            <button type="submit">{{ t.update }}{% if line.sku != blank %}<span class="visually-hidden"> {{ line.sku }}</span>{% endif %}</button>
           </form>
           {% endif %}
           <form method="post" action="{{ cart.action }}">
             <input type="hidden" name="action" value="remove">
             <input type="hidden" name="variant" value="{{ line.variant_id }}">
-            <button class="button-quiet" type="submit">{{ t.remove }}<span class="visually-hidden"> {{ line.sku }}</span></button>
+            <button class="button-quiet" type="submit">{{ t.remove }}{% if line.sku != blank %}<span class="visually-hidden"> {{ line.sku }}</span>{% endif %}</button>
           </form>
         </td>
         <td role="cell" data-label="{{ t.line_total }}">{% if line.line_total != blank %}<span class="price">{{ line.line_total }}</span>{% else %}—{% endif %}</td>
@@ -75,10 +76,12 @@
   {% endif %}
   {% if cart.subtotal != blank %}<dl class="sums"><div class="total"><dt>{{ t.subtotal }}</dt><dd><span class="price">{{ cart.subtotal }}</span></dd></div></dl>{% endif %}
   <p class="small">{{ t.cart_note }}</p>
+  {% if cart.can_check_out or site.kinds.product %}
   <p>
     {% if cart.can_check_out %}<a class="button" href="{{ cart.checkout_path }}">{{ t.checkout }}</a>{% endif %}
     {% if site.kinds.product %}<a class="button button-quiet" href="{{ site.kinds.product.path }}">{{ t.back_to_catalogue }}</a>{% endif %}
   </p>
+  {% endif %}
   {% if cart.orders_path != blank %}<p class="small"><a href="{{ cart.orders_path }}">{{ t.orders_link }}</a></p>{% endif %}
 
   {% if cart.inquiry_action != blank %}

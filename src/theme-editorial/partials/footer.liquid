@@ -5,16 +5,21 @@
       {% if theme.options.footer_blurb != blank %}<p>{{ theme.options.footer_blurb }}</p>{% elsif site.tagline != "" %}<p>{{ site.tagline }}</p>{% endif %}
       {% if theme.options.footer_note != blank %}<p class="small">{{ theme.options.footer_note }}</p>{% endif %}
     </div>
+    {% if site.nav.size > 0 %}
     <nav aria-label="{{ t.footer_nav }}">
       <ul>
         {% for item in site.nav %}<li><a href="{{ item.href }}">{{ item.label }}</a></li>{% endfor %}
       </ul>
     </nav>
+    {% endif %}
+    {%- comment -%} A site that gave no way to reach it has no column for one. {%- endcomment -%}
+    {% if theme.options.contact_email != blank or theme.options.contact_phone != blank or theme.options.contact_href != blank %}
     <div>
       {% if theme.options.contact_email != blank %}<p><a href="mailto:{{ theme.options.contact_email }}">{{ theme.options.contact_email }}</a></p>{% endif %}
       {% if theme.options.contact_phone != blank %}<p>{{ theme.options.contact_phone }}</p>{% endif %}
       {% if theme.options.contact_href != blank %}<p><a href="{{ theme.options.contact_href }}">{{ t.contact_us }}</a></p>{% endif %}
     </div>
+    {% endif %}
   </div>
   <div class="column wide colophon-base">
     <p>© {{ site.name }}</p>
