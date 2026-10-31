@@ -1,0 +1,8 @@
+{%- comment -%}
+  A title block: label and value in a ruled grid, as in the corner of a
+  drawing. Drawn only for data — a product's attributes, a case's results,
+  what matters in an industry — and only when there is some.
+  Called as {% render "partials/titleblock", pairs: map, size: "large", max: 4, label: "…" %}.
+{%- endcomment -%}
+{%- if max -%}{%- assign shown = max -%}{%- else -%}{%- assign shown = 99 -%}{%- endif -%}
+<dl class="titleblock{% if size == "large" %} large{% endif %}"{% if label != blank %} aria-label="{{ label }}"{% endif %}>{% for pair in pairs limit: shown %}<div><dt>{{ pair[0] }}</dt><dd>{{ pair[1] }}</dd></div>{% endfor %}</dl>

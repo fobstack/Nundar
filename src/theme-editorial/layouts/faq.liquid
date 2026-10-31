@@ -6,7 +6,6 @@
 {% block content %}
 <article class="column">
   {% render "partials/crumbs" %}
-  <p class="kicker">{{ t.faq_eyebrow }}</p>
   <h1>{{ content.title }}</h1>
   {% if content.description != "" %}<p class="lede">{{ content.description }}</p>{% endif %}
   {% if content.faq.size > 0 %}

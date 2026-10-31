@@ -52,6 +52,8 @@ function expectWhole(path: string, html: string): void {
     [],
   );
   expect(html, path).not.toMatch(/href=""/);
+  // A picture is drawn only when there is one.
+  expect(html, path).not.toMatch(/src=""/);
   const headings = [...main.matchAll(/<h1\b[^>]*>([\s\S]*?)<\/h1>/g)];
   expect(headings, path).toHaveLength(1);
   expect(headings[0]?.[1]?.trim(), path).not.toBe('');

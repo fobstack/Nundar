@@ -50,6 +50,8 @@ function expectWhole(path: string, html: string): void {
     [],
   );
   expect(html, path).not.toMatch(/href=""/);
+  // A picture is drawn only when there is one.
+  expect(html, path).not.toMatch(/src=""/);
   expect([...main.matchAll(/<h1\b/g)], path).toHaveLength(1);
   // No script and no file of its own: the styles are in the page.
   expect(html, path).not.toMatch(/<script\b(?![^>]*application\/ld\+json)/);

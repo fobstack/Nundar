@@ -1,136 +1,327 @@
 {%- comment -%}
   The whole stylesheet, in the page: Mallok stages the files of the theme at
-  `src/theme` only, and this theme is a second one beside it. Serif type the
-  reader already has, warm paper, ink, and one accent from the site's
-  options. No font is loaded from anywhere.
+  `src/theme` only (M46), and this theme is a second one beside it, so it
+  can load no font and no file of its own.
+
+  The look is an engineering bulletin about titanium parts. The surfaces are
+  titanium — a pale grey page, a darker grey for plates — with graphite ink
+  and the site's own accent. The type is DIN, the face of the German
+  standards these parts are made to (DIN 912 is the socket head cap screw),
+  as the systems that have it name it: DIN Condensed and DIN Alternate on
+  Apple's, Bahnschrift on Windows. Running text is Charter, or the nearest
+  book face the reader has. The one device it repeats is a drawing's title
+  block — a ruled grid of label and value — and only where there is data
+  to put in it: a product's attributes, a case's results, what matters in
+  an industry.
 {%- endcomment -%}
 <style>
 :root {
-  --paper: #faf6ef;
-  --paper-deep: #f1eadd;
-  --ink: #23201c;
-  --ink-soft: #5b544b;
-  --rule: #d8cfbf;
-  --accent: #9a3412;
-  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, "Times New Roman", serif;
-  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --sheet: #eef0f1;
+  --plate: #dde1e4;
+  --white: #fbfcfc;
+  --graphite: #1d262e;
+  --steel: #59636c;
+  --hairline: #bfc6cc;
+  --accent: #b45309;
+  --display: "DIN Condensed", "Bahnschrift Condensed", "Bahnschrift", "Roboto Condensed", "Arial Narrow", sans-serif;
+  --data: "DIN Alternate", "Bahnschrift", "Roboto", "Helvetica Neue", Arial, sans-serif;
+  --text: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+  --shell: 80rem;
+  --gutter: clamp(1rem, 3.5vw, 2.5rem);
 }
 *, *::before, *::after { box-sizing: border-box; }
-html { background: var(--paper); color: var(--ink); }
+html { background: var(--sheet); color: var(--graphite); -webkit-text-size-adjust: 100%; }
 /* A German title can hold one word wider than a phone. It is hyphenated in
    the page's language (`lang` is on <html>), and broken where it must be,
    rather than carry the page sideways. */
-body { margin: 0; font-family: var(--serif); font-size: 1.125rem; line-height: 1.65; overflow-wrap: break-word; }
-a { color: var(--accent); text-underline-offset: 0.15em; }
-a:hover { color: var(--ink); }
-img { max-width: 100%; height: auto; }
+body { margin: 0; font-family: var(--text); font-size: 1.0625rem; line-height: 1.62; overflow-wrap: break-word; }
+img { display: block; max-width: 100%; height: auto; }
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 0.18em; }
+a:hover { color: var(--graphite); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+p { margin: 0 0 1rem; }
+h1, h2, h3 { margin: 0; font-family: var(--display); font-weight: 700; font-stretch: condensed; line-height: 1; letter-spacing: 0; color: var(--graphite); hyphens: auto; }
+h1 { font-size: clamp(2.6rem, 6.2vw, 5rem); }
+h2 { font-size: clamp(1.9rem, 3.4vw, 2.6rem); }
+h3 { font-size: 1.5rem; line-height: 1.05; }
+h1 a, h2 a, h3 a { color: inherit; text-decoration: none; }
+h1 a:hover, h2 a:hover, h3 a:hover { color: var(--accent); }
 .skip { position: absolute; left: -999rem; }
-.skip:focus { left: 1rem; top: 1rem; background: var(--paper); padding: 0.5rem 1rem; z-index: 10; }
+.skip:focus { left: 1rem; top: 1rem; z-index: 10; padding: 0.5rem 1rem; background: var(--white); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.column { max-width: 42rem; margin: 0 auto; padding: 0 1.25rem; }
-.column.wide { max-width: 64rem; }
-.small { font-size: 0.875rem; color: var(--ink-soft); }
-.kicker { margin: 0 0 0.25rem; font-family: var(--sans); font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
-h1, h2, h3 { font-weight: 600; line-height: 1.2; letter-spacing: -0.01em; hyphens: auto; }
-h1 { font-size: clamp(2rem, 5vw, 3rem); margin: 0.5rem 0 1rem; }
-h2 { font-size: 1.5rem; margin: 2.5rem 0 1rem; }
-h3 { font-size: 1.2rem; margin: 0 0 0.35rem; }
-.lede { font-size: 1.3rem; color: var(--ink-soft); margin: 0 0 2rem; }
-.masthead { border-bottom: 3px double var(--rule); padding: 2rem 0 0.75rem; text-align: center; }
-.masthead-name { font-size: clamp(1.75rem, 4vw, 2.5rem); color: var(--ink); text-decoration: none; font-weight: 600; }
-.masthead-tagline { margin: 0.25rem 0 1rem; font-style: italic; color: var(--ink-soft); }
-.masthead-nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.25rem 1.25rem; font-family: var(--sans); font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; }
-.masthead-nav a { color: var(--ink); text-decoration: none; }
-.masthead-nav a[aria-current] { color: var(--accent); }
-.masthead-langs { margin-top: 0.5rem !important; text-transform: none !important; letter-spacing: 0 !important; }
-main { padding: 2rem 0 4rem; }
-.trail { font-family: var(--sans); font-size: 0.8rem; color: var(--ink-soft); margin-bottom: 1rem; }
-.trail a { color: var(--ink-soft); }
-.prose p, .prose ul, .prose ol { margin: 0 0 1.1rem; }
+
+/* The page: one wide shell, and a reading measure inside it. `.column` is
+   the narrower one the shop's own pages are set in. */
+.shell, .column { width: 100%; max-width: var(--shell); margin: 0 auto; padding: 0 var(--gutter); }
+/* Set to the shell's left edge, under the name in the header, and only as
+   wide as a form or a table of a few columns reads well. */
+.column { padding-top: 2.5rem; }
+.column > * { max-width: 46rem; }
+.column.wide > * { max-width: 64rem; }
+.column > .lede { max-width: 38rem; }
+/* The sums end where the lines above them end. */
+.column > .sums { max-width: 26rem; margin-right: max(0px, 100% - 46rem); }
+.column.wide > .sums { margin-right: max(0px, 100% - 64rem); }
+.measure { max-width: 40rem; }
+main { padding-bottom: 5rem; }
+.lede { max-width: 38rem; font-size: 1.25rem; line-height: 1.5; color: var(--steel); }
+.meta, .kicker, .small { font-family: var(--data); font-size: 0.9rem; line-height: 1.4; color: var(--steel); }
+.kicker { margin: 0 0 0.5rem; }
+.small { margin: 0.5rem 0; }
+.column h1 { margin-bottom: 1.25rem; }
+.column h2 { margin: 2.5rem 0 1rem; }
+
+/* The header: the name, the languages and the cart on the sheet; the
+   sections below it on a graphite band, which scrolls sideways inside
+   itself on a narrow screen rather than folding into a menu. */
+.top { background: var(--white); border-bottom: 1px solid var(--hairline); }
+.top-bar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 2rem; padding-top: 1.1rem; padding-bottom: 1rem; }
+.brand { font-family: var(--display); font-stretch: condensed; font-weight: 700; font-size: 2rem; line-height: 1; color: var(--graphite); text-decoration: none; }
+.brand-line { margin: 0; font-size: 0.95rem; color: var(--steel); }
+.top-tools { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 1.5rem; margin-left: auto; font-family: var(--data); font-size: 0.95rem; }
+.top-tools ul { display: flex; gap: 0 0.9rem; margin: 0; padding: 0; list-style: none; }
+.top-tools a { color: var(--steel); text-decoration: none; }
+.top-tools a:hover, .top-tools a[aria-current] { color: var(--graphite); text-decoration: underline; }
+.top-tools .top-cart { color: var(--graphite); font-weight: 700; }
+.top-nav { background: var(--graphite); }
+.top-nav ul { display: flex; gap: 0 1.9rem; margin: 0 auto; padding-top: 0.75rem; padding-bottom: 0.75rem; list-style: none; overflow-x: auto; white-space: nowrap; font-family: var(--data); font-size: 0.98rem; scrollbar-width: thin; }
+.top-nav a { color: #dfe5e9; text-decoration: none; padding-bottom: 0.2rem; }
+.top-nav a:hover { color: #fff; }
+.top-nav a[aria-current] { color: #fff; box-shadow: inset 0 -2px var(--accent); }
+.top-nav :focus-visible { outline-color: #fff; }
+
+/* The opening: the catalogue's lead picture, and the site's headline set as
+   large as the width allows. Text first on a phone, beside on a desk. */
+.hero { display: grid; gap: 2rem; padding-top: 2.5rem; padding-bottom: 3.5rem; }
+.hero-text h1 { font-size: clamp(3rem, 7.4vw, 6.4rem); line-height: 0.92; }
+/* A headline this large is broken only at a space where it fits: a word
+   hyphenated at this size reads as a mistake. A phone keeps hyphenation,
+   where one German word can be wider than the screen. */
+@media (min-width: 40rem) { h1 { hyphens: manual; } }
+.hero-text .lede { margin-top: 1.5rem; }
+.hero-figure { margin: 0; }
+.hero-figure img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--plate); }
+.hero-figure figcaption { margin-top: 0.6rem; font-family: var(--data); font-size: 0.9rem; color: var(--steel); }
+.hero-figure figcaption a { color: inherit; }
+@media (min-width: 60rem) {
+  .hero { grid-template-columns: 7fr 5fr; align-items: end; gap: 3rem; }
+  .hero-figure { order: -1; }
+  .hero.plain { grid-template-columns: minmax(0, 52rem); }
+}
+.actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.75rem; }
+
+/* A section of the home page and of the lists: its heading on a rule. */
+.band { padding-top: 3rem; padding-bottom: 1rem; }
+.band-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.5rem 2rem; padding-top: 0.9rem; margin-bottom: 1.75rem; border-top: 2px solid var(--graphite); }
+.band-head p { margin: 0; font-family: var(--data); }
+
+/* A picture and a title, for what has a picture; a title and a line for
+   what has none. No box around either: the picture is the edge. */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr)); gap: 2.5rem 2rem; margin: 0; padding: 0; list-style: none; }
+/* On the home page the first industry leads: twice the width and two rows
+   high, so that five fill a row of four as a spread rather than leave one
+   alone on a second row. */
+@media (min-width: 64rem) {
+  .cards.lead { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .cards.lead > li:first-child { grid-column: span 2; grid-row: span 2; }
+  .cards.lead > li:first-child h3 { font-size: 2.2rem; }
+  .cards.lead > li:first-child p { font-size: 1.15rem; }
+}
+.card-figure { display: block; margin-bottom: 1rem; }
+.card-figure img { width: 100%; aspect-ratio: 3 / 2; object-fit: cover; background: var(--plate); }
+.card-figure:hover img { filter: contrast(1.06) brightness(0.97); }
+.card h3 { margin-bottom: 0.5rem; }
+.card .meta { margin: 0 0 0.35rem; }
+.card p { margin: 0; color: var(--steel); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: 1.25rem; margin: 0; padding: 0; list-style: none; }
+.tiles a { display: block; color: var(--graphite); text-decoration: none; font-family: var(--data); font-size: 1rem; line-height: 1.3; }
+.tiles img { width: 100%; aspect-ratio: 1; object-fit: cover; margin-bottom: 0.6rem; background: var(--plate); }
+.tiles a:hover { color: var(--accent); }
+
+/* A case study told as a spread: its picture, and beside it the work and
+   what came of it. */
+.stories { display: grid; gap: 3.5rem; margin: 0; padding: 0; list-style: none; }
+.story { display: grid; gap: 1.25rem; }
+.story-figure img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: var(--plate); }
+.story h3 { font-size: clamp(1.7rem, 2.6vw, 2.2rem); margin-bottom: 0.75rem; }
+.story p { color: var(--steel); }
+@media (min-width: 52rem) {
+  .story { grid-template-columns: 6fr 5fr; gap: 2.5rem; align-items: start; }
+  .story:nth-child(even) .story-figure { order: 2; }
+}
+
+/* The title block: a ruled grid of label and value, as in the corner of a
+   drawing. */
+/* Each cell rules its own right and lower edge and the frame clips what
+   falls on its own, so a row that is not full ends in white, not in a grey
+   gap. */
+.titleblock { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr)); margin: 1.5rem 0; padding: 0; overflow: hidden; background: var(--white); border: 1.5px solid var(--graphite); }
+.titleblock div { padding: 0.65rem 0.8rem 0.75rem; box-shadow: 1px 0 0 var(--hairline), 0 1px 0 var(--hairline); }
+.titleblock dt { font-family: var(--data); font-size: 0.82rem; line-height: 1.3; color: var(--steel); }
+.titleblock dd { margin: 0.3rem 0 0; font-family: var(--data); font-size: 1.15rem; line-height: 1.25; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.titleblock.large dd { font-family: var(--display); font-stretch: condensed; font-weight: 700; font-size: 1.9rem; line-height: 1; }
+
+/* A content page: its picture across the shell, its head, then the text
+   in a measure with what goes beside it in a narrower column. */
+.trail { margin: 0 0 1.5rem; font-family: var(--data); font-size: 0.9rem; color: var(--steel); }
+.trail ol { display: flex; flex-wrap: wrap; gap: 0 0.5rem; margin: 0; padding: 0; list-style: none; }
+.trail li + li::before { content: "/"; margin-right: 0.5rem; color: var(--hairline); }
+.trail a { color: var(--steel); }
+.cover { margin: 0 0 2.5rem; }
+.cover img { width: 100%; aspect-ratio: 21 / 9; object-fit: cover; background: var(--plate); }
+.page-head, .lead-in { padding-top: 2rem; }
+.page-head { margin-bottom: 2rem; }
+.page-head h1 { max-width: 22ch; }
+.page-head .lede { margin-top: 1.25rem; }
+.layout { display: grid; gap: 2.5rem; }
+@media (min-width: 60rem) {
+  .layout { grid-template-columns: minmax(0, 40rem) minmax(0, 1fr); gap: 4rem; }
+}
+.beside { align-self: start; }
+.beside h2 { font-size: 1.6rem; }
+.beside .titleblock { margin-top: 0.75rem; }
+.part-link { display: block; margin-top: 1.5rem; padding-top: 0.9rem; border-top: 2px solid var(--graphite); color: var(--graphite); text-decoration: none; }
+.part-link span { display: block; font-family: var(--data); font-size: 0.85rem; color: var(--steel); }
+.part-link strong { display: block; margin-top: 0.3rem; font-family: var(--display); font-stretch: condensed; font-size: 1.6rem; line-height: 1.05; }
+.part-link:hover strong { color: var(--accent); }
+
+/* A product: its pictures and its head side by side, its sizes across the
+   page, its text and its specification after. */
+.product-head { display: grid; gap: 2rem; margin-bottom: 1rem; }
+@media (min-width: 60rem) {
+  .product-head { grid-template-columns: 7fr 5fr; gap: 3rem; align-items: start; }
+  .product-head.plain { grid-template-columns: minmax(0, 46rem); }
+}
+.product-head h1 { font-size: clamp(2.4rem, 4.6vw, 3.8rem); }
+.product-head .lede { margin-top: 1.25rem; }
+.gallery { margin: 0; }
+.gallery > img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--plate); }
+.gallery-more { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-top: 0.75rem; }
+.gallery-more img { width: 100%; aspect-ratio: 3 / 2; object-fit: cover; background: var(--plate); }
+.section { margin-top: 3.5rem; }
+.section > h2 { padding-top: 0.9rem; margin-bottom: 1.25rem; border-top: 2px solid var(--graphite); }
+.product-body { display: grid; gap: 2.5rem; }
+@media (min-width: 60rem) {
+  .product-body { grid-template-columns: minmax(0, 40rem) minmax(0, 1fr); gap: 4rem; }
+}
+
+/* Running text. */
+.prose { max-width: 40rem; }
+.prose h2 { margin: 2.5rem 0 1rem; font-size: 2rem; }
+.prose h3 { margin: 2rem 0 0.75rem; }
+.prose p, .prose ul, .prose ol { margin: 0 0 1.15rem; }
+.prose li { margin-bottom: 0.35rem; }
+.prose img { margin: 1.5rem 0; }
 /* A table in a text is as wide as its figures need. Wider than the page, it
    scrolls inside itself rather than squeezing a figure onto three lines or
    taking the page sideways with it — as the commerce theme's does. */
-.prose table { display: block; width: max-content; max-width: 100%; overflow-x: auto; border-collapse: collapse; font-size: 0.95rem; margin: 1.5rem 0; }
-.prose th, .prose td { border-bottom: 1px solid var(--rule); padding: 0.4rem 0.5rem; text-align: left; vertical-align: top; }
-.prose blockquote { margin: 1.5rem 0; padding-left: 1rem; border-left: 3px solid var(--accent); font-style: italic; }
-.prose code { font-family: var(--mono); font-size: 0.9em; }
-.entries { list-style: none; margin: 0; padding: 0; }
-.entry { padding: 1.1rem 0; border-top: 1px solid var(--rule); }
-.entry:last-child { border-bottom: 1px solid var(--rule); }
-.entry p { margin: 0; color: var(--ink-soft); }
-.entry h3 a { color: var(--ink); text-decoration: none; }
-.entry h3 a:hover { color: var(--accent); }
-.ledger { width: 100%; border-collapse: collapse; font-size: 0.98rem; }
+.prose table { display: block; width: max-content; max-width: 100%; overflow-x: auto; margin: 1.5rem 0; border-collapse: collapse; font-family: var(--data); font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+.prose th, .prose td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--hairline); text-align: left; vertical-align: top; }
+.prose thead th { border-bottom: 1.5px solid var(--graphite); color: var(--steel); font-weight: 400; }
+.prose blockquote { margin: 1.75rem 0; padding-left: 1.25rem; border-left: 3px solid var(--accent); font-size: 1.2rem; }
+.prose code { font-family: var(--data); font-size: 0.95em; }
+
+/* A plain list of what has no picture. */
+.entries { margin: 0; padding: 0; list-style: none; }
+.entry { padding: 1.1rem 0; border-top: 1px solid var(--hairline); }
+.entry:last-child { border-bottom: 1px solid var(--hairline); }
+.entry h3 { margin-bottom: 0.4rem; }
+.entry p { margin: 0; color: var(--steel); }
+
+/* Tables of figures: the catalogue, a product's sizes, a cart. */
+.ledger { width: 100%; border-collapse: collapse; font-size: 1rem; }
 /* German names a thing in one long word; on a phone a cell has to break it
    rather than push the table past the page. */
-.ledger th, .ledger td { border-bottom: 1px solid var(--rule); padding: 0.6rem 0.5rem; text-align: left; vertical-align: top; hyphens: auto; overflow-wrap: anywhere; }
-.ledger thead th { font-family: var(--sans); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); font-weight: 600; }
-.ledger tbody th { font-weight: 600; }
-.ledger tbody th a { color: var(--ink); }
+.ledger th, .ledger td { padding: 0.8rem 0.75rem; border-bottom: 1px solid var(--hairline); text-align: left; vertical-align: top; hyphens: auto; overflow-wrap: anywhere; }
+.ledger thead th { padding-top: 0; padding-bottom: 0.5rem; border-bottom: 1.5px solid var(--graphite); font-family: var(--data); font-size: 0.88rem; font-weight: 400; color: var(--steel); }
+.ledger tbody th { font-family: var(--data); font-weight: 700; }
+.ledger tbody th a { color: var(--graphite); text-decoration: none; }
+.ledger tbody th a:hover { color: var(--accent); text-decoration: underline; }
+.ledger td { font-family: var(--data); }
+.ledger .thumb { display: flex; gap: 1rem; align-items: center; }
+.ledger .thumb img { flex: none; width: 4.5rem; aspect-ratio: 1; object-fit: cover; background: var(--plate); }
 /* Below 40rem a table of several columns is drawn a row at a time, each
-   value under the column's name: a sizes table, the catalogue and the cart
+   value under its column's name: a sizes table, the catalogue and the cart
    are wider than a phone. The roles in the markup keep it a table to a
    screen reader once its display is changed. */
 @media (max-width: 40rem) {
   .stack thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .stack, .stack tbody, .stack tr, .stack th, .stack td { display: block; width: 100%; }
-  .stack tr { border-bottom: 1px solid var(--rule); padding: 0.7rem 0; }
-  .ledger.stack th, .ledger.stack td { border: 0; padding: 0.2rem 0; }
+  .stack tr { padding: 0.9rem 0; border-bottom: 1px solid var(--hairline); }
+  .ledger.stack th, .ledger.stack td { padding: 0.25rem 0; border: 0; }
   .stack td[data-label] { position: relative; padding-left: 8.5rem; }
-  .stack td[data-label]::before { content: attr(data-label); position: absolute; left: 0; top: 0.35rem; width: 8rem; font-family: var(--sans); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); font-weight: 600; }
+  .stack td[data-label]::before { content: attr(data-label); position: absolute; left: 0; top: 0.3rem; width: 8rem; font-family: var(--data); font-size: 0.85rem; color: var(--steel); }
 }
-.sku { font-family: var(--mono); font-size: 0.85rem; }
-.price { font-variant-numeric: tabular-nums; font-weight: 600; }
-.facts { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 1.25rem; margin: 0 0 1.5rem; }
-.facts dt { font-family: var(--sans); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-soft); padding-top: 0.2rem; }
-.facts dd { margin: 0; overflow-wrap: anywhere; }
+.sku { font-family: var(--data); font-size: 0.95rem; letter-spacing: 0.02em; }
+.price { font-family: var(--data); font-variant-numeric: tabular-nums; font-weight: 700; }
+
+/* Label and value, for what is not a figure to compare: an order's state. */
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 0.35rem 1.5rem; margin: 0 0 1.5rem; }
+.facts dt { font-family: var(--data); font-size: 0.9rem; color: var(--steel); }
+.facts dd { margin: 0; font-family: var(--data); overflow-wrap: anywhere; }
 /* A label is sized to its longest; on a phone one can be a sentence, so each
    goes above its value instead. */
 @media (max-width: 40rem) {
   .facts { grid-template-columns: minmax(0, 1fr); gap: 0; }
   .facts dd { margin-bottom: 0.6rem; }
 }
-.aside { margin: 2rem 0; padding: 1.25rem 1.5rem; background: var(--paper-deep); border-left: 3px solid var(--accent); }
-.aside h2 { margin-top: 0; font-size: 1.15rem; }
+.aside { margin: 2.5rem 0; padding: 1.5rem; background: var(--plate); }
+.aside h2 { font-size: 1.8rem; margin: 0 0 0.75rem; }
 .aside p:last-child { margin-bottom: 0; }
-.notice { margin: 0 0 1.5rem; padding: 0.9rem 1.1rem; border: 1px solid var(--rule); background: #fff8ec; }
-.notice-bad { border-color: #e5b4a5; background: #fbefe9; color: #7c2d12; }
-.notice-good { border-color: #b8d4b4; background: #eff6ec; color: #22401f; }
+
+/* What happened to a form, said above it. */
+.notice { margin: 0 0 1.5rem; padding: 0.9rem 1.1rem; border-left: 4px solid var(--steel); background: var(--white); font-family: var(--data); }
+.notice-bad { border-left-color: #b42318; background: #fbeeec; color: #7a1a12; }
+.notice-good { border-left-color: #2e7d4f; background: #edf6f0; color: #1d4d31; }
 .notice p { margin: 0; }
 .notice p + p { margin-top: 0.3rem; }
-.button, button { display: inline-block; font-family: var(--sans); font-size: 0.85rem; letter-spacing: 0.04em; padding: 0.55rem 1rem; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); text-decoration: none; cursor: pointer; border-radius: 2px; }
-.button:hover, button:hover { background: var(--accent); border-color: var(--accent); color: var(--paper); }
-.button-quiet { background: transparent; color: var(--ink); }
-.buy { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; margin: 0; }
+
+/* Controls. */
+.button, button { display: inline-block; padding: 0.7rem 1.2rem; border: 1.5px solid var(--graphite); border-radius: 0; background: var(--graphite); color: var(--white); font-family: var(--data); font-size: 0.98rem; line-height: 1.2; text-decoration: none; cursor: pointer; }
+.button:hover, button:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.button-quiet { background: transparent; color: var(--graphite); }
+.buy { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin: 0; }
 .buy input { width: 5.5rem; }
-input, select, textarea { font: inherit; font-size: 1rem; padding: 0.45rem 0.6rem; border: 1px solid var(--ink-soft); background: #fffdf9; color: var(--ink); border-radius: 2px; }
-.form { display: grid; gap: 1rem; margin: 2rem 0; padding: 1.5rem; border: 1px solid var(--rule); background: #fffdf9; }
-.form h2 { margin: 0; }
-.form label { display: grid; gap: 0.3rem; font-family: var(--sans); font-size: 0.85rem; color: var(--ink-soft); }
-.form .pair { display: grid; gap: 1rem; }
+input, select, textarea { padding: 0.6rem 0.7rem; border: 1.5px solid var(--steel); border-radius: 0; background: var(--white); color: var(--graphite); font: inherit; font-family: var(--data); font-size: 1rem; }
+input:focus, select:focus, textarea:focus { border-color: var(--graphite); }
+.form { display: grid; gap: 1.1rem; margin: 2.5rem 0; padding: 1.75rem; border-top: 2px solid var(--graphite); background: var(--white); }
+.form h2 { margin: 0; font-size: 1.9rem; }
+.form label { display: grid; gap: 0.35rem; font-family: var(--data); font-size: 0.92rem; color: var(--steel); }
+.form .pair { display: grid; gap: 1.1rem; }
 @media (min-width: 40rem) { .form .pair { grid-template-columns: 1fr 1fr; } }
-.form .tick { display: flex; gap: 0.5rem; align-items: center; }
+.form .tick { display: flex; gap: 0.6rem; align-items: center; }
 .trap { position: absolute; left: -999rem; width: 1px; height: 1px; overflow: hidden; }
-.sums { margin: 1.5rem 0 0 auto; max-width: 24rem; }
-.sums div { display: flex; justify-content: space-between; gap: 1rem; padding: 0.3rem 0; border-bottom: 1px solid var(--rule); }
-.sums dt { color: var(--ink-soft); }
-.sums dd { margin: 0; }
-.sums .total { font-weight: 700; border-bottom: 3px double var(--rule); }
-.qa details { border-top: 1px solid var(--rule); padding: 0.9rem 0; }
-.qa details:last-child { border-bottom: 1px solid var(--rule); }
-.qa summary { cursor: pointer; font-weight: 600; }
-.qa p { margin: 0.6rem 0 0; }
-.pager { display: flex; justify-content: space-between; margin-top: 2rem; font-family: var(--sans); font-size: 0.9rem; }
-.colophon { border-top: 3px double var(--rule); padding: 2.5rem 0 2rem; font-size: 0.95rem; }
-.colophon-in { display: grid; gap: 1.5rem; }
+.sums { max-width: 26rem; margin: 1.75rem 0 0 auto; font-family: var(--data); }
+.sums div { display: flex; justify-content: space-between; gap: 1rem; padding: 0.45rem 0; border-bottom: 1px solid var(--hairline); }
+.sums dt { color: var(--steel); }
+.sums dd { margin: 0; font-variant-numeric: tabular-nums; }
+.sums .total { border-bottom: 2px solid var(--graphite); font-size: 1.15rem; font-weight: 700; }
+.sums .total dt { color: var(--graphite); }
+.qa details { padding: 1rem 0; border-top: 1px solid var(--hairline); }
+.qa details:last-child { border-bottom: 1px solid var(--hairline); }
+.qa summary { cursor: pointer; font-family: var(--data); font-size: 1.1rem; font-weight: 700; }
+.qa p { margin: 0.75rem 0 0; }
+.pager { display: flex; justify-content: space-between; margin-top: 3rem; font-family: var(--data); }
+
+/* The closing panel and the foot of every page. */
+.closing { margin-top: 5rem; margin-bottom: -5rem; background: var(--graphite); color: #dfe5e9; }
+.closing .shell { padding-top: 3.5rem; padding-bottom: 3.5rem; }
+.closing h2 { max-width: 30ch; color: #fff; font-size: clamp(2.2rem, 4.4vw, 3.4rem); }
+.closing p { max-width: 38rem; margin-top: 1.25rem; font-size: 1.15rem; }
+.closing .button { border-color: var(--accent); background: var(--accent); color: #fff; }
+.closing .button:hover { border-color: #fff; background: #fff; color: var(--graphite); }
+.colophon { padding: 3rem 0 2.5rem; background: var(--plate); font-size: 0.98rem; }
+.colophon-in { display: grid; gap: 2rem; }
 @media (min-width: 48rem) { .colophon-in { grid-template-columns: 2fr 1fr 1fr; } }
-.colophon-name { font-weight: 600; }
-.colophon ul { list-style: none; margin: 0; padding: 0; }
-.colophon-base { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem; font-size: 0.85rem; color: var(--ink-soft); }
+.colophon-name { margin-bottom: 0.5rem; font-family: var(--display); font-stretch: condensed; font-weight: 700; font-size: 1.6rem; line-height: 1; }
+.colophon ul { margin: 0; padding: 0; list-style: none; font-family: var(--data); line-height: 1.9; }
+.colophon a { color: var(--graphite); text-decoration: none; }
+.colophon a:hover { color: var(--accent); text-decoration: underline; }
+.colophon-base { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--hairline); font-family: var(--data); font-size: 0.88rem; color: var(--steel); }
 .colophon-base p { margin: 0; }
-.mallok-inquiry { display: grid; gap: 0.8rem; margin: 2rem 0; padding: 1.5rem; border: 1px solid var(--rule); background: #fffdf9; }
-.mallok-inquiry label { display: grid; gap: 0.3rem; font-family: var(--sans); font-size: 0.85rem; color: var(--ink-soft); }
+.colophon-base a { color: var(--steel); }
+.mallok-inquiry { display: grid; gap: 0.9rem; margin: 2.5rem 0; padding: 1.75rem; border-top: 2px solid var(--graphite); background: var(--white); }
+.mallok-inquiry label { display: grid; gap: 0.35rem; font-family: var(--data); font-size: 0.92rem; color: var(--steel); }
 .mallok-inquiry label br { display: none; }
 .mallok-inquiry p { margin: 0; }
 </style>

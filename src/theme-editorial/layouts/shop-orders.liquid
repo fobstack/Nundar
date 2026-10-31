@@ -14,7 +14,7 @@
   <ul class="entries">
     {% for order in lookup.orders %}
     {% assign status_key = "order_status_" | append: order.status %}
-    <li class="entry"><h3><a href="{{ order.path }}">{{ order.order_no }}</a></h3><p>{{ order.placed_on }} · {{ t[status_key] }} · <span class="price">{{ order.total }}</span></p></li>
+    <li class="entry"><h3><a href="{{ order.path }}">{{ order.order_no }}</a></h3><p>{{ order.placed_on }}, {{ t[status_key] }}</p><p class="price">{{ order.total }}</p></li>
     {% endfor %}
   </ul>
   {% else %}

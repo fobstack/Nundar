@@ -1,26 +1,33 @@
 {% layout "layouts/base" %}
+{%- comment -%}
+  A case study: the sector it was for, its picture, what came of it in a
+  title block of large figures, then the account of the work, with the part
+  that was used beside it.
+{%- endcomment -%}
 {% block content %}
-<article class="column">
-  {% render "partials/crumbs" %}
-  <p class="kicker">{% if content.frontmatter.sector != blank %}{{ content.frontmatter.sector }}{% else %}{{ t.case_eyebrow }}{% endif %}</p>
-  <h1>{{ content.title }}</h1>
-  {% if content.description != "" %}<p class="lede">{{ content.description }}</p>{% endif %}
+<article>
+  <header class="shell page-head">
+    {% render "partials/crumbs" %}
+    {% if content.frontmatter.sector != blank %}<p class="meta">{{ content.frontmatter.sector }}</p>{% endif %}
+    <h1>{{ content.title }}</h1>
+    {% if content.description != "" %}<p class="lede">{{ content.description }}</p>{% endif %}
+  </header>
+  {% if content.cover != blank %}<div class="shell"><figure class="cover"><img src="{{ content.cover }}" alt="" width="1440" height="617" decoding="async"></figure></div>{% endif %}
   {% assign results = content.frontmatter.results %}
-  {% if results != blank %}
-  <dl class="facts" aria-label="{{ t.results }}">{% for pair in results %}<dt>{{ pair[0] }}</dt><dd>{{ pair[1] }}</dd>{% endfor %}</dl>
-  {% endif %}
+  {% if results != blank %}<div class="shell">{% render "partials/titleblock", pairs: results, size: "large", label: t.results %}</div>{% endif %}
   {% capture body %}{{ content.html }}{% endcapture %}
-  {% if body != blank %}<div class="prose">{{ content.html }}</div>{% endif %}
-  {% if content.refs.product %}
-  <aside class="aside">
-    <p class="kicker">{{ t.the_product_used }}</p>
-    <p><a href="{{ content.refs.product.path }}">{{ content.refs.product.title }}</a></p>
-  </aside>
+  {% if body != blank or content.refs.product %}
+  <div class="shell layout section">
+    {% if body != blank %}<div class="prose">{{ content.html }}</div>{% endif %}
+    {% if content.refs.product %}
+    <aside class="beside"><a class="part-link" href="{{ content.refs.product.path }}"><span>{{ t.the_product_used }}</span><strong>{{ content.refs.product.title }}</strong></a></aside>
+    {% endif %}
+  </div>
   {% endif %}
   {% if content.siblings.size > 0 %}
-  <section>
+  <section class="shell section">
     <h2>{{ t.other_cases }}</h2>
-    <ul class="entries">{% for item in content.siblings limit: 3 %}{% render "partials/entry", item: item, kicker: item.frontmatter.sector %}{% endfor %}</ul>
+    <ul class="cards">{% for item in content.siblings limit: 3 %}{% render "partials/card", item: item, meta: item.frontmatter.sector %}{% endfor %}</ul>
   </section>
   {% endif %}
 </article>

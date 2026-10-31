@@ -1,0 +1,10 @@
+{%- comment -%}
+  The closing panel: the site's own call to talk, when it wrote one.
+{%- endcomment -%}
+<section class="closing">
+  <div class="shell">
+    <h2>{{ theme.options.cta_title }}</h2>
+    {% if theme.options.cta_text != blank %}<p>{{ theme.options.cta_text }}</p>{% endif %}
+    {% if theme.options.quote_href != blank %}<p class="actions"><a class="button" href="{{ theme.options.quote_href }}">{{ t.request_quote }}</a></p>{% endif %}
+  </div>
+</section>

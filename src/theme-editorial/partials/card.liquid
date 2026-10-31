@@ -1,0 +1,13 @@
+{%- comment -%}
+  One item of a list: its picture when it has one, its title, a line about
+  it. A picture is only drawn when there is one — an empty grey frame above
+  a title says nothing — and the title is the link, so a reader with no
+  pictures loses nothing.
+  Called as {% render "partials/card", item: item, meta: "…" %}.
+{%- endcomment -%}
+<li class="card">
+  {% if item.cover != blank %}<a class="card-figure" href="{{ item.path }}" tabindex="-1" aria-hidden="true"><img src="{{ item.cover }}" alt="" width="960" height="640" loading="lazy" decoding="async"></a>{% endif %}
+  {% if meta != blank %}<p class="meta">{{ meta }}</p>{% endif %}
+  <h3><a href="{{ item.path }}">{{ item.title }}</a></h3>
+  {% if item.description != blank %}<p>{{ item.description }}</p>{% endif %}
+</li>

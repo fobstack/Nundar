@@ -39,7 +39,9 @@ import shopCheckoutLiquid from './layouts/shop-checkout.liquid';
 import shopOrderLiquid from './layouts/shop-order.liquid';
 import shopOrdersLiquid from './layouts/shop-orders.liquid';
 import toolLiquid from './layouts/tool.liquid';
+import cardLiquid from './partials/card.liquid';
 import catalogueLiquid from './partials/catalogue.liquid';
+import closingLiquid from './partials/closing.liquid';
 import crumbsLiquid from './partials/crumbs.liquid';
 import entryLiquid from './partials/entry.liquid';
 import footerLiquid from './partials/footer.liquid';
@@ -47,6 +49,7 @@ import headerLiquid from './partials/header.liquid';
 import offerLiquid from './partials/offer.liquid';
 import pagerLiquid from './partials/pager.liquid';
 import styleLiquid from './partials/style.liquid';
+import titleblockLiquid from './partials/titleblock.liquid';
 import manifest from './theme.json';
 
 export const editorialTheme = defineTheme(manifest, {
@@ -71,10 +74,13 @@ export const editorialTheme = defineTheme(manifest, {
   'partials/footer.liquid': footerLiquid,
   'partials/crumbs.liquid': crumbsLiquid,
   'partials/entry.liquid': entryLiquid,
+  'partials/card.liquid': cardLiquid,
   'partials/catalogue.liquid': catalogueLiquid,
+  'partials/closing.liquid': closingLiquid,
   'partials/offer.liquid': offerLiquid,
   'partials/pager.liquid': pagerLiquid,
   'partials/style.liquid': styleLiquid,
+  'partials/titleblock.liquid': titleblockLiquid,
   'locales/en.json': JSON.stringify(enJson),
   'locales/de.json': JSON.stringify(deJson),
   'locales/fr.json': JSON.stringify(frJson),

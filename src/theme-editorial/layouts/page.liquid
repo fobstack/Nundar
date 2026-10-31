@@ -1,9 +1,12 @@
 {% layout "layouts/base" %}
 {% block content %}
-<article class="column">
-  <h1>{{ content.title }}</h1>
-  {% if content.description != "" %}<p class="lede">{{ content.description }}</p>{% endif %}
+<article>
+  <header class="shell page-head">
+    <h1>{{ content.title }}</h1>
+    {% if content.description != "" %}<p class="lede">{{ content.description }}</p>{% endif %}
+  </header>
+  {% if content.cover != blank %}<div class="shell"><figure class="cover"><img src="{{ content.cover }}" alt="" width="1440" height="617" decoding="async"></figure></div>{% endif %}
   {% capture body %}{{ content.html }}{% endcapture %}
-  {% if body != blank %}<div class="prose">{{ content.html }}</div>{% endif %}
+  {% if body != blank %}<div class="shell"><div class="prose">{{ content.html }}</div></div>{% endif %}
 </article>
 {% endblock %}

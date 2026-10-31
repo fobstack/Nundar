@@ -1,28 +1,65 @@
 {% layout "layouts/base" %}
 {%- comment -%}
-  A product as a reading page: what it is, in the product's own words, then
-  its sizes as a table to order from, then its specification. The sizes are
-  the page's front matter; what the shop knows of each is found in
-  `plugins.shop.variants` by walking it — `variants[sku]` would let a SKU
-  called `size` or `first` read Liquid's own answers — and a variant the page
-  does not name follows the sizes it does.
+  A product: its pictures beside its name, what it is, and its attributes
+  in a title block; then its sizes as a table to order from, across the
+  page; then its text, with its specification beside it; then where it is
+  used. The sizes are the page's front matter; what the shop knows of each
+  is found in `plugins.shop.variants` by walking it — `variants[sku]` would
+  let a SKU called `size` or `first` read Liquid's own answers — and a
+  variant the page does not name follows the sizes it does.
 {%- endcomment -%}
 {% block content %}
-<article class="column wide">
-  {% render "partials/crumbs", via: content.refs.collection %}
-  {% if content.refs.collection %}<p class="kicker">{{ content.refs.collection.title }}</p>{% endif %}
-  <h1>{{ content.title }}</h1>
-  {% if content.description != "" %}<p class="lede">{{ content.description }}</p>{% endif %}
+{% assign shots = content.frontmatter.gallery %}
+{% assign pictures = 0 %}
+{% for path in shots %}{% if content.images[path] %}{% assign pictures = pictures | plus: 1 %}{% endif %}{% endfor %}
+<article class="shell">
+  <div class="lead-in">{% render "partials/crumbs", via: content.refs.collection %}</div>
+  <div class="product-head{% if pictures == 0 and content.cover == blank %} plain{% endif %}">
+    {% if pictures > 0 %}
+    <figure class="gallery" role="group" aria-label="{{ t.gallery }}">
+      {%- comment -%}
+        The large picture is the first one that exists, which is not always
+        the first one named: a path that names no file is skipped.
+      {%- endcomment -%}
+      {% assign shown = 0 %}
+      {% for path in shots %}
+        {% assign shot = content.images[path] %}
+        {% if shot %}
+        {% assign shown = shown | plus: 1 %}
+        {% if shown == 1 %}
+        <img src="{{ shot.url }}"{% if shot.srcset != "" %} srcset="{{ shot.srcset }}" sizes="(max-width: 60rem) 100vw, 44rem"{% endif %}{% if shot.width %} width="{{ shot.width }}" height="{{ shot.height }}"{% endif %} alt="{% if shot.alt != "" %}{{ shot.alt }}{% else %}{{ content.title }}{% endif %}" decoding="async">
+        {% if pictures > 1 %}<div class="gallery-more">{% endif %}
+        {% else %}
+        <img src="{{ shot.url }}"{% if shot.srcset != "" %} srcset="{{ shot.srcset }}" sizes="(max-width: 60rem) 33vw, 14rem"{% endif %}{% if shot.width %} width="{{ shot.width }}" height="{{ shot.height }}"{% endif %} alt="{% if shot.alt != "" %}{{ shot.alt }}{% else %}{{ content.title }} {{ shown }}{% endif %}" loading="lazy" decoding="async">
+        {% endif %}
+        {% endif %}
+      {% endfor %}
+      {% if pictures > 1 %}</div>{% endif %}
+    </figure>
+    {% elsif content.cover != blank %}
+    <figure class="gallery"><img src="{{ content.cover }}" alt="{{ content.title }}" width="1440" height="1080" decoding="async"></figure>
+    {% endif %}
 
-  {% assign facets = content.frontmatter.facets %}
-  {% if facets != blank %}
-  <dl class="facts">{% for pair in facets %}<dt>{{ pair[0] }}</dt><dd>{{ pair[1] }}</dd>{% endfor %}</dl>
-  {% endif %}
+    <div>
+      {% if content.refs.collection %}<p class="meta"><a href="{{ content.refs.collection.path }}">{{ content.refs.collection.title }}</a></p>{% endif %}
+      <h1>{{ content.title }}</h1>
+      {% if content.description != "" %}<p class="lede">{{ content.description }}</p>{% endif %}
+      {% assign facets = content.frontmatter.facets %}
+      {% if facets != blank %}{% render "partials/titleblock", pairs: facets %}{% endif %}
+      {% assign sheet = content.files[content.frontmatter.datasheet] %}
+      {% if theme.options.quote_href != blank or sheet %}
+      <p class="actions">
+        {% if theme.options.quote_href != blank %}<a class="button" href="{{ theme.options.quote_href }}">{{ t.request_quote }}</a>{% endif %}
+        {% if sheet %}<a class="button button-quiet" href="{{ sheet }}" download>{{ t.datasheet }}</a>{% endif %}
+      </p>
+      {% endif %}
+    </div>
+  </div>
 
   {% assign sizes = content.frontmatter.sizes %}
   {% assign shop = plugins.shop %}
   {% if sizes != blank or shop.variants.size > 0 %}
-  <section>
+  <section class="section">
     <h2>{{ t.sizes }}</h2>
     <table class="ledger stack" role="table">
       <thead role="rowgroup">
@@ -46,40 +83,35 @@
   {% endif %}
 
   {% capture body %}{{ content.html }}{% endcapture %}
-  {% if body != blank %}<div class="column prose">{{ content.html }}</div>{% endif %}
-
   {% assign specs = content.frontmatter.specs %}
-  {% if specs != blank %}
-  <section>
-    <h2>{{ t.specifications }}</h2>
-    <table class="ledger"><tbody>{% for pair in specs %}<tr><th scope="row">{{ pair[0] }}</th><td>{{ pair[1] }}</td></tr>{% endfor %}</tbody></table>
-  </section>
-  {% endif %}
-
-  {% assign sheet = content.files[content.frontmatter.datasheet] %}
-  {% if theme.options.quote_href != blank or sheet %}
-  <p>
-    {% if theme.options.quote_href != blank %}<a class="button" href="{{ theme.options.quote_href }}">{{ t.request_quote }}</a>{% endif %}
-    {% if sheet %}<a class="button button-quiet" href="{{ sheet }}" download>{{ t.datasheet }}</a>{% endif %}
-  </p>
+  {% if body != blank or specs != blank %}
+  <div class="section product-body">
+    {% if body != blank %}<div class="prose">{{ content.html }}</div>{% endif %}
+    {% if specs != blank %}
+    <section class="beside">
+      <h2>{{ t.specifications }}</h2>
+      <table class="ledger"><tbody>{% for pair in specs %}<tr><th scope="row">{{ pair[0] }}</th><td>{{ pair[1] }}</td></tr>{% endfor %}</tbody></table>
+    </section>
+    {% endif %}
+  </div>
   {% endif %}
 
   {% if content.backrefs.application.size > 0 %}
-  <section class="column">
+  <section class="section">
     <h2>{{ t.used_in }}</h2>
-    <ul class="entries">{% for item in content.backrefs.application %}{% render "partials/entry", item: item, kicker: t.application_note %}{% endfor %}</ul>
+    <ul class="cards">{% for item in content.backrefs.application %}{% render "partials/card", item: item %}{% endfor %}</ul>
   </section>
   {% endif %}
 
   {% if content.backrefs.case.size > 0 %}
-  <section class="column">
+  <section class="section">
     <h2>{{ t.cases_with }}</h2>
-    <ul class="entries">{% for item in content.backrefs.case %}{% render "partials/entry", item: item, kicker: item.frontmatter.sector %}{% endfor %}</ul>
+    <ul class="cards">{% for item in content.backrefs.case %}{% render "partials/card", item: item, meta: item.frontmatter.sector %}{% endfor %}</ul>
   </section>
   {% endif %}
 
   {% if content.siblings.size > 0 %}
-  <section>
+  <section class="section">
     <h2>{{ t.related_products }}</h2>
     {% render "partials/catalogue", items: content.siblings %}
   </section>

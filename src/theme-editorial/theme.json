@@ -1,7 +1,7 @@
 {
   "id": "nundar-editorial",
   "name": "Nundar Editorial",
-  "description": "A second theme for the same shop: serif type on warm paper, the industries and notes before the catalogue, and no script and no file of its own. It reads the same content, options and shop data as the commerce theme.",
+  "description": "A second theme for the same shop: an engineering bulletin on titanium grey, set in DIN and a book face, with the industries and case studies before the catalogue, and no script and no file of its own. It reads the same content, options and shop data as the commerce theme.",
   "version": "0.1.0",
   "themeApi": 1,
   "home": "layouts/home.liquid",

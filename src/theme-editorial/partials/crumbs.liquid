@@ -4,8 +4,10 @@
 {%- endcomment -%}
 {%- assign own = site.kinds[content.kind] -%}
 <nav class="trail" aria-label="{{ t.breadcrumb }}">
-  <a href="{{ site.home_path }}">{{ t.home }}</a>
-  {%- if own %} · <a href="{{ own.path }}">{{ own.label }}</a>{% endif %}
-  {%- if via %} · <a href="{{ via.path }}">{{ via.title }}</a>{% endif %}
-  · <span aria-current="page">{{ content.title }}</span>
+  <ol>
+    <li><a href="{{ site.home_path }}">{{ t.home }}</a></li>
+    {%- if own %}<li><a href="{{ own.path }}">{{ own.label }}</a></li>{% endif %}
+    {%- if via %}<li><a href="{{ via.path }}">{{ via.title }}</a></li>{% endif %}
+    <li aria-current="page">{{ content.title }}</li>
+  </ol>
 </nav>

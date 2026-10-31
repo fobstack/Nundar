@@ -1,17 +1,24 @@
 {% layout "layouts/base" %}
+{%- comment -%}
+  A product type: its picture and its products, then what it has to say.
+{%- endcomment -%}
 {% block content %}
-<article class="column wide">
-  {% render "partials/crumbs" %}
-  <p class="kicker">{{ t.collection_eyebrow }}</p>
-  <h1>{{ content.title }}</h1>
-  {% if content.description != "" %}<p class="lede">{{ content.description }}</p>{% endif %}
-  <h2>{{ t.products_in_collection }}</h2>
-  {% if content.backrefs.product.size > 0 %}
-  {% render "partials/catalogue", items: content.backrefs.product %}
-  {% else %}
-  <p>{{ t.empty }}</p>
-  {% endif %}
+<article>
+  <header class="shell page-head">
+    {% render "partials/crumbs" %}
+    <h1>{{ content.title }}</h1>
+    {% if content.description != "" %}<p class="lede">{{ content.description }}</p>{% endif %}
+  </header>
+  {% if content.cover != blank %}<div class="shell"><figure class="cover"><img src="{{ content.cover }}" alt="" width="1440" height="617" decoding="async"></figure></div>{% endif %}
+  <section class="shell section">
+    <h2>{{ t.products_in_collection }}</h2>
+    {% if content.backrefs.product.size > 0 %}
+    {% render "partials/catalogue", items: content.backrefs.product %}
+    {% else %}
+    <p>{{ t.empty }}</p>
+    {% endif %}
+  </section>
   {% capture body %}{{ content.html }}{% endcapture %}
-  {% if body != blank %}<div class="prose">{{ content.html }}</div>{% endif %}
+  {% if body != blank %}<div class="shell section"><div class="prose">{{ content.html }}</div></div>{% endif %}
 </article>
 {% endblock %}

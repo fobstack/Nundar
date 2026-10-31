@@ -5,12 +5,13 @@
   calculator: the commerce theme's are an addition to the same text.
 {%- endcomment -%}
 {% block content %}
-<article class="column">
-  {% render "partials/crumbs" %}
-  <p class="kicker">{{ t.tool_eyebrow }}</p>
-  <h1>{{ content.title }}</h1>
-  {% if content.description != "" %}<p class="lede">{{ content.description }}</p>{% endif %}
+<article>
+  <header class="shell page-head">
+    {% render "partials/crumbs" %}
+    <h1>{{ content.title }}</h1>
+    {% if content.description != "" %}<p class="lede">{{ content.description }}</p>{% endif %}
+  </header>
   {% capture body %}{{ content.html }}{% endcapture %}
-  {% if body != blank %}<div class="prose">{{ content.html }}</div>{% endif %}
+  {% if body != blank %}<div class="shell"><div class="prose">{{ content.html }}</div></div>{% endif %}
 </article>
 {% endblock %}

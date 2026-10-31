@@ -1,8 +1,10 @@
 {% layout "layouts/base" %}
 {% block content %}
-<section class="column wide">
-  <h1>{{ page.title }}</h1>
-  <p class="lede">{{ t.catalogue_lede }}</p>
+<section class="shell">
+  <header class="page-head">
+    <h1>{{ page.title }}</h1>
+    <p class="lede">{{ t.catalogue_lede }}</p>
+  </header>
   {% if list.items.size > 0 %}
   {% render "partials/catalogue", items: list.items %}
   {% else %}
@@ -10,4 +12,5 @@
   {% endif %}
   {% render "partials/pager", list: list %}
 </section>
+{% if theme.options.cta_title != blank %}{% render "partials/closing" %}{% endif %}
 {% endblock %}

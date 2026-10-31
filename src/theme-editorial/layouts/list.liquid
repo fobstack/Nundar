@@ -1,12 +1,17 @@
 {% layout "layouts/base" %}
+{%- comment -%}
+  A kind's list: each item as a card, with its picture when it has one and
+  a case study's sector above its title.
+{%- endcomment -%}
 {% block content %}
-<section class="column">
-  <h1>{{ page.title }}</h1>
+<section class="shell">
+  <header class="page-head"><h1>{{ page.title }}</h1></header>
   {% if list.items.size > 0 %}
-  <ul class="entries">{% for item in list.items %}{% render "partials/entry", item: item, kicker: item.frontmatter.sector %}{% endfor %}</ul>
+  <ul class="cards">{% for item in list.items %}{% render "partials/card", item: item, meta: item.frontmatter.sector %}{% endfor %}</ul>
   {% else %}
   <p>{{ t.empty }}</p>
   {% endif %}
   {% render "partials/pager", list: list %}
 </section>
+{% if theme.options.cta_title != blank %}{% render "partials/closing" %}{% endif %}
 {% endblock %}

@@ -1,9 +1,9 @@
 {%- comment -%}
-  Products as a ruled table: the name, the sizes, and — when the shop says
-  anything of a product — the lowest price it can be ordered at and whether
-  it can be had. The plugin is told which products a list or the home page
-  shows, and not which a content page lists, so under a collection the same
-  table has names and no prices.
+  Products as a ruled table: a picture and the name, the sizes, and — when
+  the shop says anything of a product — the lowest price it can be ordered
+  at and whether it can be had. The plugin is told which products a list or
+  the home page shows, and not which a content page lists, so under a
+  collection the same table has names and no prices.
   Called as {% render "partials/catalogue", items: list.items %}.
 {%- endcomment -%}
 <table class="ledger stack" role="table">
@@ -14,7 +14,7 @@
     {% for item in items %}
     {% assign offer = plugins.shop.products[item.id] %}
     <tr role="row">
-      <th scope="row" role="rowheader"><a href="{{ item.path }}">{{ item.title }}</a></th>
+      <th scope="row" role="rowheader">{% if item.cover != blank %}<span class="thumb"><img src="{{ item.cover }}" alt="" width="144" height="144" loading="lazy" decoding="async"><a href="{{ item.path }}">{{ item.title }}</a></span>{% else %}<a href="{{ item.path }}">{{ item.title }}</a>{% endif %}</th>
       <td role="cell" data-label="{{ t.col_sizes }}">{% if item.frontmatter.sizes != blank %}{% for pair in item.frontmatter.sizes %}{{ pair[1] }}{% unless forloop.last %}, {% endunless %}{% endfor %}{% else %}—{% endif %}</td>
       <td role="cell" data-label="{{ t.unit_price }}">{% if offer %}{% assign state = "avail_" | append: offer.availability %}{% if offer.price_from != blank %}{{ t.price_from }} <span class="price">{{ offer.price_from }}</span><br>{% endif %}<span class="small">{{ t[state] }}</span>{% else %}<span class="small">{{ t.view_specs }}</span>{% endif %}</td>
     </tr>

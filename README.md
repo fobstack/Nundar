@@ -154,8 +154,9 @@ Two themes ship, and they are deliberately opposites. A theme is how a page look
 
 | | Commerce (`src/theme/`, the default) | Editorial (`src/theme-editorial/`) |
 |---|---|---|
-| Type | Space Grotesk and Inter, served by the site itself | The visitor's own serif |
-| Home page | A headline that points at the specification finder, then the collections and the finder | The industries, the case studies and the notes first, then a ruled catalogue |
+| Type | Space Grotesk and Inter, served by the site itself | DIN for headings and figures, Charter for text — from the visitor's own system (DIN Condensed and DIN Alternate on Apple's, Bahnschrift on Windows), with fallbacks |
+| Look | Light and open, amber on white | An engineering bulletin: titanium grey, graphite and the site's accent, with attributes and results in a drawing's title block |
+| Home page | A headline that points at the specification finder, then the collections and the finder | A headline beside a picture of a part, then the industries, the case studies with their results, a catalogue with pictures, and the product types |
 | Scripts | Three small ones, each adding to a page that works without it | None |
 | Files of its own | A stylesheet, fonts and images | None: its styles are in the page |
 

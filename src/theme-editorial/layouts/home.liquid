@@ -1,60 +1,92 @@
 {% layout "layouts/base" %}
 {%- comment -%}
-  The home page reads like the front of a journal: the site's own headline,
-  then where its parts are used, then what it has written, and only then the
-  catalogue. The commerce theme leads with the catalogue; this one is its
-  opposite on purpose, to show that the same content and the same shop data
-  stand up either way.
+  The home page reads like the front of a bulletin: the site's headline
+  beside a picture of a part, then where the parts are used and what was
+  done with them, and only then the catalogue. The commerce theme leads with
+  the catalogue; this one is its opposite on purpose, to show that the same
+  content and the same shop data stand up either way.
+
+  The opening picture is the first product in the catalogue that has one,
+  and says which: a picture of a part names the part.
 {%- endcomment -%}
 {% block content %}
-<div class="column">
-  <h1>{% if theme.options.hero_title != blank %}{{ theme.options.hero_title }}{% else %}{{ site.name }}{% endif %}</h1>
-  {% if theme.options.hero_lede != blank %}<p class="lede">{{ theme.options.hero_lede }}</p>{% endif %}
-
-  {% if recent.application.size > 0 %}
-  <section>
-    <h2>{{ t.application }}</h2>
-    <ul class="entries">{% for item in recent.application %}{% render "partials/entry", item: item, kicker: t.application_note %}{% endfor %}</ul>
-  </section>
+{% assign lead = nil %}
+{% for item in recent.product %}{% if lead == nil and item.cover != blank %}{% assign lead = item %}{% endif %}{% endfor %}
+<section class="shell hero{% if lead == nil %} plain{% endif %}">
+  <div class="hero-text">
+    <h1>{% if theme.options.hero_title != blank %}{{ theme.options.hero_title }}{% else %}{{ site.name }}{% endif %}</h1>
+    {% if theme.options.hero_lede != blank %}<p class="lede">{{ theme.options.hero_lede }}</p>{% endif %}
+    {% if theme.options.quote_href != blank or site.kinds.product %}
+    <p class="actions">
+      {% if site.kinds.product %}<a class="button" href="{{ site.kinds.product.path }}">{{ t.view_catalogue }}</a>{% endif %}
+      {% if theme.options.quote_href != blank %}<a class="button button-quiet" href="{{ theme.options.quote_href }}">{{ t.request_quote }}</a>{% endif %}
+    </p>
+    {% endif %}
+  </div>
+  {% if lead %}
+  <figure class="hero-figure">
+    <a href="{{ lead.path }}" tabindex="-1" aria-hidden="true"><img src="{{ lead.cover }}" alt="" width="1440" height="1080" fetchpriority="high" decoding="async"></a>
+    <figcaption><a href="{{ lead.path }}">{{ lead.title }}</a></figcaption>
+  </figure>
   {% endif %}
+</section>
 
-  {% if recent.case.size > 0 %}
-  <section>
-    <h2>{{ t.case }}</h2>
-    <ul class="entries">{% for item in recent.case %}{% render "partials/entry", item: item, kicker: item.frontmatter.sector %}{% endfor %}</ul>
-  </section>
-  {% endif %}
+{% if recent.application.size > 0 %}
+<section class="shell band">
+  <div class="band-head">
+    <h2>{% if site.kinds.application %}<a href="{{ site.kinds.application.path }}">{{ t.application }}</a>{% else %}{{ t.application }}{% endif %}</h2>
+  </div>
+  <ul class="cards lead">{% for item in recent.application %}{% render "partials/card", item: item %}{% endfor %}</ul>
+</section>
+{% endif %}
 
-  {% if recent.article.size > 0 %}
-  <section>
-    <h2>{{ t.article }}</h2>
-    <ul class="entries">{% for item in recent.article %}{% render "partials/entry", item: item %}{% endfor %}</ul>
-  </section>
-  {% endif %}
-</div>
+{% if recent.case.size > 0 %}
+<section class="shell band">
+  <div class="band-head">
+    <h2>{% if site.kinds.case %}<a href="{{ site.kinds.case.path }}">{{ t.case }}</a>{% else %}{{ t.case }}{% endif %}</h2>
+  </div>
+  <ul class="stories">
+    {% for item in recent.case %}
+    <li class="story">
+      {% if item.cover != blank %}<a class="story-figure" href="{{ item.path }}" tabindex="-1" aria-hidden="true"><img src="{{ item.cover }}" alt="" width="1440" height="810" loading="lazy" decoding="async"></a>{% endif %}
+      <div>
+        {% if item.frontmatter.sector != blank %}<p class="meta">{{ item.frontmatter.sector }}</p>{% endif %}
+        <h3><a href="{{ item.path }}">{{ item.title }}</a></h3>
+        {% if item.description != blank %}<p>{{ item.description }}</p>{% endif %}
+        {% if item.frontmatter.results != blank %}{% render "partials/titleblock", pairs: item.frontmatter.results, size: "large", max: 2, label: t.results %}{% endif %}
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
 
 {% if recent.product.size > 0 %}
-<section class="column wide">
-  <h2>{{ t.product }}</h2>
+<section class="shell band">
+  <div class="band-head">
+    <h2>{% if site.kinds.product %}<a href="{{ site.kinds.product.path }}">{{ t.product }}</a>{% else %}{{ t.product }}{% endif %}</h2>
+  </div>
   {% render "partials/catalogue", items: recent.product %}
-  {% if site.kinds.product %}<p><a href="{{ site.kinds.product.path }}">{{ t.view_catalogue }} →</a></p>{% endif %}
 </section>
 {% endif %}
 
 {% if recent.collection.size > 0 %}
-<section class="column">
-  <h2>{{ t.collection }}</h2>
-  <ul class="entries">{% for item in recent.collection %}{% render "partials/entry", item: item %}{% endfor %}</ul>
+<section class="shell band">
+  <div class="band-head"><h2>{{ t.browse_by_type }}</h2></div>
+  <ul class="tiles">
+    {% for item in recent.collection %}<li><a href="{{ item.path }}">{% if item.cover != blank %}<img src="{{ item.cover }}" alt="" width="480" height="480" loading="lazy" decoding="async">{% endif %}{{ item.title }}</a></li>{% endfor %}
+  </ul>
 </section>
 {% endif %}
 
-{% if theme.options.cta_title != blank %}
-<div class="column">
-  <div class="aside">
-    <h2>{{ theme.options.cta_title }}</h2>
-    {% if theme.options.cta_text != blank %}<p>{{ theme.options.cta_text }}</p>{% endif %}
-    {% if theme.options.quote_href != blank %}<p><a class="button" href="{{ theme.options.quote_href }}">{{ t.request_quote }}</a></p>{% endif %}
+{% if recent.article.size > 0 %}
+<section class="shell band">
+  <div class="band-head">
+    <h2>{% if site.kinds.article %}<a href="{{ site.kinds.article.path }}">{{ t.article }}</a>{% else %}{{ t.article }}{% endif %}</h2>
   </div>
-</div>
+  <ul class="cards">{% for item in recent.article %}{% render "partials/card", item: item %}{% endfor %}</ul>
+</section>
 {% endif %}
+
+{% if theme.options.cta_title != blank %}{% render "partials/closing" %}{% endif %}
 {% endblock %}

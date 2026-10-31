@@ -1,10 +1,11 @@
 <!doctype html>
 {%- comment -%}
-  The editorial theme: serif type on warm paper, a narrow reading column,
-  and nothing loaded but the page. It has no stylesheet file and no font
-  file: Mallok stages the assets of the theme at `src/theme` only, so a
-  second theme in the same project carries its styles in the page
-  (`partials/style.liquid`) and uses the reader's own serif.
+  The editorial theme: an engineering bulletin on titanium grey, set in DIN
+  and a book face, with nothing loaded but the page. It has no stylesheet
+  file and no font file: Mallok stages the assets of the theme at
+  `src/theme` only, so a second theme in the same project carries its
+  styles in the page (`partials/style.liquid`) and uses the faces the
+  reader's system has.
 {%- endcomment -%}
 <html lang="{{ page.locale }}" style="--accent: {{ theme.options.accent }}">
 <head>

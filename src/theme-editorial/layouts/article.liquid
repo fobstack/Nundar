@@ -1,16 +1,19 @@
 {% layout "layouts/base" %}
 {% block content %}
-<article class="column">
-  {% render "partials/crumbs" %}
-  <h1>{{ content.title }}</h1>
-  {% if content.published_at %}<p class="small"><time datetime="{{ content.published_at }}">{{ content.published_at | date: "%Y-%m-%d" }}</time></p>{% endif %}
-  {% if content.description != "" %}<p class="lede">{{ content.description }}</p>{% endif %}
+<article>
+  <header class="shell page-head">
+    {% render "partials/crumbs" %}
+    {% if content.published_at %}<p class="meta"><time datetime="{{ content.published_at }}">{{ content.published_at | date: "%Y-%m-%d" }}</time></p>{% endif %}
+    <h1>{{ content.title }}</h1>
+    {% if content.description != "" %}<p class="lede">{{ content.description }}</p>{% endif %}
+  </header>
+  {% if content.cover != blank %}<div class="shell"><figure class="cover"><img src="{{ content.cover }}" alt="" width="1440" height="617" decoding="async"></figure></div>{% endif %}
   {% capture body %}{{ content.html }}{% endcapture %}
-  {% if body != blank %}<div class="prose">{{ content.html }}</div>{% endif %}
+  {% if body != blank %}<div class="shell"><div class="prose">{{ content.html }}</div></div>{% endif %}
   {% if content.siblings.size > 0 %}
-  <section>
+  <section class="shell section">
     <h2>{{ t.article }}</h2>
-    <ul class="entries">{% for item in content.siblings limit: 3 %}{% render "partials/entry", item: item %}{% endfor %}</ul>
+    <ul class="cards">{% for item in content.siblings limit: 3 %}{% render "partials/card", item: item %}{% endfor %}</ul>
   </section>
   {% endif %}
 </article>
