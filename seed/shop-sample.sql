@@ -1,4 +1,5 @@
--- Sample variants and base prices for the sample products in content/product.
+-- Sample variants and base prices for the sample products in content/product,
+-- and the zones the sample ships to.
 --
 -- One variant per size on offer. product_group is the product bundle's
 -- translation_group, fixed in that bundle's mallok.json, so a variant attaches
@@ -90,3 +91,44 @@ VALUES
   ('sample-ti-hex-m8-30', 'GBP', 390, 'manual', NULL, '2026-10-05T00:00:00.000Z'),
   ('sample-ti-shl-m6-20', 'EUR', 1185, 'manual', NULL, '2026-10-05T00:00:00.000Z'),
   ('sample-ti-shl-m6-20', 'GBP', 1020, 'manual', NULL, '2026-10-05T00:00:00.000Z');
+
+-- Sample shipping zones: a fixed rate per zone in each currency, free past an
+-- amount where the zone has one. Invented for the sample, as the prices are.
+-- A country in no zone cannot be checked out to.
+
+INSERT OR IGNORE INTO p_shop_shipping_zone (id, name, sort_order, created_at, updated_at)
+VALUES
+  ('sample-zone-europe', 'Europe', 0, '2026-10-31T00:00:00.000Z', '2026-10-31T00:00:00.000Z'),
+  ('sample-zone-uk', 'United Kingdom', 1, '2026-10-31T00:00:00.000Z', '2026-10-31T00:00:00.000Z'),
+  ('sample-zone-north-america', 'North America', 2, '2026-10-31T00:00:00.000Z', '2026-10-31T00:00:00.000Z'),
+  ('sample-zone-asia-pacific', 'Asia Pacific', 3, '2026-10-31T00:00:00.000Z', '2026-10-31T00:00:00.000Z');
+
+INSERT OR IGNORE INTO p_shop_shipping_country (country, zone_id)
+VALUES
+  ('AT', 'sample-zone-europe'), ('BE', 'sample-zone-europe'),
+  ('DE', 'sample-zone-europe'), ('DK', 'sample-zone-europe'),
+  ('ES', 'sample-zone-europe'), ('FI', 'sample-zone-europe'),
+  ('FR', 'sample-zone-europe'), ('IE', 'sample-zone-europe'),
+  ('IT', 'sample-zone-europe'), ('LU', 'sample-zone-europe'),
+  ('NL', 'sample-zone-europe'), ('PL', 'sample-zone-europe'),
+  ('PT', 'sample-zone-europe'), ('SE', 'sample-zone-europe'),
+  ('GB', 'sample-zone-uk'),
+  ('CA', 'sample-zone-north-america'), ('US', 'sample-zone-north-america'),
+  ('AU', 'sample-zone-asia-pacific'), ('JP', 'sample-zone-asia-pacific'),
+  ('KR', 'sample-zone-asia-pacific'), ('NZ', 'sample-zone-asia-pacific'),
+  ('SG', 'sample-zone-asia-pacific');
+
+INSERT OR IGNORE INTO p_shop_shipping_rate (zone_id, currency, amount_minor, free_over_minor)
+VALUES
+  ('sample-zone-europe', 'EUR', 2500, 50000),
+  ('sample-zone-europe', 'USD', 2900, NULL),
+  ('sample-zone-europe', 'GBP', 2200, NULL),
+  ('sample-zone-uk', 'GBP', 1500, 40000),
+  ('sample-zone-uk', 'EUR', 1800, NULL),
+  ('sample-zone-uk', 'USD', 1900, NULL),
+  ('sample-zone-north-america', 'USD', 3500, 75000),
+  ('sample-zone-north-america', 'EUR', 3200, NULL),
+  ('sample-zone-north-america', 'GBP', 2800, NULL),
+  ('sample-zone-asia-pacific', 'USD', 4500, NULL),
+  ('sample-zone-asia-pacific', 'EUR', 4200, NULL),
+  ('sample-zone-asia-pacific', 'GBP', 3600, NULL);

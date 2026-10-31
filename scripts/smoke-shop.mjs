@@ -9,9 +9,12 @@
  *   3. load the sample variants from `seed/shop-sample.sql`;
  *   4. request every kind of page, follow the navigation in every language,
  *      and fetch the theme's own files;
- *   5. add to the cart with the form a product page offers, and read the
- *      cart page it leads to;
- *   6. add a variant the way the admin's form does, and delete it.
+ *   5. add to the cart with the form a product page offers, read the cart
+ *      page it leads to, and go on to checkout, which quotes shipping and,
+ *      with no Stripe keys set, takes no payment;
+ *   6. add a variant the way the admin's form does, and delete it;
+ *   7. send the cart as a request for a quote;
+ *   8. export the site, and find the shop's data in it.
  *
  * It exists because the unit tests, thorough as they are, run each piece in
  * isolation. This is the one place the theme, the plugin, the content and the
@@ -592,6 +595,86 @@ try {
     'the German cart page does not show the same cart in German and in euros',
   );
 
+  // 5b. Checkout, the way the cart page leads to it. The run sets no Stripe
+  //     keys, so the shop takes no payment: the cart offers no checkout, the
+  //     checkout page says so and places nothing, and Stripe's deliveries
+  //     are turned away for Stripe to deliver again.
+  expect(
+    !germanCart.includes('/_mallok/p/shop/de/checkout'),
+    'the cart page offers checkout though the shop cannot take a payment',
+  );
+  const checkoutPage = await fetch(
+    `${base}/_mallok/p/shop/de/checkout?country=DE`,
+    { headers: { cookie: cartCookie }, signal: timeout() },
+  );
+  const checkout = await checkoutPage.text();
+  expect(
+    checkoutPage.status === 200 &&
+      checkout.includes('<h1 class="detail-title">Kasse</h1>') &&
+      /<option value="DE" selected>Deutschland<\/option>/.test(checkout) &&
+      /Versand · Europe<\/dt><dd><span class="price">25,00\s€<\/span>/.test(
+        checkout,
+      ) &&
+      /class="checkout-total"><dt>Gesamt<\/dt><dd><span class="price">235,00\s€<\/span>/.test(
+        checkout,
+      ) &&
+      checkout.includes('Online-Zahlung ist derzeit nicht verfügbar.') &&
+      !checkout.includes('name="recipient"') &&
+      !/<script\b/.test(checkout),
+    `the German checkout page does not quote shipping to Germany, or offers a payment it cannot take (${checkoutPage.status})`,
+  );
+  const placeAttempt = await fetch(`${base}/_mallok/p/shop/de/checkout/place`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/x-www-form-urlencoded',
+      origin: base,
+      cookie: cartCookie,
+    },
+    body: new URLSearchParams({
+      email: 'buyer@smoke.example',
+      company: 'Smoke GmbH',
+      recipient: 'Smoke Buyer',
+      line1: 'Hafenstraße 1',
+      city: 'Hamburg',
+      country: 'DE',
+    }).toString(),
+    redirect: 'manual',
+    signal: timeout(),
+  });
+  expect(
+    placeAttempt.status === 303 &&
+      placeAttempt.headers.get('location') ===
+        '/_mallok/p/shop/de/checkout?checkout=payments_unavailable&country=DE',
+    `placing an order without Stripe's keys returned ${placeAttempt.status} to ${placeAttempt.headers.get('location')}`,
+  );
+  const unpaid = await query('SELECT COUNT(*) AS n FROM p_shop_order');
+  expect(
+    unpaid[0].n === 0,
+    'an order was placed though no payment can be taken',
+  );
+  const delivery = await fetch(`${base}/_mallok/p/shop/stripe/webhook`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'stripe-signature': 't=1,v1=00',
+    },
+    body: '{}',
+    signal: timeout(),
+  });
+  expect(
+    delivery.status === 503,
+    `a delivery from Stripe before its signing secret is set returned ${delivery.status}`,
+  );
+  const noOrder = await fetch(
+    `${base}/_mallok/p/shop/order/ND-261031-AAAAAAAA?k=${'A'.repeat(43)}`,
+    { signal: timeout() },
+  );
+  expect(
+    noOrder.status === 404 &&
+      (await noOrder.text()).includes('This order cannot be shown.'),
+    `a link that opens no order returned ${noOrder.status}`,
+  );
+
   // The header's way to the cart is on a public page, the same for everyone.
   expect(
     /<a class="cart-link" href="\/_mallok\/p\/shop\/cart">/.test(home.html),
@@ -666,6 +749,28 @@ try {
   expect(
     removed.ok && left[0].n === 0,
     `deleting the variant returned ${removed.status} and left ${left[0].n} behind`,
+  );
+
+  // The admin's lists of what checkout keeps: the sample's shipping zones,
+  // and orders and refused payments, of which there are none.
+  const shopPanel = async (id) => {
+    const response = await fetch(
+      `${base}/_mallok/api/plugins/shop/panels/${id}`,
+      { headers: authorised, signal: timeout() },
+    );
+    return { status: response.status, rows: (await response.json()).rows };
+  };
+  const zones = await shopPanel('shipping');
+  const orderList = await shopPanel('orders');
+  const refusedList = await shopPanel('refused-payments');
+  expect(
+    zones.status === 200 &&
+      zones.rows.length === 4 &&
+      orderList.status === 200 &&
+      orderList.rows.length === 0 &&
+      refusedList.status === 200 &&
+      refusedList.rows.length === 0,
+    `the admin's shop lists answered ${zones.status} (${zones.rows?.length} zones), ${orderList.status} and ${refusedList.status}`,
   );
 
   const lines = await query(
@@ -847,7 +952,7 @@ try {
   );
 
   process.stdout.write(
-    `smoke:shop: ok (settings, publish, seed, every kind of page, ${followed} navigation links in ${site.locales.length} languages, ${shipped.length} theme files, cart, variants in the admin, a cart sent as an inquiry, the shop in the site's export) on ${base}\n`,
+    `smoke:shop: ok (settings, publish, seed, every kind of page, ${followed} navigation links in ${site.locales.length} languages, ${shipped.length} theme files, cart, checkout with no payment taken, variants in the admin, a cart sent as an inquiry, the shop in the site's export) on ${base}\n`,
   );
 } catch (error) {
   failure = error;
