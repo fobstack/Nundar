@@ -158,7 +158,10 @@ describe('a buyer finding their orders', () => {
     // Never paid: not listed.
     expect((listed.match(/class="cart-name"/g) ?? []).length).toBe(2);
     // Whole: no empty box, no link to nowhere.
-    const main = listed.slice(listed.indexOf('<main'), listed.indexOf('</main>'));
+    const main = listed.slice(
+      listed.indexOf('<main'),
+      listed.indexOf('</main>'),
+    );
     expect(main).not.toMatch(/<(p|div|ul|li|span|dl|h1|h2)\b[^>]*>\s*<\/\1>/);
     expect(listed).not.toMatch(/href=""/);
     // Each order opens its own page.

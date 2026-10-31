@@ -10,16 +10,19 @@
  *
  * - the commerce theme, which decides how the shop looks;
  * - the shop plugin, which holds the commerce logic;
- * - Mallok's own inquiry plugin, for the request-a-quote form.
+ * - Mallok's own inquiry plugin, for the request-a-quote form;
+ * - the sample shop, as a starter the first-run wizard offers.
  *
- * All three are build-time choices — changing any of them needs a deploy.
+ * All of them are build-time choices — changing any needs a deploy.
  */
 
 import { createMallok, inquiry } from 'mallok/worker';
 import { shop } from '../plugins/shop/index.js';
+import { sampleShop } from '../starter/index.js';
 import { nundarTheme } from '../theme/index.js';
 
 export default createMallok({
   theme: nundarTheme,
   plugins: [inquiry, shop],
+  starters: [sampleShop],
 });
