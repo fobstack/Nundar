@@ -30,6 +30,16 @@ import { PAID_FOR_STATUSES } from './order-state.js';
  */
 const LISTED = JSON.stringify(PAID_FOR_STATUSES);
 
+/*
+ * An address is compared without regard to case, and folded by SQLite's
+ * `lower()` wherever it is folded — here as in the customers view. SQLite
+ * folds ASCII only; JavaScript folds all of Unicode, and U+212A KELVIN SIGN
+ * becomes an ASCII k. Folded by one rule and compared with the other, an
+ * address with a capital beyond ASCII found none of its orders, and
+ * `mi\u212Ae@…` was sent a link to the orders of `mike@…`. Never fold one
+ * in JavaScript to compare it with the database.
+ */
+
 /** How long a link opens the list. */
 export const ORDER_LOOKUP_LIFETIME_MS = 24 * 60 * 60 * 1000;
 
@@ -97,39 +107,38 @@ export async function recordLookup(
   | { readonly kind: 'recorded'; readonly orders: number }
   | { readonly kind: 'too_many' }
 > {
-  const email = input.email.toLowerCase();
   const nowIso = input.now.toISOString();
   const hourAgo = new Date(input.now.getTime() - 60 * 60 * 1000).toISOString();
   const [written, counted] = await db.batch<{ n: number }>([
     db
       .prepare(
         `INSERT INTO p_shop_order_link (id, email, ip_hash, created_at, expires_at)
-         SELECT ?, ?, ?, ?, ?
+         SELECT ?, lower(?), ?, ?, ?
          WHERE (SELECT COUNT(*) FROM p_shop_order_link
                 WHERE ip_hash IS ? AND created_at > ?) < ?
            AND (SELECT COUNT(*) FROM p_shop_order_link
-                WHERE email = ? AND created_at > ?) < ?`,
+                WHERE email = lower(?) AND created_at > ?) < ?`,
       )
       .bind(
         await lookupDigest(input.token),
-        email,
+        input.email,
         input.ipHash,
         nowIso,
         new Date(input.now.getTime() + ORDER_LOOKUP_LIFETIME_MS).toISOString(),
         input.ipHash,
         hourAgo,
         MAX_LOOKUPS_PER_VISITOR_HOUR,
-        email,
+        input.email,
         hourAgo,
         MAX_LOOKUPS_PER_ADDRESS_HOUR,
       ),
     db
       .prepare(
         `SELECT COUNT(*) AS n FROM p_shop_order
-         WHERE lower(email) = ?
+         WHERE lower(email) = lower(?)
            AND status IN (SELECT value FROM json_each(?))`,
       )
-      .bind(email, LISTED),
+      .bind(input.email, LISTED),
   ]);
   if ((written?.meta.changes ?? 0) === 0) {
     return { kind: 'too_many' };
@@ -174,11 +183,11 @@ export async function ordersOf(
     .prepare(
       `SELECT id, order_no, status, currency, total_minor, locale, created_at
        FROM p_shop_order
-       WHERE lower(email) = ?
+       WHERE lower(email) = lower(?)
          AND status IN (SELECT value FROM json_each(?))
        ORDER BY created_at DESC LIMIT ?`,
     )
-    .bind(email.toLowerCase(), LISTED, LOOKUP_ORDER_LIMIT)
+    .bind(email, LISTED, LOOKUP_ORDER_LIMIT)
     .all<{
       id: string;
       order_no: string;

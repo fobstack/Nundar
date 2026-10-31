@@ -210,6 +210,35 @@ describe('a buyer finding their orders', () => {
     expect(recorded?.n).toBe(3);
   });
 
+  it('folds an address’s case as the shop stores it, so that one with a capital beyond ASCII finds its orders', async () => {
+    // The database folds ASCII only. Folded here by another rule, the
+    // address typed exactly as it was ordered with found nothing.
+    const placed = await order('ÖMER@firma.example');
+
+    await ask('ÖMER@firma.example');
+
+    const link = await linkSentTo('ÖMER@firma.example');
+    const listed = await (await SELF.fetch(link)).text();
+    expect(listed).toContain(placed);
+  });
+
+  it('never sends one address the orders of another that folds to it', async () => {
+    // U+212A KELVIN SIGN is a letter, which an address may hold, and
+    // JavaScript lower-cases it to an ASCII k: folded so, this address
+    // would be sent a link to mike's orders, though it never paid here.
+    await order('mike@buyer.example');
+    const kelvin = 'mi\u212Ae@buyer.example';
+
+    const answer = await ask(kelvin);
+
+    expect(answer.headers.get('location')).toBe(`${SHOP}/orders?sent=1`);
+    expect(await mailTo(kelvin)).toEqual([]);
+    const { results } = await db()
+      .prepare("SELECT payload FROM job WHERE type = 'email'")
+      .all();
+    expect(results).toEqual([]);
+  });
+
   it('is written to in the language they asked in', async () => {
     await order('ada@buyer.example');
 
