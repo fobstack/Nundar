@@ -107,6 +107,7 @@ export async function recordLookup(
   | { readonly kind: 'recorded'; readonly orders: number }
   | { readonly kind: 'too_many' }
 > {
+  const digest = await lookupDigest(input.token);
   const nowIso = input.now.toISOString();
   const hourAgo = new Date(input.now.getTime() - 60 * 60 * 1000).toISOString();
   const [written, counted] = await db.batch<{ n: number }>([
@@ -120,7 +121,7 @@ export async function recordLookup(
                 WHERE email = lower(?) AND created_at > ?) < ?`,
       )
       .bind(
-        await lookupDigest(input.token),
+        digest,
         input.email,
         input.ipHash,
         nowIso,
@@ -132,13 +133,20 @@ export async function recordLookup(
         hourAgo,
         MAX_LOOKUPS_PER_ADDRESS_HOUR,
       ),
+    // Asked only when the record above was written: a refused request
+    // reads no orders. A CASE, because SQLite tests an EXISTS in a WHERE
+    // against every row it reads rather than once before them.
     db
       .prepare(
-        `SELECT COUNT(*) AS n FROM p_shop_order
-         WHERE lower(email) = lower(?)
-           AND status IN (SELECT value FROM json_each(?))`,
+        `SELECT CASE
+           WHEN EXISTS (SELECT 1 FROM p_shop_order_link WHERE id = ?)
+           THEN (SELECT COUNT(*) FROM p_shop_order
+                 WHERE lower(email) = lower(?)
+                   AND status IN (SELECT value FROM json_each(?)))
+           ELSE 0
+         END AS n`,
       )
-      .bind(input.email, LISTED),
+      .bind(digest, input.email, LISTED),
   ]);
   if ((written?.meta.changes ?? 0) === 0) {
     return { kind: 'too_many' };

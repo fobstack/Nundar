@@ -53,3 +53,15 @@ SELECT
             substr('0' || ((revenue_minor / orders) % 100), -2)
   END AS average
 FROM by_month;
+
+-- Finding a buyer's orders compares lower(email), which no index covered:
+-- each request read every paid order the shop had, through the status
+-- index. The form is public and D1's allowance is counted in rows read, so
+-- enough requests could spend a day's allowance and stop the shop. An index
+-- on the same expression lets a request read the address's own orders
+CREATE INDEX IF NOT EXISTS p_shop_order_email
+  ON p_shop_order (lower(email), status);
+
+-- The customers view gathers inquiries by the same expression
+CREATE INDEX IF NOT EXISTS p_shop_inquiry_email
+  ON p_shop_inquiry (lower(email));

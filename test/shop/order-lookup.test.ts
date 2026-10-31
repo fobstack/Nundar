@@ -7,6 +7,8 @@ import {
   deleteExpiredLookups,
   MAX_LOOKUPS_PER_ADDRESS_HOUR,
   MAX_LOOKUPS_PER_VISITOR_HOUR,
+  newLookupToken,
+  recordLookup,
 } from '../../src/plugins/shop/lib/order-lookup.js';
 import {
   createPendingOrder,
@@ -456,5 +458,91 @@ describe('the answer to a request for a link', () => {
       'ada@buyer.example',
     ]);
     expect(stranger.sent).toEqual([]);
+  });
+});
+
+describe('what a request for a link costs', () => {
+  /** A database that keeps the rows each batch read, as D1 reports them. */
+  function readsOf(): { db: D1Database; reads: number[] } {
+    const real = db();
+    const reads: number[] = [];
+    return {
+      reads,
+      db: {
+        prepare: (sql: string) => real.prepare(sql),
+        batch: async (statements: D1PreparedStatement[]) => {
+          const results = await real.batch(statements);
+          reads.push(
+            results.reduce(
+              (total, result) => total + (result.meta.rows_read ?? 0),
+              0,
+            ),
+          );
+          return results;
+        },
+      } as unknown as D1Database,
+    };
+  }
+
+  /** The rows a request for a link reads, as D1 counts them. */
+  async function rowsReadAsking(
+    email: string,
+    options: { visitor?: string; now?: Date } = {},
+  ): Promise<{ kind: string; read: number }> {
+    const counting = readsOf();
+    const recorded = await recordLookup(counting.db, {
+      token: newLookupToken(),
+      email,
+      ipHash: options.visitor ?? 'costly-visitor',
+      now: options.now ?? new Date(),
+    });
+    return { kind: recorded.kind, read: counting.reads[0] ?? -1 };
+  }
+
+  // The form is public and D1's allowance is counted in rows read: a
+  // request whose cost grew with the shop's orders would let anyone spend a
+  // day's allowance, and stop the shop, by asking often enough.
+  it('reads no more in a shop of twice as many orders', async () => {
+    await order('ada@buyer.example');
+    const others = async (from: number): Promise<void> => {
+      for (let index = from; index < from + 40; index += 1) {
+        await order(`other${index}@buyer.example`);
+      }
+      // A request's own record would be read by the next one's limits.
+      await db().prepare('DELETE FROM p_shop_order_link').run();
+    };
+    await others(0);
+    const forty = await rowsReadAsking('Ada@Buyer.example');
+    await others(40);
+
+    const eighty = await rowsReadAsking('Ada@Buyer.example');
+
+    expect(forty.kind).toBe('recorded');
+    expect(eighty).toEqual(forty);
+  });
+
+  it('reads no orders for a request it refuses, however many there are', async () => {
+    const now = new Date();
+    for (let index = 0; index < MAX_LOOKUPS_PER_ADDRESS_HOUR; index += 1) {
+      await rowsReadAsking('ada@buyer.example', {
+        visitor: `visitor-${index}`,
+        now,
+      });
+    }
+    const none = await rowsReadAsking('ada@buyer.example', {
+      visitor: 'one-more',
+      now,
+    });
+    for (let index = 0; index < 30; index += 1) {
+      await order('ada@buyer.example');
+    }
+
+    const many = await rowsReadAsking('ada@buyer.example', {
+      visitor: 'yet-another',
+      now,
+    });
+
+    expect(none.kind).toBe('too_many');
+    expect(many).toEqual(none);
   });
 });
