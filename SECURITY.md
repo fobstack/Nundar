@@ -236,6 +236,40 @@ risks — has no challenge in front of it. What is in its place:
   failure answering a webhook with 500 is logged with D1's message, which
   names a constraint and never a value.
 
+### Finding orders again
+
+There are no buyer accounts. A buyer who has lost an order's link asks for
+their orders by the address they ordered with.
+
+- **The form says the same whether or not there were orders** — that a
+  link is on its way if any were placed with that address. It tells nobody
+  who has bought here.
+- **Only an address a payment was made from is written to.** An order left
+  waiting, or cancelled because its payment page lapsed, carries whatever
+  address was typed into checkout, and is not counted. Without that, a
+  stranger could place an order in someone's name, let it lapse, and have
+  the shop write to them.
+- **Two limits, counted inside the write**: five requests an hour from one
+  visitor, and three links an hour to one address, whoever asks — so that
+  the form cannot fill a buyer's inbox. A request counts whether or not the
+  address has orders, so the limits say nothing either.
+- **The link's secret is 32 random bytes**, of which the database keeps only
+  the SHA-256 digest; it opens the list for 24 hours. The list shows each
+  order by its own signed link, and the page sends no referrer and writes
+  nothing.
+- **What a request leaves behind** is the address typed, lower-cased, and
+  the visitor's IP hash, for the day the link is good; the cron's
+  housekeeping deletes them afterwards. They are not in the export.
+- **The address is never in a link or a log.** The email carries the link
+  and nothing of the orders.
+
+### Customers and sales in the admin
+
+The customers panel gathers what orders and inquiries already hold — an
+address, a company, a country, counts and totals — and keeps nothing of its
+own. Sales are counted from the shop's own records. Both are read-only views
+an administrator sees.
+
 ## Known residual risks
 
 Stated plainly rather than left for an auditor to find:
@@ -312,7 +346,9 @@ Stated plainly rather than left for an auditor to find:
   export succeeds and has nothing of the shop's in it. The reason is in the
   Worker's log, under `shop_export_refused`.
 - **Sample content and sample variants are public test data.** Do not load
-  `seed/shop-sample.sql` into a production database. The sample catalogue
+  `seed/shop-sample.sql` into a production database, and do not choose the
+  sample in Mallok's first-run wizard for a site that will sell — or delete
+  its content, variants and zones before it does. The sample catalogue
   describes a supplier that does not exist: its certifications, test figures
   and compliance statements are illustrative, and a real site must replace
   them with its own before it is published.
@@ -329,7 +365,17 @@ Stated plainly rather than left for an auditor to find:
   buyer's details, as records of a sale are usually kept; there is no
   retention period and no erasure in the admin.
 - **The order emails go through Mallok's queue as the inquiry's do**, and
-  stay in its `job` table as described above.
+  stay in its `job` table as described above. So does the email that carries
+  a link to a buyer's orders, link included: whoever can read that table
+  within the day can open the list.
+- **A link to a buyer's orders opens them for a day, for whoever has it.** It
+  is in the address of the page it opens, as an order's own link is. It
+  cannot be withdrawn before it lapses, except by deleting its row.
+- **Many addresses together can still have the shop write to real buyers**:
+  three links an hour to each address that has paid, whoever asks. Nothing
+  more is disclosed by it — the email goes to the address, not to whoever
+  asked — and the form has no challenge in front of it, for the reason the
+  inquiry form has none.
 - **A purchase in Stripe's test mode has not been run end to end** on a real
   Stripe account. Everything above is tested against a stand-in for Stripe's
   API built from its documentation.

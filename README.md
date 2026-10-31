@@ -5,7 +5,7 @@
 [![CI](https://github.com/fobstack/Nundar/actions/workflows/ci.yml/badge.svg)](https://github.com/fobstack/Nundar/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](LICENSE)
 
-> **Status: in development.** Nundar is being rebuilt on Mallok. The catalogue, the cart, requests for a quote and checkout with Stripe work locally; a purchase at Stripe has not been run end to end yet, and nothing has been deployed — see [What works today](#what-works-today). It is not ready to run a real shop.
+> **Status: in development.** Nundar is being rebuilt on Mallok. The catalogue, the cart, requests for a quote, checkout with Stripe, the seller's orders, customers and sales, and a second theme work locally; a purchase at Stripe has not been run end to end yet, and nothing has been deployed — see [What works today](#what-works-today). It is not ready to run a real shop.
 
 ---
 
@@ -38,13 +38,15 @@ Each links to the product it discusses, the product lists the pages written abou
 
 ## How it is built
 
-Nundar is not a second application beside Mallok. A shop is a Mallok site with two things added:
+Nundar is not a second application beside Mallok. A shop is a Mallok site with a plugin and a theme added; the rest is a sample to start from:
 
 | Part | Where | What it owns |
 |---|---|---|
 | **Shop plugin** | `src/plugins/shop/` | Variants, prices per currency, stock, minimum order quantities, the cart, the cart sent as an inquiry, exchange-rate repricing, shipping zones, checkout with Stripe, orders and their emails |
 | **Commerce theme** | `src/theme/` | How the home page, the specification finder and the product, application, collection, case study, question, reference, cart, checkout and order pages look, in four languages |
+| **Editorial theme** | `src/theme-editorial/` | The same pages drawn the opposite way — see [Themes](#themes) |
 | **Sample content** | `content/`, `seed/`, `site.json` | A titanium fastener catalogue in four languages: six products in five collections, five industry pages, four case studies, questions and answers, reference pages, and the site's own copy |
+| **Starter** | `src/starter/` | The same sample, offered by Mallok's first-run wizard to a newly deployed site |
 
 Mallok provides everything else: content and its editor, languages and `hreflang`, the sitemap, the admin and sign-in, media, the edge cache, email. That boundary is deliberate — commerce logic lives only in the plugin, and nothing about pages is reimplemented here.
 
@@ -65,6 +67,9 @@ Nundar builds on `mallok@0.1.0-rc.11`, the first release with the plugin API the
 | **Shipping** | Zones set in the admin: the countries each covers, a fixed rate in each currency, and an amount from which it ships free. A country in no zone is not offered at checkout | Rates by weight |
 | **Checkout and payment** | A checkout page in the site's own design and language, with no script: the country the order goes to, shipping and the total for it, the buyer's company and address, then Stripe's hosted page to pay — by card, or Link, at the shop's own prices with Stripe's currency conversion off. Tax is not charged unless the shop switches Stripe Tax on. An order's own page, opened by the signed link Stripe returns the buyer to and every email carries. A payment takes stock exactly once however often Stripe reports it, is held to the order's total, and empties what was ordered from the cart; an unpaid order is cancelled an hour after its payment page lapses | A purchase made at Stripe in test mode has not been run yet (it needs a shop's own test keys); buyer accounts; invoices of the shop's own; partial refunds |
 | **Orders in the admin** | Every order with its lines, its address and its amounts: mark shipped (tracking number and carrier), delivered, cancel one that was not paid, refund in full — at Stripe first, then the books, with the stock back unless the goods have shipped — or fulfil one that was paid for after its stock had gone, once restocked. Payments the shop could not keep are listed to refund. The buyer is written to in their language when an order is confirmed, shipped, refunded or cancelled; the seller is told of every new order and every refund owed | |
+| **Customers and sales** | Every address that ordered or asked for a quote, with its orders and inquiries beneath it and what it has spent in each currency; sales by month — paid, refunded, net and the average order — and by product, per currency | |
+| **Finding an order again** | No account to make: a buyer types the address they ordered with and is emailed a link, good for a day, to every order they paid for. The page says the same whether or not there were any, and asking is limited per visitor and per address | |
+| **Starting a site** | A site deployed from this repository is offered the sample in Mallok's first-run wizard: the catalogue in four languages, its variants and prices, the shipping zones and the settings, with no command to run | The sample's pictures (a starter carries no files; `npm run preview` publishes them) |
 
 The reasoning and the plan are in [`docs/superpowers/specs/2026-09-30-nundar-on-mallok-design.md`](docs/superpowers/specs/2026-09-30-nundar-on-mallok-design.md).
 
@@ -83,6 +88,7 @@ The reasoning and the plan are in [`docs/superpowers/specs/2026-09-30-nundar-on-
 - A payment is checked against its order's currency and total; one that does not fit is kept for a refund, not taken for the order.
 - Money moves at Stripe before the shop's books do: a refund is made at Stripe before the order says refunded, and a payment page is closed at Stripe before its order is cancelled. A cart has one payment page open at a time.
 - An order's page opens only with the secret its link carries, never with its number alone.
+- The form that emails a buyer their orders says the same whether or not there were any, and writes only to an address a payment was made from.
 - A payment is believed only with Stripe's signature on the exact bytes received, and only for five minutes.
 - A manually set price is never overwritten by an exchange-rate refresh.
 - Language is decided by the URL alone, never by the visitor's IP.
@@ -100,7 +106,7 @@ npm run preview
 
 In about a minute `preview` prints the address of a local shop with the sample catalogue in four languages, the address of its admin, and a login for it. Everything is set up for you: an administrator, the two plugins, the settings, the content with its images, the variants.
 
-It is a throwaway. The database lives in a temporary directory and goes when you stop the command with Ctrl+C; the next run starts clean, with a new login. Use `npm run preview -- --port 8800` if port 8799 is taken.
+It is a throwaway. The database lives in a temporary directory and goes when you stop the command with Ctrl+C; the next run starts clean, with a new login. Use `npm run preview -- --port 8800` if port 8799 is taken, and `npm run preview -- --theme editorial` to see the same shop in the [other theme](#themes).
 
 To see the same shop checked rather than shown — every kind of page, every navigation link in every language, the cart, the checkout page — run `npm run smoke:shop`.
 
@@ -140,6 +146,22 @@ The sample is a supplier of titanium fasteners that does not exist. Its products
 - **The site's own copy** — the name, the navigation, the home page's headline and sections, the footer — is in `site.json`. Each language has its own values there; none of it is fixed in the theme.
 - **Variants and prices** are in `seed/shop-sample.sql`, one variant for each SKU a product page lists, each with a US dollar base price and a euro and a sterling price entered by hand. Leave a currency out and the shop derives its price from the base price and the day's exchange rate.
 - **Fonts** are served from the site itself (`src/theme/assets/fonts/`), under the SIL Open Font License; the licence texts and the source of each file are beside them. The theme loads nothing from a third party.
+- **The starter** (`src/starter/`) is the same sample for Mallok's first-run wizard. Its list of documents is generated: after changing `content/`, run `npm run starter:documents`, or the tests fail.
+
+## Themes
+
+Two themes ship, and they are deliberately opposites. A theme is how a page looks and nothing else: what a page says, its `hreflang` and structured data, and every interface word are the same in both, so a theme can make a site look different but cannot change what a search engine reads or what a buyer is told.
+
+| | Commerce (`src/theme/`, the default) | Editorial (`src/theme-editorial/`) |
+|---|---|---|
+| Type | Space Grotesk and Inter, served by the site itself | The visitor's own serif |
+| Home page | A headline that points at the specification finder, then the collections and the finder | The industries, the case studies and the notes first, then a ruled catalogue |
+| Scripts | Three small ones, each adding to a page that works without it | None |
+| Files of its own | A stylesheet, fonts and images | None: its styles are in the page |
+
+The second exists to keep the contract honest: a contract with one implementation is only a guess. Its tests hold its manifest to the commerce theme's and draw every page of the sample in it.
+
+To deploy the editorial theme instead, set `main` in `wrangler.jsonc` to `src/worker/editorial.ts`. To build your own, copy `src/theme-editorial/`, give `theme.json` a new `id`, and add a Worker entry like `src/worker/editorial.ts` that names it. A theme with files of its own (fonts, pictures, a script) has to be the one at `src/theme/`: Mallok stages the files of that directory only.
 
 ## Taking payments
 
@@ -157,7 +179,7 @@ To try it on a local site (`npm run dev`), Stripe's command-line tool can forwar
 
 | Command | What it does |
 |---|---|
-| `npm run preview` | A local shop with the sample catalogue and an admin login, on a throwaway database |
+| `npm run preview` | A local shop with the sample catalogue and an admin login, on a throwaway database (`-- --theme editorial` for the other theme) |
 | `npm run dev` | Local development server, with local D1 and R2 that keep their data; starts empty |
 | `npm run build` | Stage assets, then a production build (a deploy dry run) |
 | `npm test` | Project checks, then the plugin and theme tests inside the real Workers runtime |
@@ -165,10 +187,11 @@ To try it on a local site (`npm run dev`), Stripe's command-line tool can forwar
 | `npm run smoke` | A real request to a real local Worker |
 | `npm run smoke:shop` | The whole shop on a real local Worker |
 | `npm run seed:local` | Load the sample variants into the local database |
+| `npm run starter:documents` | Regenerate the starter's list of documents after changing `content/` |
 
 ## Deploying
 
-Not yet. The shop can take payments now, and a purchase in Stripe's test mode has still to be run end to end on a real Stripe account before anyone relies on it. Nothing here has been measured on a real Cloudflare account either. When Nundar is ready, deployment is Mallok's own: `npx mallok create . --slug <slug>`, which creates the Worker, the D1 database and the R2 bucket on your own Cloudflare account. That path has not been run for this repository.
+Not yet. The shop can take payments now, and a purchase in Stripe's test mode has still to be run end to end on a real Stripe account before anyone relies on it. Nothing here has been measured on a real Cloudflare account either. When Nundar is ready, deployment is Mallok's own: `npx mallok create . --slug <slug>`, which creates the Worker, the D1 database and the R2 bucket on your own Cloudflare account, after which Mallok's first-run wizard offers the sample shop to start from. That path has not been run for this repository.
 
 ## Languages and currencies
 

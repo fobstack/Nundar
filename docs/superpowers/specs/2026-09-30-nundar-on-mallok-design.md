@@ -323,6 +323,7 @@ The phases follow Mallok's own roadmap (`mallok: docs/PRODUCT_VISION.md §9`: 0.
   - Free-plan quotas are checked against a day of synthetic traffic.
 
 **Phase 3: full storefront (Mallok 1.0)**
+- *Built 2026-10-31 (§21), locally:* the customer and sales panels, a buyer's way back to their orders, the starter, and the second theme. The Next.js code was already retired to its tag; no migration was built, because no real data or deployment of it is known. Parity with the old README holds for every commerce item; what is left is Mallok's (§21).
 - Mallok: API-10.
 - Nundar:
   - customer view and sales dashboard as panels;
@@ -823,3 +824,55 @@ And the ones the sheet did not ask about: the Stripe API version is pinned (`202
 6. *An order's link does not expire*, and cannot be withdrawn for one order: only by deleting the key, which withdraws them all.
 7. *That the terms were accepted is not recorded* with the order — when, and which version of the page.
 8. *The admin cannot say "done" with a message* (M43): an action that changed some orders and not others answers as a refusal that says which.
+
+## 21. What phase 3 changed or found (2026-10-31)
+
+Phase 3 (§9): the full storefront, built straight after phase 2 on `mallok@0.1.0-rc.11`, under the same instruction from the owner — the whole of it locally, nothing deployed, the CPU use of pages not measured again (§20).
+
+**What was built.**
+
+1. *Customers and sales, as panels* (`migrations/0005_storefront.sql`). There are no buyer accounts (D2), so a customer is an address that placed an order or sent an inquiry, compared without regard to case: the panel gathers what the shop already holds and keeps nothing of its own. Each row has the address's latest company and country, its orders and inquiries counted, what it has spent in each currency on orders paid, shipped or delivered — a refunded one is not counted — and its first and last contact; its orders and inquiries open beneath it. *Sales by month* reads the outbox — a payment is counted in the month it arrived, a refund in the month it was made — per currency, with the orders paid, their total, the refunds, net and the average order. *Sales by product* is per SKU and currency, from the lines of orders paid, shipped or delivered. All three are read-only views, spelled out from minor units without a float, as the order panels are (§20, finding 5).
+2. *A buyer's way back to their orders* (`lib/order-lookup.ts`, `routes/orders.ts`, the theme's `shop/orders`). The buyer types the address they ordered with and is emailed a link, good for a day, that lists the orders paid for from it, each opening its own page by its signed link (D2). The page says the same whether or not there were any, so the form tells nobody who has bought here; the link's secret is 32 random bytes of which only the digest is kept; a visitor may ask five times an hour and an address be sent three links an hour, whoever asks, counted inside the write; a request is counted whether or not the address has orders, so the limits say nothing either; expired requests are deleted by the cron's housekeeping, and the table is left out of the export. The cart page and every order's page link to it.
+3. *The sample as a starter* (`src/starter/`; API-10). A site deployed from this repository can be filled from Mallok's first-run wizard with no command: the 31 bundles in four languages, the nine variants with their prices in three currencies, the four shipping zones, and `site.json`'s settings. The documents are generated from `content/` (`npm run starter:documents`), and a project test fails when the generated file is not what `content/` would give. A starter carries no files, so the sample comes without its pictures, and the theme draws every page whole without them; `npm run preview` still publishes it with them.
+4. *A second theme* (`src/theme-editorial/`, `src/worker/editorial.ts`). The old Nundar kept two opposite themes "to keep the contract honest: a contract with one implementation is only a guess"; this does the same for the contract Mallok and the shop give a theme. It reads the same kinds, options, language packs and plugin views — a test holds its manifest to the commerce theme's — and draws them the other way: serif type on paper, the industries and the notes before the catalogue, a ruled table where the other has a finder, and no script and no file of its own. What the commerce theme adds with its three scripts is left out, and each page is whole without it as there: the catalogue is a table with no filters, a page states its currency and the cart's form changes it, and the engineering page prints its formulas and tables with no calculator above them. Its stylesheet is in the page, because `mallok prepare` stages the files of the theme at `src/theme` only (M46). A site uses it by pointing `main` in `wrangler.jsonc` at `src/worker/editorial.ts`; `npm run preview -- --theme editorial` shows it, and CI brings it up.
+
+**What building it found.**
+
+1. *The order lookup counted orders that were never paid for* — cancelled because their payment page lapsed — and emailed their address a link. The address on such an order is whatever was typed into checkout, which is why the buyer's own emails are not sent for it (D17); counted here, it let a stranger have the shop write to someone who never bought anything. Only the statuses a payment leads to count now (`PAID_FOR_STATUSES`). Found while writing this section, before the review.
+2. *A related table is ordered by `rowid` when its panel names no order* (M41), and a view has none: every related table and every panel built on a view here names its order, and those whose rows can tie name a unique column last, or the list changes order between two loads.
+3. *Related rows come back with the columns the manifest declares, and only those*: a column the view has and the related table does not name is not sent to the admin, so a test reads what a seller sees, not the view.
+4. *The wizard checks a starter's records against the same fields as the admin's form*, so the sample's variants and zones go through `saveVariant` and the zone handler exactly as a seller's would — a SKU taken twice, a price with no base, would be refused there as here. `test/shop/starter.test.ts` imports the starter through Mallok's wizard endpoint and compares what it wrote with what `seed/shop-sample.sql` loads.
+5. *A theme cannot have files unless it is the one at `src/theme`* (M46). The editorial theme has none; a second theme with fonts, pictures or a script could not be served.
+6. *Below 40rem a table of several columns does not fit a phone*, and German puts a whole name in one word. The editorial theme draws a sizes table, the catalogue and the cart a row at a time there, each value under its column's name (`data-label`), with table roles in the markup so that a screen reader still reads a table; a table in a text scrolls inside itself, as the commerce theme's does; titles hyphenate in the page's language. Measured in a browser on all 131 pages of the sample and the shop, at 320, 375, 768 and 1280 pixels: none scrolls sideways.
+
+**Phase 3's exit criterion: parity with the old README, item by item.** The list is the "What is in the box" and "Theming" sections of the README at the tag `nextjs-final`.
+
+| The old Nundar | Now | |
+|---|---|---|
+| Product and application pages in four languages, `hreflang`, self-referencing canonicals | Mallok renders and caches them, with `hreflang` and `x-default` and a canonical; an application is its own kind (§11, decision 3) | Met |
+| `Product`, `Offer`, `Article`, `BreadcrumbList` structured data | `Product` with the shop's offers, `Article`, `FAQPage`, `Organization`: Mallok's and the shop's. No `BreadcrumbList`: Mallok emits none, and a theme cannot write JSON-LD (M47) | Not met — Mallok's |
+| A sitemap from the database | Mallok's, with `hreflang` | Met |
+| Stock and prices patched in on the client | Replaced on purpose: a page prints a state, not a count, and is purged by tag when a price moves; nothing is fetched after the page loads (§5.1) | By design |
+| Cart, checkout and order tracking for guests | Phases 1 and 2, and now every order found again by email | Met |
+| The admin in English, with Chinese | Mallok's admin is in English only (M47) | Not met — Mallok's |
+| Products, multilingual content, SEO fields with length guidance | Mallok's editor, every language of an item, a description used as the meta description; no length guidance (M47) | Partly — Mallok's |
+| Images to R2, the type checked from the file, alt text required | Mallok checks the sniffed type and makes WebP variants; alt text has a default per image and is not required (M47) | Partly — Mallok's |
+| Orders by an explicit state machine | `lib/order-state.ts` (phase 2) | Met |
+| Customer records, a sales dashboard | Panels (above) | Met |
+| Administrator management | One administrator in Mallok 0.1; roles deferred by the owner | Deferred by the owner |
+| A translation workbench | Deferred by the owner | Deferred by the owner |
+| Integer money; prices recomputed from the database; stock taken after payment, never below zero; signed, idempotent webhooks; MOQ and lead time first-class; a USD base with EUR and GBP from ECB rates, a buffer, price points and a drift threshold | All hold, and are tested (README, "Commerce rules") | Met |
+| Two opposite themes; SEO never in a theme; interface words shared | Two themes; `page.head` is Mallok's; the editorial theme reads the commerce theme's packs | Met |
+| A security contact at `/.well-known/security.txt` (the old deployment steps) | Not in Mallok (M47) | Not met — Mallok's |
+
+Every commerce item is met. What is open is Mallok's, listed for the owner as M47, two items of which the owner had already deferred.
+
+**What was not built, and why.**
+
+- *A migration from the Next.js schema, and redirects from `/en/*`.* §9 asks for them "if any real shop data exists". None is known to this work: the Next.js version's configuration names no route or domain, and the owner has mentioned no shop that ran on it. If one did, the owner says so; the redirects would then need Mallok — its `redirect` table takes one path at a time and a plugin may not write it, and intercepting requests is the `onRequest` hook this repository does not use for pages.
+- *Retiring the Next.js code* needed nothing: it was removed when the rebuild began and is kept at the tag `nextjs-final`.
+- *Invoices, partial refunds and buyer accounts* stay out, by D15, D11 and D2.
+
+**How it was verified.** 1,053 tests in workerd — 36 more than phase 2 left — and 54 project tests: the panels through Mallok's panel API with orders and inquiries made through the shop's own functions; the lookup through `SELF.fetch` from the form to the email in Mallok's queue and back through the link; the starter through Mallok's wizard endpoint, compared with the seed; and the editorial theme on its own Worker, the sample imported through its starter and every one of its pages, the home page and every list in four languages, and the cart, checkout, order and lookup pages drawn and held whole. Twenty-five guards were broken one at a time, and each turned a test red: four in the views, nine in the lookup, three in the starter, eight in the editorial theme, and the generated documents left stale. `npm run smoke:shop` and `npm run preview -- --check` pass for the commerce theme, and `npm run preview -- --theme editorial --check` for the editorial one: the real sample published with the Mallok CLI to a real local Worker. The editorial theme was looked at in a browser at phone and desktop widths, and its pages measured for sideways scrolling (finding 6).
+
+**Not verified.** As in §20: no payment at Stripe, no deployment, no figure from a Cloudflare account, no email delivered — the lookup's link was seen handed to Mallok's queue. The wizard was driven through its endpoint, not clicked through in the admin. The editorial theme was not looked at with a screen reader.
