@@ -63,16 +63,26 @@ type SuccessfulCart = Extract<PricedCart, { ok: true }>;
 /** The Stripe event that confirms a payment. */
 export const PAYMENT_EVENT_TYPE = 'payment_intent.succeeded';
 
-/** What an order's number begins with. */
-const ORDER_NO_PREFIX = 'ND';
+/** What an order's number begins with, unless a shop sets its own. */
+export const DEFAULT_ORDER_NO_PREFIX = 'ND';
+
+/** A prefix a shop may set: up to six capitals or digits. */
+export function orderNoPrefixOf(setting: unknown): string {
+  return typeof setting === 'string' && /^[A-Z0-9]{1,6}$/.test(setting)
+    ? setting
+    : DEFAULT_ORDER_NO_PREFIX;
+}
 
 /**
  * The number a buyer sees: the date and a random suffix, so it says nothing
  * about how many orders the shop takes.
  */
-function newOrderNo(now: Date): string {
-  return newReference(ORDER_NO_PREFIX, now);
+function newOrderNo(now: Date, prefix: string): string {
+  return newReference(prefix, now);
 }
+
+/** none: no tax is charged. stripe: Stripe calculates it at checkout. */
+export type TaxMode = 'none' | 'stripe';
 
 /**
  * Places an order that is waiting for payment.
@@ -94,6 +104,15 @@ export async function createPendingOrder(
     readonly shippingMinor?: number;
     readonly taxMinor?: number;
     readonly now: Date;
+    /** What checkout records beside the address. */
+    readonly cartId?: string | null;
+    readonly company?: string;
+    readonly taxId?: string;
+    readonly shippingZone?: string;
+    readonly taxMode?: TaxMode;
+    /** The digest of the secret in the buyer's link to their order. */
+    readonly accessHash?: string | null;
+    readonly orderNoPrefix?: string;
   },
 ): Promise<{ id: string; orderNo: string; totalMinor: number }> {
   const { cart } = input;
@@ -117,7 +136,10 @@ export async function createPendingOrder(
   }
 
   const id = crypto.randomUUID();
-  const orderNo = newOrderNo(input.now);
+  const orderNo = newOrderNo(
+    input.now,
+    orderNoPrefixOf(input.orderNoPrefix ?? DEFAULT_ORDER_NO_PREFIX),
+  );
   const shippingMinor = input.shippingMinor ?? 0;
   const taxMinor = input.taxMinor ?? 0;
   // Added up from the lines being written, so an order's subtotal can never
@@ -134,8 +156,9 @@ export async function createPendingOrder(
         `INSERT INTO p_shop_order
            (id, order_no, status, currency, subtotal_minor, shipping_minor,
             tax_minor, total_minor, email, shipping_address, locale,
+            cart_id, company, tax_id, shipping_zone, tax_mode, access_hash,
             created_at, updated_at)
-         VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         id,
@@ -148,6 +171,12 @@ export async function createPendingOrder(
         input.email,
         JSON.stringify(input.shippingAddress),
         input.locale,
+        input.cartId ?? null,
+        input.company ?? '',
+        input.taxId ?? '',
+        input.shippingZone ?? '',
+        input.taxMode ?? 'none',
+        input.accessHash ?? null,
         nowIso,
         nowIso,
       ),
@@ -202,7 +231,15 @@ export interface OrderDetail {
   readonly shippingAddress: Partial<ShippingAddress>;
   readonly locale: string;
   readonly trackingNo: string | null;
+  readonly carrier: string | null;
+  readonly company: string;
+  readonly taxId: string;
+  readonly shippingZone: string;
+  readonly taxMode: TaxMode;
+  /** The cart the order was placed from; null for one placed otherwise. */
+  readonly cartId: string | null;
   readonly stripePaymentIntentId: string | null;
+  readonly stripeSessionId: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly lines: readonly OrderLine[];
@@ -226,7 +263,14 @@ interface OrderRow {
   shipping_address: string;
   locale: string;
   tracking_no: string | null;
+  carrier: string | null;
+  company: string;
+  tax_id: string;
+  shipping_zone: string;
+  tax_mode: string;
+  cart_id: string | null;
   stripe_payment_intent_id: string | null;
+  stripe_session_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -274,7 +318,9 @@ export async function getOrder(
       .prepare(
         `SELECT id, order_no, status, currency, subtotal_minor, shipping_minor,
                 tax_minor, total_minor, email, shipping_address, locale,
-                tracking_no, stripe_payment_intent_id, created_at, updated_at
+                tracking_no, carrier, company, tax_id, shipping_zone,
+                tax_mode, cart_id, stripe_payment_intent_id,
+                stripe_session_id, created_at, updated_at
          FROM p_shop_order WHERE ${column} = ?`,
       )
       .bind(key),
@@ -323,7 +369,14 @@ export async function getOrder(
     shippingAddress: parseAddress(row.shipping_address),
     locale: row.locale,
     trackingNo: row.tracking_no,
+    carrier: row.carrier,
+    company: row.company,
+    taxId: row.tax_id,
+    shippingZone: row.shipping_zone,
+    taxMode: row.tax_mode === 'stripe' ? 'stripe' : 'none',
+    cartId: row.cart_id,
     stripePaymentIntentId: row.stripe_payment_intent_id,
+    stripeSessionId: row.stripe_session_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     lines: ((lineResult?.results ?? []) as LineRow[]).map((line) => ({
@@ -342,6 +395,40 @@ export async function getOrder(
         ? leadTime.max_days
         : null,
   };
+}
+
+/**
+ * Records the Checkout session an order was sent to pay through, and when
+ * it stops taking payment. Only on an order still waiting for its payment:
+ * a webhook that got there first has the last word.
+ *
+ * Returns false when the order had moved on, with nothing written.
+ */
+export async function recordCheckoutSession(
+  db: D1Database,
+  input: {
+    readonly orderId: string;
+    readonly sessionId: string;
+    readonly expiresAt: Date;
+    readonly now: Date;
+  },
+): Promise<boolean> {
+  const row = await db
+    .prepare(
+      `UPDATE p_shop_order
+       SET stripe_session_id = ?, stripe_session_expires_at = ?,
+           updated_at = ?
+       WHERE id = ? AND status = 'pending'
+       RETURNING id`,
+    )
+    .bind(
+      input.sessionId,
+      input.expiresAt.toISOString(),
+      input.now.toISOString(),
+      input.orderId,
+    )
+    .first<{ id: string }>();
+  return row !== null;
 }
 
 /**
@@ -375,10 +462,24 @@ interface PaymentInput {
   readonly eventId: string;
   readonly paymentIntentId: string;
   readonly now: Date;
+  /**
+   * What the payment came to, as Stripe reports it: whole minor units, and
+   * the currency in Stripe's lower case. When given, a payment that does not
+   * fit the order is refused rather than paid (`amountFits`).
+   */
+  readonly amountMinor?: number;
+  readonly currency?: string;
 }
 
 interface PaymentState {
-  readonly order: { readonly status: OrderStatus } | null;
+  readonly order: {
+    readonly status: OrderStatus;
+    readonly currency: string;
+    readonly subtotalMinor: number;
+    readonly shippingMinor: number;
+    readonly totalMinor: number;
+    readonly taxMode: TaxMode;
+  } | null;
   /**
    * This payment is on record already: the same event, or another event of
    * the same type about the same payment intent.
@@ -414,19 +515,77 @@ async function readPaymentState(
       )
       .bind(input.eventId, PAYMENT_EVENT_TYPE, input.paymentIntentId),
     db
-      .prepare('SELECT status FROM p_shop_order WHERE id = ?')
+      .prepare(
+        `SELECT status, currency, subtotal_minor, shipping_minor, total_minor,
+                tax_mode
+         FROM p_shop_order WHERE id = ?`,
+      )
       .bind(input.orderId),
     db.prepare(`SELECT ${ORDER_SHORT_OF_STOCK} AS short`).bind(input.orderId),
   ]);
 
   const order = (orderResult?.results ?? [])[0] as
-    | { status: string }
+    | {
+        status: string;
+        currency: string;
+        subtotal_minor: number;
+        shipping_minor: number;
+        total_minor: number;
+        tax_mode: string;
+      }
     | undefined;
   return {
-    order: order === undefined ? null : { status: order.status as OrderStatus },
+    order:
+      order === undefined
+        ? null
+        : {
+            status: order.status as OrderStatus,
+            currency: order.currency,
+            subtotalMinor: order.subtotal_minor,
+            shippingMinor: order.shipping_minor,
+            totalMinor: order.total_minor,
+            taxMode: order.tax_mode === 'stripe' ? 'stripe' : 'none',
+          },
     seen: (seenResult?.results ?? []).length > 0,
     shortOfStock: (shortResult?.results ?? [])[0]?.short === 1,
   };
+}
+
+/**
+ * Whether a payment fits the order it names: the same currency, and the
+ * amount the order comes to. With Stripe calculating tax the order does not
+ * know its tax until it is paid, so the payment has to come to at least the
+ * goods and the shipping, and what it comes to beyond them is the tax.
+ *
+ * A payment that does not fit is not taken for the order: it is recorded as
+ * refused, for a person to look at and refund. Checkout sets every amount
+ * from the server and Stripe's own conversion is switched off, so a
+ * mismatch is never a buyer's doing — it is a fault, and the order must not
+ * be marked paid on the strength of it.
+ */
+export function amountFits(
+  order: NonNullable<PaymentState['order']>,
+  payment: { readonly amountMinor?: number; readonly currency?: string },
+): boolean {
+  if (payment.amountMinor === undefined || payment.currency === undefined) {
+    return true;
+  }
+  if (payment.currency.toUpperCase() !== order.currency) {
+    return false;
+  }
+  return order.taxMode === 'stripe'
+    ? payment.amountMinor >= order.subtotalMinor + order.shippingMinor
+    : payment.amountMinor === order.totalMinor;
+}
+
+/** The tax a payment carries, when Stripe calculated it; null otherwise. */
+function paidTaxMinor(
+  order: NonNullable<PaymentState['order']>,
+  payment: { readonly amountMinor?: number },
+): number | null {
+  return order.taxMode === 'stripe' && payment.amountMinor !== undefined
+    ? payment.amountMinor - order.subtotalMinor - order.shippingMinor
+    : null;
 }
 
 function variantsOfOrder(db: D1Database, orderId: string): D1PreparedStatement {
@@ -479,6 +638,8 @@ async function writePaid(
   db: D1Database,
   input: PaymentInput,
   from: OrderStatus,
+  /** The tax the payment carries, to be the order's; null to leave it. */
+  taxMinor: number | null = null,
 ): Promise<PaymentResult | null> {
   const { orderId } = input;
   const nowIso = input.now.toISOString();
@@ -530,11 +691,14 @@ async function writePaid(
     db
       .prepare(
         `UPDATE p_shop_order
-         SET status = 'paid', stripe_payment_intent_id = ?, updated_at = ?
+         SET status = 'paid', stripe_payment_intent_id = ?, updated_at = ?,
+             tax_minor = COALESCE(?, tax_minor),
+             total_minor = COALESCE(? + subtotal_minor + shipping_minor,
+                                    total_minor)
          WHERE id = ? AND status = ?
          RETURNING id`,
       )
-      .bind(input.paymentIntentId, nowIso, orderId, from),
+      .bind(input.paymentIntentId, nowIso, taxMinor, taxMinor, orderId, from),
     variantsOfOrder(db, orderId),
   ]);
 
@@ -682,11 +846,12 @@ export async function markOrderPaid(
       return { outcome: 'duplicate', status: from, availabilityChanged: [] };
     }
 
-    const action: PaymentAction = !canTransition(from, 'paid')
-      ? 'refuse'
-      : state.shortOfStock
-        ? 'oversold'
-        : 'pay';
+    const action: PaymentAction =
+      !canTransition(from, 'paid') || !amountFits(state.order, input)
+        ? 'refuse'
+        : state.shortOfStock
+          ? 'oversold'
+          : 'pay';
     // Thrown twice running by the same write: a real failure, to be retried
     // by whoever delivered the event.
     if (failed?.action === action && failed.times >= 2) {
@@ -695,7 +860,12 @@ export async function markOrderPaid(
 
     try {
       if (action === 'pay') {
-        const paid = await writePaid(db, input, from);
+        const paid = await writePaid(
+          db,
+          input,
+          from,
+          paidTaxMinor(state.order, input),
+        );
         if (paid !== null) {
           return paid;
         }

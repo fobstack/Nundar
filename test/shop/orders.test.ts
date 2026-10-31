@@ -1006,6 +1006,131 @@ describe('markOrderPaid', () => {
     });
   });
 
+  it('pays when the payment comes to the order’s total, in its currency', async () => {
+    const order = await pendingOrder();
+
+    const result = await markOrderPaid(db(), {
+      orderId: order.id,
+      eventId: 'evt_1',
+      paymentIntentId: 'pi_1',
+      amountMinor: 99_000,
+      currency: 'usd',
+      now: LATER,
+    });
+
+    expect(result.outcome).toBe('paid');
+    expect(await stockOf('dn50')).toBe(90);
+  });
+
+  it('refuses a payment that does not come to the order’s total', async () => {
+    // Checkout sets every amount from the server, so a mismatch is a fault,
+    // never a buyer's doing — and never a reason to ship.
+    const short = await pendingOrder();
+    const foreign = await pendingOrder();
+
+    const shortResult = await markOrderPaid(db(), {
+      orderId: short.id,
+      eventId: 'evt_short',
+      paymentIntentId: 'pi_short',
+      amountMinor: 98_999,
+      currency: 'usd',
+      now: LATER,
+    });
+    const foreignResult = await markOrderPaid(db(), {
+      orderId: foreign.id,
+      eventId: 'evt_foreign',
+      paymentIntentId: 'pi_foreign',
+      amountMinor: 99_000,
+      currency: 'eur',
+      now: LATER,
+    });
+
+    expect(shortResult.outcome).toBe('refused');
+    expect(foreignResult.outcome).toBe('refused');
+    expect((await orderRow(short.id)).status).toBe('pending');
+    expect((await orderRow(foreign.id)).status).toBe('pending');
+    expect(await stockOf('dn50')).toBe(100);
+    // The money was taken all the same: each is owed a refund.
+    expect(
+      (await outboxRows())
+        .filter((row) => row.topic === 'payment.refused')
+        .map((row) => row.ref),
+    ).toEqual(['pi_short', 'pi_foreign']);
+  });
+
+  it('takes the tax Stripe calculated from the payment, and makes it the order’s', async () => {
+    const order = await createPendingOrder(db(), {
+      cart: await pricedCart(),
+      locale: 'en',
+      email: EMAIL,
+      shippingAddress: ADDRESS,
+      shippingMinor: 1500,
+      taxMode: 'stripe',
+      now: NOW,
+    });
+
+    const result = await markOrderPaid(db(), {
+      orderId: order.id,
+      eventId: 'evt_1',
+      paymentIntentId: 'pi_1',
+      amountMinor: 100_500 + 20_100,
+      currency: 'usd',
+      now: LATER,
+    });
+
+    expect(result.outcome).toBe('paid');
+    const row = await orderRow(order.id);
+    expect(row.tax_minor).toBe(20_100);
+    expect(row.total_minor).toBe(120_600);
+    expect(row.subtotal_minor + row.shipping_minor + row.tax_minor).toBe(
+      row.total_minor,
+    );
+  });
+
+  it('refuses a taxed payment that comes to less than the goods and the shipping', async () => {
+    const order = await createPendingOrder(db(), {
+      cart: await pricedCart(),
+      locale: 'en',
+      email: EMAIL,
+      shippingAddress: ADDRESS,
+      shippingMinor: 1500,
+      taxMode: 'stripe',
+      now: NOW,
+    });
+
+    const result = await markOrderPaid(db(), {
+      orderId: order.id,
+      eventId: 'evt_1',
+      paymentIntentId: 'pi_1',
+      amountMinor: 100_499,
+      currency: 'usd',
+      now: LATER,
+    });
+
+    expect(result.outcome).toBe('refused');
+    const row = await orderRow(order.id);
+    expect(row.status).toBe('pending');
+    expect(row.tax_minor).toBe(0);
+    expect(row.total_minor).toBe(100_500);
+  });
+
+  it('leaves the tax alone for an order that charges none', async () => {
+    const order = await pendingOrder();
+
+    await markOrderPaid(db(), {
+      orderId: order.id,
+      eventId: 'evt_1',
+      paymentIntentId: 'pi_1',
+      amountMinor: 99_000,
+      currency: 'USD',
+      now: LATER,
+    });
+
+    const row = await orderRow(order.id);
+    expect(row.tax_minor).toBe(0);
+    expect(row.total_minor).toBe(99_000);
+  });
+
   it('reports the product whose availability the payment changed', async () => {
     // 15 in stock with a minimum order of 10 is orderable; 5 is not. That is
     // the moment the product's pages have to be purged.

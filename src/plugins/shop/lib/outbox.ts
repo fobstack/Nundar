@@ -72,6 +72,8 @@ export function orderChangedOutbox(
     readonly now: Date;
     /** Something else that must also hold for the change to be made. */
     readonly andIf?: SqlCondition;
+    /** What the change needs said about it: why an order was cancelled. */
+    readonly ref?: string | null;
   },
 ): D1PreparedStatement {
   const topic: OutboxTopic = `order.${input.to}`;
@@ -81,7 +83,7 @@ export function orderChangedOutbox(
       id: `${topic}:${input.orderId}`,
       topic,
       orderId: input.orderId,
-      ref: null,
+      ref: input.ref ?? null,
       now: input.now,
     },
     {

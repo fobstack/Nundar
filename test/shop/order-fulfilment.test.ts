@@ -3,6 +3,8 @@ import type { CartLine } from '../../src/plugins/shop/lib/cart.js';
 import { priceCart } from '../../src/plugins/shop/lib/cart-pricing.js';
 import {
   cancelOrder,
+  expireOrder,
+  fulfilOversold,
   markDelivered,
   refundOrder,
   shipOrder,
@@ -12,6 +14,7 @@ import {
   getOrder,
   markOrderPaid,
   OrderNotFoundError,
+  recordCheckoutSession,
 } from '../../src/plugins/shop/lib/orders.js';
 import {
   atTheSameMoment,
@@ -76,6 +79,22 @@ async function paidOrder(
 
 async function statusOf(orderId: string): Promise<string | undefined> {
   return (await getOrder(db(), { id: orderId }))?.status;
+}
+
+/** An order paid for after its stock had gone: stock 0, then the payment. */
+async function oversoldOrder(): Promise<{ id: string; orderNo: string }> {
+  const order = await makeOrder();
+  await setStock('dn50', 0);
+  await markOrderPaid(db(), {
+    orderId: order.id,
+    eventId: `evt_${order.id}`,
+    paymentIntentId: `pi_${order.id}`,
+    now: NOW,
+  });
+  if ((await statusOf(order.id)) !== 'oversold') {
+    throw new Error('The fixture order was not oversold');
+  }
+  return order;
 }
 
 async function reasons(orderId: string): Promise<string[]> {
@@ -148,6 +167,28 @@ describe('shipOrder', () => {
     expect(detail?.status).toBe('shipped');
     expect(detail?.trackingNo).toBe('TRACK-123');
     expect(detail?.updatedAt).toBe(LATER.toISOString());
+  });
+
+  it('records the carrier when one is named, and none when it is blank', async () => {
+    const named = await paidOrder();
+    await shipOrder(db(), {
+      orderId: named.id,
+      trackingNo: 'T-1',
+      carrier: ' DHL Express ',
+      now: LATER,
+    });
+    const blank = await paidOrder();
+    await shipOrder(db(), {
+      orderId: blank.id,
+      trackingNo: 'T-2',
+      carrier: '   ',
+      now: LATER,
+    });
+
+    expect((await getOrder(db(), { id: named.id }))?.carrier).toBe(
+      'DHL Express',
+    );
+    expect((await getOrder(db(), { id: blank.id }))?.carrier).toBeNull();
   });
 
   it('owes the buyer a shipping notice from the moment the order ships', async () => {
@@ -265,6 +306,35 @@ describe('cancelOrder', () => {
     expect(await statusOf(order.id)).toBe('cancelled');
   });
 
+  it('says on what it owes why the order was cancelled', async () => {
+    // What follows reads it: a buyer is told when the seller cancelled, and
+    // not when they let the payment page lapse.
+    const bySeller = await makeOrder();
+    const lapsed = await makeOrder();
+
+    await cancelOrder(db(), { orderId: bySeller.id, now: LATER });
+    await cancelOrder(db(), {
+      orderId: lapsed.id,
+      reason: 'expired',
+      now: LATER,
+    });
+
+    const refs = (await outboxRows()).map((row) => [row.order_id, row.ref]);
+    expect(refs).toEqual([
+      [bySeller.id, 'seller'],
+      [lapsed.id, 'expired'],
+    ]);
+  });
+
+  it('refuses to cancel an oversold order — its payment has to go back', async () => {
+    const order = await oversoldOrder();
+
+    await expect(
+      cancelOrder(db(), { orderId: order.id, now: LATER }),
+    ).rejects.toThrow(/transition/i);
+    expect(await statusOf(order.id)).toBe('oversold');
+  });
+
   it('refuses to cancel a paid order — that is a refund', async () => {
     const order = await paidOrder();
 
@@ -285,6 +355,99 @@ describe('cancelOrder', () => {
     expect(outcome.fulfilled).toBe(1);
     expect(await statusOf(order.id)).toBe('cancelled');
     expect(await owed(order.id)).toEqual(['order.cancelled']);
+  });
+});
+
+describe('expireOrder', () => {
+  async function withSession(sessionId: string): Promise<{ id: string }> {
+    const order = await makeOrder();
+    await recordCheckoutSession(db(), {
+      orderId: order.id,
+      sessionId,
+      expiresAt: LATER,
+      now: NOW,
+    });
+    return order;
+  }
+
+  it('cancels an order still waiting for the session that lapsed', async () => {
+    const order = await withSession('cs_1');
+
+    expect(
+      await expireOrder(db(), {
+        orderId: order.id,
+        sessionId: 'cs_1',
+        now: LATER,
+      }),
+    ).toBe('cancelled');
+    expect(await statusOf(order.id)).toBe('cancelled');
+  });
+
+  it('leaves the order alone when it is given another session meanwhile', async () => {
+    // Between the reading and the write: the write has to ask again.
+    const order = await withSession('cs_1');
+    const database = interceptBatches({
+      before: async () => {
+        await db()
+          .prepare(
+            "UPDATE p_shop_order SET stripe_session_id = 'cs_2' WHERE id = ?",
+          )
+          .bind(order.id)
+          .run();
+      },
+    });
+
+    expect(
+      await expireOrder(database, {
+        orderId: order.id,
+        sessionId: 'cs_1',
+        now: LATER,
+      }),
+    ).toBe('other_session');
+    expect(await statusOf(order.id)).toBe('pending');
+    expect(await owed(order.id)).toEqual([]);
+  });
+
+  it('leaves the order alone when it is paid meanwhile', async () => {
+    const order = await withSession('cs_1');
+    const database = interceptBatches({
+      before: async () => {
+        await markOrderPaid(db(), {
+          orderId: order.id,
+          eventId: 'evt_meanwhile',
+          paymentIntentId: 'pi_meanwhile',
+          now: NOW,
+        });
+      },
+    });
+
+    expect(
+      await expireOrder(database, {
+        orderId: order.id,
+        sessionId: 'cs_1',
+        now: LATER,
+      }),
+    ).toBe('not_pending');
+    expect(await statusOf(order.id)).toBe('paid');
+    expect(await owed(order.id)).toEqual(['order.paid']);
+  });
+
+  it('passes on a failure that is not the order having changed', async () => {
+    const order = await withSession('cs_1');
+    const database = interceptBatches({
+      before: () => {
+        throw new Error('D1 is unreachable');
+      },
+    });
+
+    await expect(
+      expireOrder(database, {
+        orderId: order.id,
+        sessionId: 'cs_1',
+        now: LATER,
+      }),
+    ).rejects.toThrow('D1 is unreachable');
+    expect(await statusOf(order.id)).toBe('pending');
   });
 });
 
@@ -331,6 +494,23 @@ describe('refundOrder', () => {
     expect(await stockOf('dn50')).toBe(1);
     expect(await statusOf(order.id)).toBe('refunded');
     expect(await reasons(order.id)).toEqual([]);
+  });
+
+  it('leaves the stock alone when the goods are not coming back', async () => {
+    const order = await paidOrder();
+    await shipOrder(db(), { orderId: order.id, trackingNo: 'T-1', now: NOW });
+
+    await refundOrder(db(), { orderId: order.id, restock: false, now: LATER });
+
+    expect(await statusOf(order.id)).toBe('refunded');
+    expect(await stockOf('dn50')).toBe(90);
+    // The ledger has nothing to undo: the stock went with the goods.
+    expect(await reasons(order.id)).toEqual(['order_paid']);
+    expect(await owed(order.id)).toEqual([
+      'order.paid',
+      'order.shipped',
+      'order.refunded',
+    ]);
   });
 
   it('refuses to refund an order that was never paid', async () => {
@@ -446,5 +626,112 @@ describe('refundOrder', () => {
     const result = await refundOrder(db(), { orderId: order.id, now: LATER });
 
     expect(result.availabilityChanged).toEqual([]);
+  });
+});
+
+describe('fulfilOversold', () => {
+  it('takes the stock once it is back and makes the order paid', async () => {
+    const order = await oversoldOrder();
+    await setStock('dn50', 25);
+
+    await fulfilOversold(db(), { orderId: order.id, now: LATER });
+
+    expect(await statusOf(order.id)).toBe('paid');
+    expect(await stockOf('dn50')).toBe(15);
+    expect(await reasons(order.id)).toEqual(['order_paid']);
+    expect(await owed(order.id)).toEqual(['order.oversold', 'order.paid']);
+  });
+
+  it('then ships, and a refund gives back what it took', async () => {
+    const order = await oversoldOrder();
+    await setStock('dn50', 25);
+    await fulfilOversold(db(), { orderId: order.id, now: LATER });
+
+    await shipOrder(db(), { orderId: order.id, trackingNo: 'T-1', now: LATER });
+    await refundOrder(db(), { orderId: order.id, now: LATER });
+
+    expect(await stockOf('dn50')).toBe(25);
+    expect(await reasons(order.id)).toEqual(['order_paid', 'refund']);
+  });
+
+  it('takes nothing while the stock is still short, and leaves the order oversold', async () => {
+    const order = await oversoldOrder();
+    await setStock('dn50', 9);
+
+    await expect(
+      fulfilOversold(db(), { orderId: order.id, now: LATER }),
+    ).rejects.toThrow();
+
+    expect(await statusOf(order.id)).toBe('oversold');
+    expect(await stockOf('dn50')).toBe(9);
+    expect(await reasons(order.id)).toEqual([]);
+    expect(await owed(order.id)).toEqual(['order.oversold']);
+  });
+
+  it('refuses an order that was not oversold', async () => {
+    const pending = await makeOrder();
+    const paid = await paidOrder();
+
+    await expect(
+      fulfilOversold(db(), { orderId: pending.id, now: LATER }),
+    ).rejects.toThrow(/transition/i);
+    await expect(
+      fulfilOversold(db(), { orderId: paid.id, now: LATER }),
+    ).rejects.toThrow(/transition/i);
+    expect(await statusOf(pending.id)).toBe('pending');
+    expect(await stockOf('dn50')).toBe(90);
+  });
+
+  it('takes the stock once when two people fulfil it at the same moment', async () => {
+    const order = await oversoldOrder();
+    await setStock('dn50', 25);
+
+    const outcome = await settle([
+      (database) => fulfilOversold(database, { orderId: order.id, now: LATER }),
+      (database) => fulfilOversold(database, { orderId: order.id, now: LATER }),
+    ]);
+
+    expect(outcome.fulfilled).toBe(1);
+    expect(await stockOf('dn50')).toBe(15);
+    expect(await reasons(order.id)).toEqual(['order_paid']);
+    expect(await owed(order.id)).toEqual(['order.oversold', 'order.paid']);
+  });
+
+  it('refunds or fulfils, never both, when the two happen at the same moment', async () => {
+    const order = await oversoldOrder();
+    await setStock('dn50', 25);
+
+    const outcome = await settle([
+      (database) => fulfilOversold(database, { orderId: order.id, now: LATER }),
+      (database) => refundOrder(database, { orderId: order.id, now: LATER }),
+    ]);
+
+    expect(outcome.fulfilled).toBe(1);
+    const status = await statusOf(order.id);
+    if (status === 'paid') {
+      expect(await stockOf('dn50')).toBe(15);
+      expect(await owed(order.id)).toEqual(['order.oversold', 'order.paid']);
+    } else {
+      expect(status).toBe('refunded');
+      expect(await stockOf('dn50')).toBe(25);
+      expect(await reasons(order.id)).toEqual([]);
+      expect(await owed(order.id)).toEqual([
+        'order.oversold',
+        'order.refunded',
+      ]);
+    }
+  });
+
+  it('reports the product whose availability the stock it took changed', async () => {
+    const order = await oversoldOrder();
+    await setStock('dn50', 10);
+
+    const result = await fulfilOversold(db(), {
+      orderId: order.id,
+      now: LATER,
+    });
+
+    expect(await stockOf('dn50')).toBe(0);
+    expect(result.availabilityChanged).toEqual([valve.translationGroup]);
   });
 });

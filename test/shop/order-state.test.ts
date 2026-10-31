@@ -27,10 +27,12 @@ describe('canTransition', () => {
 
   it('routes an oversold order out of pending', () => {
     expect(canTransition('pending', 'oversold')).toBe(true);
-    // An oversold order can only be refunded or cancelled by hand; it must
-    // never pretend to be paid and ship.
+    // An oversold order is refunded, or restocked and so paid; it never
+    // ships as it is. Nor is it just cancelled: its payment was taken, and
+    // cancelling would leave nobody owing it back.
     expect(canTransition('oversold', 'refunded')).toBe(true);
-    expect(canTransition('oversold', 'cancelled')).toBe(true);
+    expect(canTransition('oversold', 'paid')).toBe(true);
+    expect(canTransition('oversold', 'cancelled')).toBe(false);
     expect(canTransition('oversold', 'shipped')).toBe(false);
   });
 

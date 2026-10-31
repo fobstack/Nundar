@@ -1,6 +1,10 @@
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { priceCart } from '../../src/plugins/shop/lib/cart-pricing.js';
-import { createPendingOrder } from '../../src/plugins/shop/lib/orders.js';
+import { cancelOrder } from '../../src/plugins/shop/lib/order-fulfilment.js';
+import {
+  createPendingOrder,
+  recordCheckoutSession,
+} from '../../src/plugins/shop/lib/orders.js';
 import { handleStripeWebhook } from '../../src/plugins/shop/lib/stripe-webhook.js';
 import {
   clearShopTables,
@@ -50,7 +54,12 @@ async function pendingOrder(): Promise<{ id: string; orderNo: string }> {
 /** The event Stripe sends when a payment succeeds, for one of our orders. */
 function paymentSucceeded(
   orderId: string | null,
-  overrides: { eventId?: string; paymentIntentId?: string } = {},
+  overrides: {
+    eventId?: string;
+    paymentIntentId?: string;
+    amount?: number;
+    currency?: string;
+  } = {},
 ): unknown {
   return {
     id: overrides.eventId ?? 'evt_1',
@@ -60,8 +69,30 @@ function paymentSucceeded(
       object: {
         id: overrides.paymentIntentId ?? 'pi_1',
         object: 'payment_intent',
-        amount: 99_000,
-        currency: 'usd',
+        amount: overrides.amount ?? 99_000,
+        amount_received: overrides.amount ?? 99_000,
+        currency: overrides.currency ?? 'usd',
+        metadata: orderId === null ? {} : { order_id: orderId },
+      },
+    },
+  };
+}
+
+/** The event Stripe sends when a Checkout session lapses unpaid. */
+function sessionExpired(
+  orderId: string | null,
+  sessionId = 'cs_1',
+  eventId = 'evt_expired',
+): unknown {
+  return {
+    id: eventId,
+    object: 'event',
+    type: 'checkout.session.expired',
+    data: {
+      object: {
+        id: sessionId,
+        object: 'checkout.session',
+        status: 'expired',
         metadata: orderId === null ? {} : { order_id: orderId },
       },
     },
@@ -429,5 +460,129 @@ describe('handleStripeWebhook', () => {
     // And the delivery Stripe then repeats goes through.
     const again = await deliver(JSON.stringify(paymentSucceeded(order.id)));
     expect(again.kind).toBe('paid');
+  });
+
+  it('refuses a payment that does not come to the order’s total, and puts it on record', async () => {
+    const order = await pendingOrder();
+
+    const outcome = await deliver(
+      JSON.stringify(
+        paymentSucceeded(order.id, { amount: 1000, paymentIntentId: 'pi_x' }),
+      ),
+    );
+
+    expect(outcome).toEqual({
+      status: 200,
+      kind: 'refused',
+      orderId: order.id,
+      orderStatus: 'pending',
+    });
+    expect(await statusOf(order.id)).toBe('pending');
+    expect(await stockOf('dn50')).toBe(100);
+    expect((await outboxRows()).map((row) => [row.topic, row.ref])).toEqual([
+      ['payment.refused', 'pi_x'],
+    ]);
+  });
+
+  it('refuses a payment event that does not say what was received', async () => {
+    // Without the amount the order cannot be held to it, and paying it
+    // regardless would be paying on trust.
+    const order = await pendingOrder();
+    const event = paymentSucceeded(order.id) as {
+      data: { object: Record<string, unknown> };
+    };
+    delete event.data.object.amount_received;
+
+    const outcome = await deliver(JSON.stringify(event));
+
+    expect(outcome.status).toBe(400);
+    expect(await statusOf(order.id)).toBe('pending');
+  });
+
+  it('cancels the order when its payment page lapses', async () => {
+    const order = await pendingOrder();
+    await recordCheckoutSession(db(), {
+      orderId: order.id,
+      sessionId: 'cs_1',
+      expiresAt: NOW,
+      now: NOW,
+    });
+
+    const outcome = await deliver(
+      JSON.stringify(sessionExpired(order.id, 'cs_1')),
+    );
+
+    expect(outcome).toEqual({
+      status: 200,
+      kind: 'expired',
+      orderId: order.id,
+    });
+    expect(await statusOf(order.id)).toBe('cancelled');
+    // Said to have lapsed: the buyer is not written to about it.
+    expect((await outboxRows()).map((row) => [row.topic, row.ref])).toEqual([
+      ['order.cancelled', 'expired'],
+    ]);
+  });
+
+  it('cancels it too when the session was never recorded on the order', async () => {
+    const order = await pendingOrder();
+
+    const outcome = await deliver(JSON.stringify(sessionExpired(order.id)));
+
+    expect(outcome.kind).toBe('expired');
+    expect(await statusOf(order.id)).toBe('cancelled');
+  });
+
+  it('leaves an order alone that is waiting for another session', async () => {
+    const order = await pendingOrder();
+    await recordCheckoutSession(db(), {
+      orderId: order.id,
+      sessionId: 'cs_new',
+      expiresAt: NOW,
+      now: NOW,
+    });
+
+    const outcome = await deliver(
+      JSON.stringify(sessionExpired(order.id, 'cs_old')),
+    );
+
+    expect(outcome.status).toBe(200);
+    expect(outcome.kind).toBe('ignored');
+    expect(await statusOf(order.id)).toBe('pending');
+    expect(await outboxRows()).toEqual([]);
+  });
+
+  it('leaves an order alone that was paid or cancelled already', async () => {
+    const paid = await pendingOrder();
+    await deliver(JSON.stringify(paymentSucceeded(paid.id)));
+    const cancelled = await pendingOrder();
+    await cancelOrder(db(), { orderId: cancelled.id, now: NOW });
+
+    const first = await deliver(
+      JSON.stringify(sessionExpired(paid.id, 'cs_1', 'evt_e1')),
+    );
+    const second = await deliver(
+      JSON.stringify(sessionExpired(cancelled.id, 'cs_2', 'evt_e2')),
+    );
+
+    expect([first.kind, second.kind]).toEqual(['ignored', 'ignored']);
+    expect(await statusOf(paid.id)).toBe('paid');
+    expect(await statusOf(cancelled.id)).toBe('cancelled');
+    expect((await outboxRows()).map((row) => row.ref)).toEqual([
+      null,
+      'seller',
+    ]);
+  });
+
+  it('answers 200 to a lapsed session that names no order, or one it does not have', async () => {
+    const none = await deliver(JSON.stringify(sessionExpired(null)));
+    const unknown = await deliver(JSON.stringify(sessionExpired('nope')));
+
+    expect(none).toMatchObject({ status: 200, kind: 'ignored' });
+    expect(unknown).toEqual({
+      status: 200,
+      kind: 'unmatched',
+      orderId: 'nope',
+    });
   });
 });

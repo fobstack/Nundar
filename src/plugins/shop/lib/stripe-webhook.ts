@@ -23,9 +23,16 @@
  * wrote. A route drains the order's outbox after any outcome that names an
  * order, `duplicate` included: a duplicate is what a redelivery looks like
  * after a first attempt that paid the order and then died.
+ *
+ * Two event types are acted on. `payment_intent.succeeded` pays an order;
+ * checkout only offers payment methods that settle at once, so it is the
+ * only word on a payment there is. `checkout.session.expired` cancels the
+ * order a lapsed payment page was for, which is what stops a pending order
+ * from holding its prices for ever.
  */
 
 import { z } from 'zod';
+import { expireOrder } from './order-fulfilment.js';
 import type { OrderStatus } from './order-state.js';
 import {
   markOrderPaid,
@@ -72,6 +79,12 @@ export type WebhookOutcome =
       readonly orderId: string;
       readonly orderStatus: OrderStatus;
     }
+  /** The order's payment page lapsed unpaid, and the order is cancelled. */
+  | {
+      readonly status: 200;
+      readonly kind: 'expired';
+      readonly orderId: string;
+    }
   /** This payment had been dealt with before. */
   | {
       readonly status: 200;
@@ -96,10 +109,25 @@ const paymentSchema = z.object({
   data: z.object({
     object: z.object({
       id: z.string().min(1).max(255),
+      // "Amount that this PaymentIntent collects", in minor units, and its
+      // currency in lower case: what the order is held to (`amountFits`).
+      amount_received: z.number().int().nonnegative(),
+      currency: z.string().regex(/^[a-z]{3}$/),
       metadata: z.record(z.string(), z.string()).nullish(),
     }),
   }),
 });
+
+const sessionSchema = z.object({
+  data: z.object({
+    object: z.object({
+      id: z.string().min(1).max(255),
+      metadata: z.record(z.string(), z.string()).nullish(),
+    }),
+  }),
+});
+
+export const CHECKOUT_EXPIRED_EVENT = 'checkout.session.expired';
 
 const MALFORMED: WebhookOutcome = {
   status: 400,
@@ -139,6 +167,9 @@ export async function handleStripeWebhook(
     return MALFORMED;
   }
 
+  if (envelope.data.type === CHECKOUT_EXPIRED_EVENT) {
+    return sessionExpired(db, json, input.now);
+  }
   if (envelope.data.type !== PAYMENT_EVENT_TYPE) {
     return { status: 200, kind: 'ignored', reason: 'Event type not handled' };
   }
@@ -167,6 +198,8 @@ export async function handleStripeWebhook(
       orderId,
       eventId: envelope.data.id,
       paymentIntentId: payment.data.data.object.id,
+      amountMinor: payment.data.data.object.amount_received,
+      currency: payment.data.data.object.currency,
       now: input.now,
     });
 
@@ -203,6 +236,57 @@ export async function handleStripeWebhook(
     }
     // The reason is for the logs. It names the order by id and never carries
     // an email address or a postal address.
+    return {
+      status: 500,
+      kind: 'failed',
+      orderId,
+      reason: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+/**
+ * A Checkout session lapsed. Its order is cancelled when it is still waiting
+ * for that session's payment; anything else about it is left alone, and the
+ * delivery is answered 200 — a retry would find the same.
+ */
+async function sessionExpired(
+  db: D1Database,
+  json: unknown,
+  now: Date,
+): Promise<WebhookOutcome> {
+  const session = sessionSchema.safeParse(json);
+  if (!session.success) {
+    return MALFORMED;
+  }
+  const orderId = session.data.data.object.metadata?.order_id ?? '';
+  if (orderId === '') {
+    return {
+      status: 200,
+      kind: 'ignored',
+      reason: 'Session carries no order id',
+    };
+  }
+  try {
+    const result = await expireOrder(db, {
+      orderId,
+      sessionId: session.data.data.object.id,
+      now,
+    });
+    return result === 'cancelled'
+      ? { status: 200, kind: 'expired', orderId }
+      : {
+          status: 200,
+          kind: 'ignored',
+          reason:
+            result === 'not_pending'
+              ? 'Order is no longer waiting for payment'
+              : 'Order is waiting for another session',
+        };
+  } catch (error) {
+    if (error instanceof OrderNotFoundError) {
+      return { status: 200, kind: 'unmatched', orderId };
+    }
     return {
       status: 500,
       kind: 'failed',

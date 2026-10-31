@@ -6,8 +6,11 @@
  * reconciliation and fulfilment incidents — shipping before payment clears, or
  * marking a refunded order as delivered.
  *
- * `oversold` means payment succeeded but the stock had already been sold. Such
- * an order can only be refunded or cancelled by hand. It must never ship.
+ * `oversold` means payment succeeded but the stock had already been sold. It
+ * must never ship as it is. A person either refunds it, or restocks and
+ * fulfils it, which takes the stock then and makes it `paid`. It is never
+ * just cancelled: that would leave a payment taken and nobody owing a refund
+ * of it (design §20).
  */
 
 export const ORDER_STATUSES = [
@@ -27,7 +30,7 @@ const TRANSITIONS: Readonly<Record<OrderStatus, readonly OrderStatus[]>> = {
   paid: ['shipped', 'refunded'],
   shipped: ['delivered', 'refunded'],
   delivered: ['refunded'],
-  oversold: ['refunded', 'cancelled'],
+  oversold: ['refunded', 'paid'],
   cancelled: [],
   refunded: [],
 };
