@@ -25,6 +25,19 @@ export const ORDER_STATUSES = [
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
+/**
+ * The statuses an order reaches only through a payment. `cancelled` is not
+ * one: only a pending order is cancelled, so a cancelled order was never
+ * paid for, and its address was never shown to be its buyer's.
+ */
+export const PAID_FOR_STATUSES: readonly OrderStatus[] = [
+  'paid',
+  'oversold',
+  'shipped',
+  'delivered',
+  'refunded',
+];
+
 const TRANSITIONS: Readonly<Record<OrderStatus, readonly OrderStatus[]>> = {
   pending: ['paid', 'cancelled', 'oversold'],
   paid: ['shipped', 'refunded'],

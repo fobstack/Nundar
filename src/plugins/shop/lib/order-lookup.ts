@@ -2,8 +2,8 @@
  * A buyer's way back to their orders, without an account (design §20, D2;
  * §21).
  *
- * The buyer gives the address they ordered with. If any order was placed
- * with it, they are emailed a link that lists every one of them for a day;
+ * The buyer gives the address they ordered with. If any order placed with
+ * it was paid for, they are emailed a link that lists those for a day;
  * the answer on the page is the same whether or not there were any, so the
  * form tells nobody who has bought here. The link's secret is 32 random
  * bytes, of which the table keeps only the digest, and the address is never
@@ -19,6 +19,16 @@
 
 import { z } from 'zod';
 import { EMAIL_PATTERN, INQUIRY_LIMITS } from './inquiries.js';
+import { PAID_FOR_STATUSES } from './order-state.js';
+
+/**
+ * An order is listed, and its address sent a link, only once a payment was
+ * taken for it. An order left waiting, or cancelled when its payment page
+ * lapsed, carries an address anyone could have typed — as anyone can type it
+ * into this form — so counting one would let a stranger have the shop write
+ * to an address that never bought anything.
+ */
+const LISTED = JSON.stringify(PAID_FOR_STATUSES);
 
 /** How long a link opens the list. */
 export const ORDER_LOOKUP_LIFETIME_MS = 24 * 60 * 60 * 1000;
@@ -113,14 +123,13 @@ export async function recordLookup(
         hourAgo,
         MAX_LOOKUPS_PER_ADDRESS_HOUR,
       ),
-    // A pending order is one whose buyer has not paid: not one to tell
-    // them of by email.
     db
       .prepare(
         `SELECT COUNT(*) AS n FROM p_shop_order
-         WHERE lower(email) = ? AND status <> 'pending'`,
+         WHERE lower(email) = ?
+           AND status IN (SELECT value FROM json_each(?))`,
       )
-      .bind(email),
+      .bind(email, LISTED),
   ]);
   if ((written?.meta.changes ?? 0) === 0) {
     return { kind: 'too_many' };
@@ -156,7 +165,7 @@ export interface LookupOrder {
   readonly createdAt: string;
 }
 
-/** An address's orders, newest first, leaving out those never paid for. */
+/** An address's orders that were paid for, newest first. */
 export async function ordersOf(
   db: D1Database,
   email: string,
@@ -165,10 +174,11 @@ export async function ordersOf(
     .prepare(
       `SELECT id, order_no, status, currency, total_minor, locale, created_at
        FROM p_shop_order
-       WHERE lower(email) = ? AND status <> 'pending'
+       WHERE lower(email) = ?
+         AND status IN (SELECT value FROM json_each(?))
        ORDER BY created_at DESC LIMIT ?`,
     )
-    .bind(email.toLowerCase(), LOOKUP_ORDER_LIMIT)
+    .bind(email.toLowerCase(), LISTED, LOOKUP_ORDER_LIMIT)
     .all<{
       id: string;
       order_no: string;

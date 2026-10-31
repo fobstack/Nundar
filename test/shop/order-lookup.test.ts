@@ -1,6 +1,7 @@
 import { SELF } from 'cloudflare:test';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { priceCart } from '../../src/plugins/shop/lib/cart-pricing.js';
+import { cancelOrder } from '../../src/plugins/shop/lib/order-fulfilment.js';
 import {
   deleteExpiredLookups,
   MAX_LOOKUPS_PER_ADDRESS_HOUR,
@@ -43,8 +44,14 @@ function ask(
   });
 }
 
-/** An order with this address, paid unless told otherwise. */
-async function order(email: string, paid = true): Promise<string> {
+/**
+ * An order with this address: paid, left waiting for its payment, or
+ * cancelled without one — as when its payment page lapsed.
+ */
+async function order(
+  email: string,
+  state: 'paid' | 'pending' | 'cancelled' = 'paid',
+): Promise<string> {
   const cart = await priceCart(db(), {
     lines: [{ variantId: 'bolt', quantity: 10 }],
     locale: 'en',
@@ -67,11 +74,17 @@ async function order(email: string, paid = true): Promise<string> {
     },
     now: new Date(),
   });
-  if (paid) {
+  if (state === 'paid') {
     await markOrderPaid(db(), {
       orderId: placed.id,
       eventId: `evt_${placed.id}`,
       paymentIntentId: `pi_${placed.id}`,
+      now: new Date(),
+    });
+  } else if (state === 'cancelled') {
+    await cancelOrder(db(), {
+      orderId: placed.id,
+      reason: 'expired',
       now: new Date(),
     });
   }
@@ -142,7 +155,8 @@ describe('a buyer finding their orders', () => {
   it('is sent a link that lists every paid order placed with the address, whatever its case', async () => {
     const first = await order('Ada@Buyer.example');
     const second = await order('ada@buyer.example');
-    await order('ada@buyer.example', false);
+    await order('ada@buyer.example', 'pending');
+    await order('ada@buyer.example', 'cancelled');
 
     const answer = await ask('ADA@buyer.example');
 
@@ -155,7 +169,7 @@ describe('a buyer finding their orders', () => {
     expect(listed).toContain(first);
     expect(listed).toContain(second);
     expect(listed).toContain('Paid — being prepared');
-    // Never paid: not listed.
+    // Never paid, waiting or lapsed: not listed.
     expect((listed.match(/class="cart-name"/g) ?? []).length).toBe(2);
     // Whole: no empty box, no link to nowhere.
     const main = listed.slice(
@@ -173,22 +187,27 @@ describe('a buyer finding their orders', () => {
     expect(await orderPage.text()).toMatch(/ND-\d{6}-[0-9A-Z]{8}/);
   });
 
-  it('is told the same, and nothing is sent, for an address with no paid orders', async () => {
-    await order('pending@buyer.example', false);
+  it('is told the same, and nothing is sent, for an address no payment was made from', async () => {
+    await order('pending@buyer.example', 'pending');
+    // An order whose page lapsed unpaid proves nothing about its address:
+    // anyone could have typed it, as anyone can type it into this form.
+    await order('lapsed@buyer.example', 'cancelled');
 
     const none = await ask('nobody@buyer.example');
     const pending = await ask('pending@buyer.example');
+    const lapsed = await ask('lapsed@buyer.example');
 
-    for (const answer of [none, pending]) {
+    for (const answer of [none, pending, lapsed]) {
       expect(answer.headers.get('location')).toBe(`${SHOP}/orders?sent=1`);
     }
     expect(await mailTo('nobody@buyer.example')).toEqual([]);
     expect(await mailTo('pending@buyer.example')).toEqual([]);
+    expect(await mailTo('lapsed@buyer.example')).toEqual([]);
     // Counted all the same, so that the limits say nothing either.
     const recorded = await db()
       .prepare('SELECT COUNT(*) AS n FROM p_shop_order_link')
       .first<{ n: number }>();
-    expect(recorded?.n).toBe(2);
+    expect(recorded?.n).toBe(3);
   });
 
   it('is written to in the language they asked in', async () => {
