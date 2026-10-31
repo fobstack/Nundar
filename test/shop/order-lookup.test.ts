@@ -21,6 +21,7 @@ import {
   createVariant,
   db,
   ensureSite,
+  holdWrites,
   ORIGIN,
   setPrice,
   type TestProduct,
@@ -211,6 +212,34 @@ describe('a buyer finding their orders', () => {
     expect(await orderPage.text()).toMatch(/ND-\d{6}-[0-9A-Z]{8}/);
   });
 
+  it('lists an order in every status a payment leads to', async () => {
+    const shown = new Map<string, string>();
+    for (const status of [
+      'paid',
+      'oversold',
+      'shipped',
+      'delivered',
+      'refunded',
+    ]) {
+      const orderNo = await order('ada@buyer.example');
+      await db()
+        .prepare('UPDATE p_shop_order SET status = ? WHERE order_no = ?')
+        .bind(status, orderNo)
+        .run();
+      shown.set(orderNo, status);
+    }
+
+    await ask('ada@buyer.example');
+    const listed = await (
+      await SELF.fetch(await linkSentTo('ada@buyer.example'))
+    ).text();
+
+    for (const orderNo of shown.keys()) {
+      expect(listed, shown.get(orderNo)).toContain(orderNo);
+    }
+    expect((listed.match(/class="cart-name"/g) ?? []).length).toBe(5);
+  });
+
   it('is told the same, and nothing is sent, for an address no payment was made from', async () => {
     await order('pending@buyer.example', 'pending');
     // An order whose page lapsed unpaid proves nothing about its address:
@@ -346,6 +375,73 @@ describe('a buyer finding their orders', () => {
     });
 
     expect(over.headers.get('location')).toBe(`${SHOP}/orders?lookup=too_many`);
+  });
+
+  // Both limits are counted inside the statement that records a request.
+  // Each test holds two requests at that write until both have arrived:
+  // a limit asked of the table before the write would let both through.
+  it('lets one of two requests at the same moment past a visitor’s last place in the hour', async () => {
+    for (
+      let attempt = 0;
+      attempt < MAX_LOOKUPS_PER_VISITOR_HOUR - 1;
+      attempt += 1
+    ) {
+      await ask(`early${attempt}@buyer.example`, { visitor: '198.51.100.70' });
+    }
+    const gate = holdWrites((sql) =>
+      sql.includes('INSERT INTO p_shop_order_link'),
+    );
+
+    let answers: Response[];
+    try {
+      const pending = Promise.all([
+        ask('late1@buyer.example', { visitor: '198.51.100.70' }),
+        ask('late2@buyer.example', { visitor: '198.51.100.70' }),
+      ]);
+      await gate.arrived(2);
+      gate.open();
+      answers = await pending;
+    } finally {
+      gate.restore();
+    }
+
+    expect(
+      answers.map((answer) => answer.headers.get('location')).sort(),
+    ).toEqual([`${SHOP}/orders?lookup=too_many`, `${SHOP}/orders?sent=1`]);
+    const recorded = await db()
+      .prepare('SELECT COUNT(*) AS n FROM p_shop_order_link')
+      .first<{ n: number }>();
+    expect(recorded?.n).toBe(MAX_LOOKUPS_PER_VISITOR_HOUR);
+  });
+
+  it('sends an address one link, not two, for its last place in the hour', async () => {
+    await order('ada@buyer.example');
+    for (
+      let attempt = 0;
+      attempt < MAX_LOOKUPS_PER_ADDRESS_HOUR - 1;
+      attempt += 1
+    ) {
+      await ask('ada@buyer.example', { visitor: `198.51.100.${80 + attempt}` });
+    }
+    const gate = holdWrites((sql) =>
+      sql.includes('INSERT INTO p_shop_order_link'),
+    );
+
+    try {
+      const pending = Promise.all([
+        ask('ada@buyer.example', { visitor: '198.51.100.90' }),
+        ask('ada@buyer.example', { visitor: '198.51.100.91' }),
+      ]);
+      await gate.arrived(2);
+      gate.open();
+      await pending;
+    } finally {
+      gate.restore();
+    }
+
+    expect(await mailTo('ada@buyer.example')).toHaveLength(
+      MAX_LOOKUPS_PER_ADDRESS_HOUR,
+    );
   });
 
   it('is turned away for an address that is not one, and ignored for the field no person sees', async () => {

@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import { SELF } from 'cloudflare:test';
 import { beforeAll, describe, expect, it } from 'vitest';
 import seedSql from '../../seed/shop-sample.sql';
@@ -14,6 +15,22 @@ import { api, db, ensureSite, ORIGIN } from './helpers.js';
  * The sample shop as a starter: held to the seed `npm run preview` loads, and
  * run through Mallok's own wizard step on a site of its own.
  */
+
+/**
+ * Each product's slug, by the translation group its identity file fixes —
+ * the group the seed attaches its variants to.
+ */
+const PRODUCT_SLUG_OF_GROUP = new Map(
+  Object.values(
+    import.meta.glob<{
+      translation_group: string;
+      items: { en: { slug: string } };
+    }>('../../content/product/*/mallok.json', {
+      eager: true,
+      import: 'default',
+    }),
+  ).map((identity) => [identity.translation_group, identity.items.en.slug]),
+);
 
 /** The value tuples of one `INSERT … VALUES` of the seed, as strings. */
 function seedRows(table: string): string[][] {
@@ -85,8 +102,10 @@ describe('the starter’s records', () => {
   it('are the seed’s variants, prices and zones', () => {
     const variants = seedRows('p_shop_variant');
     const prices = seedRows('p_shop_price');
+    expect(PRODUCT_SLUG_OF_GROUP.size).toBeGreaterThan(0);
     expect(
       SAMPLE_VARIANTS.map((variant) => [
+        variant.product,
         variant.sku,
         JSON.stringify({ length: variant.length }),
         String(variant.moq),
@@ -98,6 +117,7 @@ describe('the starter’s records', () => {
       ]),
     ).toEqual(
       variants.map((row) => [
+        PRODUCT_SLUG_OF_GROUP.get(row[1] ?? ''),
         row[2],
         row[3],
         row[4],
@@ -195,12 +215,40 @@ describe('the starter, through Mallok’s wizard', () => {
     expect(countries?.n).toBe(
       SAMPLE_ZONES.reduce((sum, zone) => sum + zone.countries.length, 0),
     );
+    const rates = await db()
+      .prepare(
+        `SELECT z.name, r.currency, r.amount_minor, r.free_over_minor
+         FROM p_shop_shipping_rate AS r
+         JOIN p_shop_shipping_zone AS z ON z.id = r.zone_id
+         ORDER BY z.name, r.currency`,
+      )
+      .all<{
+        name: string;
+        currency: string;
+        amount_minor: number;
+        free_over_minor: number | null;
+      }>();
+    expect(rates.results).toEqual(
+      SAMPLE_ZONES.flatMap((zone) =>
+        zone.rates.map((rate) => ({
+          name: zone.name,
+          currency: rate.currency,
+          amount_minor: rate.amount,
+          free_over_minor: rate.freeOver,
+        })),
+      ).sort(
+        (a, b) =>
+          a.name.localeCompare(b.name) || a.currency.localeCompare(b.currency),
+      ),
+    );
   });
 
   it('serves a product page with its prices, in every language', async () => {
     for (const [path, price] of [
       ['/products/titanium-socket-head-cap-screw-m5', '$1.85'],
       ['/de/products/titan-zylinderschraube-innensechskant-m5', '1,75'],
+      ['/fr/products/vis-titane-tete-cylindrique-six-pans-creux-m5', '1,75'],
+      ['/es/products/tornillo-titanio-cabeza-cilindrica-allen-m5', '1,75'],
     ] as const) {
       const response = await SELF.fetch(`${ORIGIN}${path}`);
       const html = await response.text();
