@@ -365,6 +365,37 @@ describe('the scheduled tick', () => {
       .all<{ cart_id: string }>();
     expect(lines.results.map((row) => row.cart_id)).toEqual(['b'.repeat(32)]);
   });
+
+  it('deletes every link to a buyer’s orders that no longer opens, however many', async () => {
+    // Each holds the address typed into the form, kept for the day the link
+    // is good and no longer. A request is recorded whether or not the
+    // address has bought, and many visitors can ask in an hour.
+    const ecb = feed(new Error('not the subject of this test'));
+    const rows = Array.from({ length: 180 }, (_, index) => ({
+      id: index.toString(16).padStart(64, '0'),
+      email: `asker${index}@buyer.example`,
+      expires_at:
+        index < 170 ? '2026-09-01T00:00:00.000Z' : '2099-01-01T00:00:00.000Z',
+    }));
+    await db().batch(
+      rows.map((row) =>
+        db()
+          .prepare(
+            `INSERT INTO p_shop_order_link (id, email, ip_hash, created_at, expires_at)
+             VALUES (?, ?, NULL, '2026-08-31T00:00:00.000Z', ?)`,
+          )
+          .bind(row.id, row.email, row.expires_at),
+      ),
+    );
+
+    await tick(ecb.impl, minutesAfter(0)); // the rates attempt
+    await tick(ecb.impl, minutesAfter(1));
+
+    const left = await db()
+      .prepare('SELECT COUNT(*) AS n FROM p_shop_order_link')
+      .first<{ n: number }>();
+    expect(left?.n).toBe(10);
+  });
 });
 
 describe('the scheduled tick, for orders', () => {

@@ -216,20 +216,21 @@ export async function ordersOf(
   }));
 }
 
-/** Deletes links that no longer open anything; how many went. */
+/**
+ * Deletes every link that no longer opens anything; how many went. All of
+ * them, in one statement, rather than a few at a time as carts are: each
+ * holds an address someone typed, which the shop keeps for the day the link
+ * is good and no longer, and a request is recorded whether or not the
+ * address has bought — more of them can come in an hour than any fixed
+ * number per run would clear. The expiry index finds them.
+ */
 export async function deleteExpiredLookups(
   db: D1Database,
   now: Date,
-  limit: number,
 ): Promise<number> {
   const result = await db
-    .prepare(
-      `DELETE FROM p_shop_order_link WHERE id IN (
-         SELECT id FROM p_shop_order_link WHERE expires_at <= ?
-         ORDER BY expires_at LIMIT ?
-       )`,
-    )
-    .bind(now.toISOString(), limit)
+    .prepare('DELETE FROM p_shop_order_link WHERE expires_at <= ?')
+    .bind(now.toISOString())
     .run();
   return result.meta.changes;
 }

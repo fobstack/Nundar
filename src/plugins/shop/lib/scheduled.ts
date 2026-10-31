@@ -323,9 +323,9 @@ export async function runScheduledTick(
     CART_CLEANUP_INTERVAL_MS
   ) {
     const deleted = await deleteExpiredCarts(db, now, CART_CLEANUP_LIMIT);
-    // And the links to buyers' orders that no longer open anything: each
-    // holds an address.
-    await deleteExpiredLookups(db, now, CART_CLEANUP_LIMIT);
+    // And the links to buyers' orders that no longer open anything, every
+    // one: each holds an address.
+    await deleteExpiredLookups(db, now);
     await setStateStatement(
       db,
       STATE_KEYS.cartsCleanedAt,

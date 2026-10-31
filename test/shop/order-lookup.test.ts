@@ -372,7 +372,7 @@ describe('a buyer finding their orders', () => {
       )
       .run();
 
-    expect(await deleteExpiredLookups(db(), new Date(), 50)).toBe(1);
+    expect(await deleteExpiredLookups(db(), new Date())).toBe(1);
     const left = await db()
       .prepare('SELECT email FROM p_shop_order_link')
       .all<{ email: string }>();
