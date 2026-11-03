@@ -390,9 +390,11 @@ Stated plainly rather than left for an auditor to find:
   more is disclosed by it — the email goes to the address, not to whoever
   asked — and the form has no challenge in front of it, for the reason the
   inquiry form has none.
-- **A purchase in Stripe's test mode has not been run end to end** on a real
-  Stripe account. Everything above is tested against a stand-in for Stripe's
-  API built from its documentation.
+- **A purchase has been run end to end in Stripe's test mode only on a local
+  site** (design §22): paid, delivered twice, refunded, expired and cancelled.
+  Stripe Tax, wallets, a card that asks for authentication and a deployed
+  site's webhook endpoint have not been tried at Stripe; the tests run against
+  a stand-in for Stripe's API built from its documentation.
 
 ## Dependency posture
 

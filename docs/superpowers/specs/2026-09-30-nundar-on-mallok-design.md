@@ -309,7 +309,7 @@ The phases follow Mallok's own roadmap (`mallok: docs/PRODUCT_VISION.md §9`: 0.
 
 **Phase 2: payment (Mallok 0.3)**
 - *Built ahead, 2026-10-05 (§14):* everything below that needs no Mallok extension point — the order tables, placing an order, the payment batch, refunds, the webhook's decision, the Stripe calls and the order emails. Not built: every route, page and admin screen.
-- *Built 2026-10-31 (§20), locally:* shipping zones, the checkout and order pages, the webhook route, the follow-ups, the order panels and their actions, on the owner's nineteen decisions. Of the exit criteria below, the first two hold; the test-mode purchase waits for the owner's Stripe test keys, and the quotas for a deployment (the owner waived measuring CPU now).
+- *Built 2026-10-31 (§20), locally:* shipping zones, the checkout and order pages, the webhook route, the follow-ups, the order panels and their actions, on the owner's nineteen decisions. Of the exit criteria below, the first two hold; the test-mode purchase was run on 2026-11-03 against a local site (§22), and the quotas wait for a deployment (the owner waived measuring CPU now).
 - Mallok: API-5, 6 (actions with parameters) and 8.
 - Shop plugin:
   - Stripe Checkout and the webhook;
@@ -816,7 +816,7 @@ And the ones the sheet did not ask about: the Stripe API version is pinned (`202
 
 **Left open.**
 
-1. *A Stripe test-mode purchase, end to end*, on the owner's keys: phase 2's last exit criterion.
+1. *A Stripe test-mode purchase, end to end*, on the owner's keys: phase 2's last exit criterion. Run on 2026-11-03 against a local site (§22).
 2. *Partial refunds, invoices, buyer accounts* — not in phase 2 by decision (D11, D15, D2).
 3. *A payment for an order this database does not have* is still left with a log line (§14, item 13).
 4. *A form the server refuses comes back empty* (M33), which at checkout is an address typed again. The fields carry the server's rules, and the only refusals a browser cannot foresee are a cart that changed and Stripe being unavailable.
@@ -889,3 +889,42 @@ And one the security reviewer raised that is kept, and written in `SECURITY.md`:
 **How it was verified.** 1,100 tests in workerd — 83 more than phase 2 left — and 54 project tests: the panels through Mallok's panel API with orders and inquiries made through the shop's own functions; the lookup through `SELF.fetch` from the form to the email in Mallok's queue and back through the link; the starter through Mallok's wizard endpoint, compared with the seed; and the editorial theme on its own Worker, the sample imported through its starter and every one of its pages, the home page and every list in four languages, and the cart, checkout, order and lookup pages drawn and held whole. Before the reviews, twenty-five guards were broken one at a time, and each turned a test red: four in the views, nine in the lookup, three in the starter, eight in the editorial theme, and the generated documents left stale. After them, every fix was preceded by its test failing, and twelve more were broken and turned red: the deferred email (an email sent whatever, three runs of three), the index and the refused-request guard, the four template guards, the starter's product and free-over amount, the limits made read-then-write (three runs of three), and a paid-for status left out. What a request reads is held by the `rows_read` D1 reports, locally. `npm run smoke:shop` and `npm run preview -- --check` pass for the commerce theme, and `npm run preview -- --theme editorial --check` for the editorial one: the real sample published with the Mallok CLI to a real local Worker. The editorial theme was looked at in a browser at phone and desktop widths, and its pages measured for sideways scrolling (finding 6).
 
 **Not verified.** As in §20: no payment at Stripe, no deployment, no figure from a Cloudflare account, no email delivered — the lookup's link was seen handed to Mallok's queue. The wizard was driven through its endpoint, not clicked through in the admin. The editorial theme was not looked at with a screen reader. The index on an expression and the query plans were seen in workerd's SQLite, not on D1 itself, whose documentation neither names nor rules out an index on an expression; and how long the lookup's answer took before and after finding 3 was not measured anywhere — the fix removes the difference by construction.
+
+## 22. What the first purchase in Stripe's test mode found (2026-11-03)
+
+Phase 2's last exit criterion, run on the owner's Stripe sandbox. The shop was `npm run preview`, a local Worker; Stripe's events reached it through `stripe listen --latest` (Stripe CLI 1.55.3). The code is pinned to `2026-10-28.endive`, which Stripe's changelog listed that day as its latest version, so the events the listener sent were in the shape the webhook reads. Four orders, all for 50 of TI-HEX-M8-30 shipped to the United States: $240.00 and $35.00 shipping.
+
+1. *Paid.*
+   - Read back through Stripe's API, the Checkout session matched the order: test mode, $275.00 in USD, the one line at its snapshot price, one shipping option named after the zone, card and Link only, adaptive pricing off, the order's id in its metadata, and the expiry the order recorded.
+   - Paid on Stripe's page with a test card. `payment_intent.succeeded` was delivered and answered 200. The order became paid; stock went from 3,000 to 2,950 with one ledger row; the cart was emptied; an `order.paid` row and a follow-up job were written.
+   - The same event delivered again (`stripe events resend`) was answered 200 and took nothing.
+2. *Refunded* in full from the admin's orders panel, back to stock. Stripe's refund of $275.00 succeeded first; then the order read `refunded`, stock went back to 3,000 with its ledger row, and an `order.refunded` row was written.
+3. *Expired*, twice: two orders whose payment pages lapsed unpaid. Stripe's `checkout.session.expired` cancelled each (`expired`). Stock was not touched, and no email was owed to the buyer.
+4. *Cancelled from the admin* while unpaid. The session was closed at Stripe first (Stripe then reported it `expired`), and only then was the order cancelled (`seller`). Stripe's expiry event that followed was answered 200 and changed nothing. The cart kept its line.
+
+Two ticks of Mallok's scheduled handler, run by hand on the local Worker (`/cdn-cgi/handler/scheduled`), carried out the follow-ups: the buyer's confirmation, refund and cancellation were handed to Mallok, and nothing was sent for the two expiries. Mallok's email jobs then failed for want of an email provider, which a local site does not have.
+
+**What it found.**
+
+1. *A secret saved with white space around it refused every delivery.*
+   - The signing secret had been saved with the space before it on the line `stripe listen` prints, and Mallok keeps a secret exactly as pasted. Every delivery was answered 400, as signed with another secret, and nothing in the admin said why. A shop running like that confirms no payment.
+   - Seen by signing a request with the listener's secret, which was refused, and again with a space before it, which was taken.
+   - The fix: neither secret can contain white space, so every reading now goes through `lib/stripe-secrets.ts`, which trims it, and a test fails when any other file reads one.
+   - Its three tests went red with the trim taken away, and the one-place test went red with one raw reading put back.
+   - Mallok's side is M48.
+2. *`stripe listen` stops forwarding once its login lapses.*
+   - Twice the listener reconnected on its own, forwarded nothing Stripe sent after that, and some time later stopped with "expired OAuth token". Neither expiry was forwarded when it happened.
+   - This is Stripe's command-line tool, not the shop. A missed event is delivered again with `stripe events resend <id>`, which is how both expiries reached the shop. The README now says so.
+
+**Not verified.**
+
+- Not tried at Stripe:
+  - Stripe Tax, which needs registrations;
+  - Apple Pay and Google Pay;
+  - a card that fails or asks for authentication;
+  - an order in EUR or GBP;
+  - an endpoint created in Stripe's dashboard rather than the CLI's forwarding.
+- Not looked at here:
+  - Stripe's hosted page, which the owner paid on in their own browser;
+  - the order page Stripe returned them to.
+- No site was deployed and no email was delivered.
