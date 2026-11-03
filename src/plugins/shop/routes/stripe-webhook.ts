@@ -18,13 +18,14 @@
 
 import type { PluginRequestContext, RouteInput } from 'mallok/worker';
 import { FOLLOW_UP_JOB } from '../lib/order-follow-up.js';
+import { stripeSecret } from '../lib/stripe-secrets.js';
 import { handleStripeWebhook } from '../lib/stripe-webhook.js';
 
 export async function stripeWebhook(
   _input: RouteInput,
   ctx: PluginRequestContext,
 ): Promise<Response> {
-  const secret = ctx.secrets.stripe_webhook_secret ?? '';
+  const secret = stripeSecret(ctx.secrets, 'stripe_webhook_secret');
   if (secret === '') {
     console.log(
       JSON.stringify({ event: 'shop_stripe_webhook', kind: 'no_secret' }),

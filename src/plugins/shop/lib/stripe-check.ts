@@ -9,12 +9,13 @@
 
 import type { PluginContext, PluginSecretVerdict } from 'mallok/worker';
 import { STRIPE_API_VERSION } from './stripe-client.js';
+import { stripeSecret } from './stripe-secrets.js';
 
 export async function checkStripeSecretKey(
   ctx: Pick<PluginContext, 'secrets'>,
   fetchImpl: typeof fetch = fetch,
 ): Promise<PluginSecretVerdict> {
-  const key = ctx.secrets.stripe_secret_key ?? '';
+  const key = stripeSecret(ctx.secrets, 'stripe_secret_key');
   if (key === '') {
     return { ok: false, message: 'Not set.' };
   }
@@ -60,7 +61,7 @@ export async function checkStripeSecretKey(
 export async function checkStripeWebhookSecret(
   ctx: Pick<PluginContext, 'secrets'>,
 ): Promise<PluginSecretVerdict> {
-  const secret = ctx.secrets.stripe_webhook_secret ?? '';
+  const secret = stripeSecret(ctx.secrets, 'stripe_webhook_secret');
   if (secret === '') {
     return { ok: false, message: 'Not set.' };
   }

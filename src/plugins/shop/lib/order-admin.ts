@@ -29,6 +29,7 @@ import {
   createRefund,
   StripeRequestError,
 } from './stripe-client.js';
+import { stripeSecret } from './stripe-secrets.js';
 
 /**
  * A refund asked of Stripe, or the word that the payment had been refunded
@@ -213,7 +214,7 @@ export async function cancelOrders(
       confirm: 'Tick the box to cancel these orders.',
     });
   }
-  const secretKey = ctx.secrets.stripe_secret_key ?? '';
+  const secretKey = stripeSecret(ctx.secrets, 'stripe_secret_key');
   const problems: string[] = [];
   let done = 0;
   for (const order of await readOrders(ctx.db, ids)) {
@@ -295,7 +296,7 @@ export async function refundOrders(
       confirm: 'Tick the box to refund these orders in full.',
     });
   }
-  const secretKey = ctx.secrets.stripe_secret_key ?? '';
+  const secretKey = stripeSecret(ctx.secrets, 'stripe_secret_key');
   if (secretKey === '') {
     return refused(
       'Set the Stripe secret key first: the refund is made at Stripe.',
@@ -391,7 +392,7 @@ export async function refundRefusedPayments(
       confirm: 'Tick the box to refund these payments in full.',
     });
   }
-  const secretKey = ctx.secrets.stripe_secret_key ?? '';
+  const secretKey = stripeSecret(ctx.secrets, 'stripe_secret_key');
   if (secretKey === '') {
     return refused(
       'Set the Stripe secret key first: the refund is made at Stripe.',

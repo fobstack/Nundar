@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { CartFacts } from '../../src/plugins/shop/lib/cart-pricing.js';
 import {
@@ -205,6 +206,40 @@ describe('the settings checkout reads', () => {
         stripe_webhook_secret: 'whsec_1',
       }),
     ).toEqual({ secretKey: 'sk_test_1', webhookSecret: 'whsec_1' });
+  });
+
+  it('reads a key without the white space it was pasted with', () => {
+    // Copied from the line `stripe listen` prints, a signing secret comes
+    // with the space before it; from a web page, often a line break after.
+    expect(
+      stripeKeys({
+        stripe_secret_key: ' sk_test_1\n',
+        stripe_webhook_secret: ' whsec_1',
+      }),
+    ).toEqual({ secretKey: 'sk_test_1', webhookSecret: 'whsec_1' });
+    expect(
+      stripeKeys({
+        stripe_secret_key: 'sk_test_1',
+        stripe_webhook_secret: ' ',
+      }),
+    ).toBeNull();
+  });
+
+  it('reads the Stripe secrets in one place, so that no reading keeps the white space', () => {
+    const sources = import.meta.glob<string>('../../src/plugins/shop/**/*.ts', {
+      eager: true,
+      import: 'default',
+      query: '?raw',
+    });
+    const reading = /secrets\??\.\s*stripe_|secrets\??\.\[\s*['"]stripe_/;
+
+    const elsewhere = Object.entries(sources)
+      .filter(([path]) => !path.endsWith('/lib/stripe-secrets.ts'))
+      .filter(([, text]) => reading.test(text))
+      .map(([path]) => path);
+
+    expect(Object.keys(sources).length).toBeGreaterThan(20);
+    expect(elsewhere).toEqual([]);
   });
 
   it('charges no tax unless told Stripe is to', () => {
@@ -433,5 +468,33 @@ describe('the Stripe keys’ checks', () => {
         })
       ).ok,
     ).toBe(false);
+  });
+
+  it('checks each secret as the shop will use it, without the white space around it', async () => {
+    let authorization = '';
+    const recording = (async (
+      _input: RequestInfo | URL,
+      init?: RequestInit,
+    ) => {
+      authorization = new Headers(init?.headers).get('authorization') ?? '';
+      return new Response('{}', { status: 200 });
+    }) as unknown as typeof fetch;
+
+    expect(
+      (
+        await checkStripeSecretKey(
+          { secrets: { stripe_secret_key: ' sk_test_abc\n' } },
+          recording,
+        )
+      ).ok,
+    ).toBe(true);
+    expect(authorization).toBe('Bearer sk_test_abc');
+    expect(
+      (
+        await checkStripeWebhookSecret({
+          secrets: { stripe_webhook_secret: ' whsec_abc' },
+        })
+      ).ok,
+    ).toBe(true);
   });
 });

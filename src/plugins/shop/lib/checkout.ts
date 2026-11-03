@@ -31,6 +31,7 @@ import {
   shippingCountriesStatement,
 } from './shipping.js';
 import { MAX_CHARGE_MINOR, MIN_CHARGE_MINOR } from './stripe-client.js';
+import { stripeSecret } from './stripe-secrets.js';
 
 /** The length each field may have. The form carries the same in `maxlength`. */
 export const CHECKOUT_LIMITS = {
@@ -243,8 +244,8 @@ export async function readCheckout(
 export function stripeKeys(
   secrets: Readonly<Record<string, string>>,
 ): { secretKey: string; webhookSecret: string } | null {
-  const secretKey = secrets.stripe_secret_key ?? '';
-  const webhookSecret = secrets.stripe_webhook_secret ?? '';
+  const secretKey = stripeSecret(secrets, 'stripe_secret_key');
+  const webhookSecret = stripeSecret(secrets, 'stripe_webhook_secret');
   // Without the signing secret no payment could ever be confirmed: an order
   // would be paid for and wait for ever.
   return secretKey === '' || webhookSecret === ''

@@ -243,6 +243,28 @@ describe('a payment, from Stripe’s delivery to the buyer’s inbox', () => {
     expect(row?.status).toBe('pending');
   });
 
+  it('takes payments with secrets saved with the white space they were pasted with', async () => {
+    // The first purchase in Stripe's test mode failed here: the signing
+    // secret was saved with the space before it on the line `stripe listen`
+    // prints, and every delivery was refused as signed with another secret.
+    await setShopSecrets({
+      stripe_secret_key: ' sk_test_order_page\n',
+      stripe_webhook_secret: ` ${WEBHOOK_SECRET}`,
+    });
+    const order = await placedOrder();
+
+    const response = await deliverPayment(order.id, 103_900);
+
+    const session = stripe?.calls.findLast(
+      (call) => call.path === '/v1/checkout/sessions',
+    );
+    expect(session?.headers.get('authorization')).toBe(
+      'Bearer sk_test_order_page',
+    );
+    expect(response.status).toBe(200);
+    expect(await stockOf('hb-m8')).toBe(900);
+  });
+
   it('refuses a delivery signed with another secret', async () => {
     const order = await placedOrder();
 

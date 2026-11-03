@@ -26,6 +26,7 @@ import {
   setStateStatement,
 } from './state.js';
 import { closeCheckoutSession } from './stripe-client.js';
+import { stripeSecret } from './stripe-secrets.js';
 
 /**
  * How often the rates are fetched. The ECB publishes once per working day, so
@@ -215,7 +216,7 @@ export async function runScheduledTick(
       now.toISOString(),
       now,
     ).run();
-    const key = ctx.secrets?.stripe_secret_key ?? '';
+    const key = stripeSecret(ctx.secrets, 'stripe_secret_key');
     const cancelled = await closeLapsedOrders(
       db,
       now,
