@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repository is
 
-Nundar is a **shop plugin and a commerce theme for Mallok**, packaged as a Mallok site. It is not a standalone application: Mallok (the `mallok` npm package, pinned to an exact version, currently `0.1.0-rc.11`) provides routing, rendering, content, languages, hreflang, the sitemap, the admin, sign-in, media, email and the edge cache. Nundar adds only commerce.
+Nundar is a **shop plugin and a commerce theme for Mallok**, packaged as a Mallok site. It is not a standalone application: Mallok (the `mallok` npm package, pinned to an exact version, currently `0.1.0-rc.12`) provides routing, rendering, content, languages, hreflang, the sitemap, the admin, sign-in, media, email and the edge cache. Nundar adds only commerce.
 
 `docs/superpowers/specs/2026-09-30-nundar-on-mallok-design.md` is the source of truth for the architecture, with the owner's decisions in its §11. The commerce rules in `docs/superpowers/specs/2026-09-03-nundar-design.md` (§4–§7) still hold; its stack and architecture are superseded. The previous standalone Next.js implementation is at the tag `nextjs-final` — read it for reference, never restore it.
 
-Nundar is in development. `mallok@0.1.0-rc.11` carries plugin API 2 — the extension points of design §7 — and several features are not built on them yet (the list is below). **Do not work around a missing Mallok capability** — no writing into Mallok's core tables, no `onRequest` hook to intercept pages, no client-side fetching of prices. A defect or a gap met in Mallok is written up for the owner, who does the Mallok-side work in the Mallok repository; do not edit that repository from a session here.
+Nundar is in development. `mallok@0.1.0-rc.12` carries plugin API 2 — the extension points of design §7 — and several features are not built on them yet (the list is below). **Do not work around a missing Mallok capability** — no writing into Mallok's core tables, no `onRequest` hook to intercept pages, no client-side fetching of prices. A defect or a gap met in Mallok is written up for the owner, who does the Mallok-side work in the Mallok repository; do not edit that repository from a session here.
 
 ## Commands
 
@@ -28,7 +28,10 @@ npx vitest run test/shop/cart-route.test.ts -t "MOQ"      # tests matching a nam
 npm run smoke                 # a real request to a real local Worker
 npm run smoke:shop            # the whole shop end to end on a throwaway local Worker
 npm run starter:documents     # rewrite src/starter/documents.generated.ts after changing content/
+npm run seed:local            # load seed/shop-sample.sql's variants into the local D1 of `npm run dev`
 ```
+
+`npm run deploy` exists but nothing has been deployed from this repository yet; never run it unasked. The project's Node is 22 (`.nvmrc`).
 
 CI (`.github/workflows/ci.yml`) runs `npm ci` → lint → typecheck → test → build → smoke → smoke:shop → `preview --check` for each theme.
 
@@ -56,6 +59,7 @@ Mallok decides the contracts on both sides. Its documentation is the reference: 
 - **What a page shows of the shop** is `plugins.shop`, built by `lib/storefront.ts` from rows alone and read by the `renderData` hook in `lib/render-data.ts`. That file's header is the contract a theme is written against. Mallok gives the hook one database call, a read: one batch of two statements serves a product page and a list alike, and a cold product page is three round trips in all (`test/theme/prices.test.ts` counts them). Every value arrives ready to print — a plugin cannot give a template a filter. The stock is read to decide a state and goes no further.
 - **A page says which products it depends on**: the hook returns each product's translation group as a cache tag, which the page carries as `p:shop:<group>` — a product page its own, a list or the home page every product's it shows, a product with no variants too, so that its first one reaches the page.
 - **Variants are edited in the admin**, in a `records` panel under the editor of every product (`attachTo` in `plugin.json`; the handlers are `lib/variant-records.ts`). Mallok checks each value against the field the manifest declares and never writes the table itself: `saveVariant` judges what only the shop can — a SKU that is taken, a lead time that ends before it starts — and writes the variant, its prices and the stock ledger in one batch after one read. `price` is the base price; `other_prices` are entered by hand and stored `manual`, and need a base price; any other currency is derived from the base price at the stored rate. Whether a derived price is out of date is asked inside the write, of the table as the batch runs — a decision taken from the earlier reading goes wrong when two saves cross. The stock field comes to the form empty and writes only when a figure is typed. A deleted product takes its variants with it (`onContentDelete`, once its last language has gone); one kept because an order names it gives its SKU back.
+- **Shipping zones are edited in a second `records` panel** (`lib/shipping-records.ts`; the rules are `lib/shipping.ts`): a zone has a name, its countries and a rate in each currency it can be paid in. A country is in one zone at most — the key of `p_shop_shipping_country` says so — and a save that would put it in a second one is answered with the zone it is in already, read again after a write that still met one, since two saves can cross.
 - **Whoever changes what a page shows purges that product's tag**: a save or a delete in the admin, and a repricing chunk for the products whose prices moved, one call for the chunk. A handler does not wait for its purge — Mallok gathers two seconds of purges into one call, and a save that waited would take those two seconds — it hands the promise to `ctx.waitUntil`. A purge that does not happen leaves the pages to expire and is not a failed save. Mallok's `purgeTags` resolves, rather than rejects, when a purge was not attempted or was turned down, so its answer is read (`purgeOutcome`), never assumed.
 - **`lib/scheduled.ts`** does one small piece of work per minute tick: a repricing chunk in progress, else a rate fetch if due, else clearing expired carts. State between ticks is in `p_shop_state`.
 - **Migrations**: additive and idempotent. Mallok's migrator drops whole-line `--` comments, then splits on `;` — a comment must have a line to itself. They run on the Worker's first request, not from a CLI, and Mallok records each by its id, so one that has run is never run again: a view is changed by a new migration that drops and makes it again (`0006_review.sql` does so for two of 0005's), never by editing the one that made it. `test/shop/schema.test.ts` lists every migration's id.
@@ -107,13 +111,13 @@ Mallok decides the contracts on both sides. Its documentation is the reference: 
 
 ### What is not built on plugin API 2 yet
 
-`mallok@0.1.0-rc.11` allows each of these; the code here does not use it yet.
+`mallok@0.1.0-rc.12` allows each of these; the code here does not use it yet.
 
 - The sample's products name one collection each, though `reference[]` is resolved now.
 
 When one is built, take it off this list and prove the behaviour with a test or the smoke run.
 
-### Known limits of mallok 0.1.0-rc.11 that shape the code
+### Known limits of mallok 0.1.0-rc.12 that shape the code
 
 - `renderData` is told the items a list or the home page shows, and nothing of what a content page lists through a reference. So the products on a collection's page, and a product's neighbours, have no prices; `test/theme/prices.test.ts` holds that, and fails the day Mallok passes them.
 - A `remove` handler of a records panel can only throw, which the admin shows as a failure with no reason; so deleting a variant that is on an order archives it instead of refusing. A panel's own order is always descending, so the variants list opens on the last one changed, not in the order a page shows them.
@@ -127,7 +131,7 @@ When one is built, take it off this list and prove the behaviour with a test or 
 - An action can answer only success or a refusal, so one that acted on some of the rows ticked and not others answers 422 with what it changed and what it did not (M43).
 - `mallok prepare` stages the files of the theme at `src/theme` and no other, so a second theme can have no assets (M46): the editorial theme's stylesheet is in the page.
 - Nothing tells a plugin of a deletion it missed, and nothing here sweeps up afterwards: a variant with no product may as well be one that was loaded before its product was published, and a sweep cannot tell the two apart.
-- Switching a plugin on or off, or changing a setting, can leave cached pages as they were — and the admin's "Clear cached pages" can report success without clearing anything. So the plugins are switched on before the first publish (`scripts/lib/local-shop.mjs`, the README), and `test/shop/helpers.ts` deletes the cached home page by hand after changing settings. Keep both until a Mallok release says the purge can be trusted.
+- Switching a plugin on or off, or changing a setting, can leave cached pages as they were. rc.12 made a failed purge say so ("Clear cached pages" answers 502, `GET /health` shows the last failure) but not these changes purge. So the plugins are switched on before the first publish (`scripts/lib/local-shop.mjs`, the README), and `test/shop/helpers.ts` deletes the cached home page by hand after changing settings. Keep both until a Mallok release says these changes purge.
 
 ## Testing
 
@@ -177,3 +181,4 @@ When one is built, take it off this list and prove the behaviour with a test or 
 - Comments explain *why*, often naming the defect or the platform limit behind the code. Match that density.
 - Biome formats and lints (single quotes, semicolons, 80 columns). Named exports; `import type`; no `any`.
 - Conventional Commits, one concern per commit.
+- A change that contradicts a decision recorded in `docs/superpowers/specs/` updates the spec in the same change, with the new reasoning (`CONTRIBUTING.md`).

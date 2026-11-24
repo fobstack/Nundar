@@ -39,9 +39,10 @@ export function productCacheTag(productGroup: string): string {
  *
  * Mallok's `purgeTags` does not reject when a purge does not happen: it
  * resolves to an object saying whether one was attempted and whether it
- * worked. A site without a purge token attempts none. Its type promises
- * nothing about that object, so it is read for exactly those two answers,
- * and anything else is taken at its word.
+ * worked. A site without a purge token attempts none. Mallok types that
+ * object as `PurgeOutcome` since rc.12, but it is still read for exactly
+ * those two answers, and anything else is taken at its word: a type is not
+ * a check, and a purge that is not understood must not fail a save.
  */
 export function purgeOutcome(
   answer: unknown,

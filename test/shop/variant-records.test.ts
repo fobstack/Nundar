@@ -822,8 +822,8 @@ describe('variants in the admin', () => {
       let finish: () => void = () => {};
       const { ctx, background } = context({
         purgeTags: () =>
-          new Promise<void>((resolve) => {
-            finish = resolve;
+          new Promise((resolve) => {
+            finish = () => resolve({ attempted: true, ok: true });
           }),
       });
 
@@ -1004,7 +1004,9 @@ describe('variants in the admin', () => {
       const log = vi.spyOn(console, 'log').mockImplementation(() => {});
       try {
         const { ctx, background } = context({
-          purgeTags: async () => answer,
+          // Answers Mallok's type does not allow are fed on purpose: the
+          // shop reads whatever arrives, not what the type promises.
+          purgeTags: (async () => answer) as PluginContext['purgeTags'],
         });
         const created = await saveVariant(
           record(screw, null, { sku: `CS-${crypto.randomUUID()}` }),
