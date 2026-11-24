@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repository is
 
-Nundar is a **shop plugin and a commerce theme for Mallok**, packaged as a Mallok site. It is not a standalone application: Mallok (the `mallok` npm package, pinned to an exact version, currently `0.1.0-rc.11`) provides routing, rendering, content, languages, hreflang, the sitemap, the admin, sign-in, media, email and the edge cache. Nundar adds only commerce.
+Nundar is a **shop plugin and a commerce theme for Mallok**, packaged as a Mallok site. It is not a standalone application: Mallok (the `mallok` npm package, pinned to an exact version, currently `0.1.0-rc.12`) provides routing, rendering, content, languages, hreflang, the sitemap, the admin, sign-in, media, email and the edge cache. Nundar adds only commerce.
 
 `docs/superpowers/specs/2026-09-30-nundar-on-mallok-design.md` is the source of truth for the architecture, with the owner's decisions in its §11. The commerce rules in `docs/superpowers/specs/2026-09-03-nundar-design.md` (§4–§7) still hold; its stack and architecture are superseded. The previous standalone Next.js implementation is at the tag `nextjs-final` — read it for reference, never restore it.
 
-Nundar is in development. `mallok@0.1.0-rc.11` carries plugin API 2 — the extension points of design §7 — and several features are not built on them yet (the list is below). **Do not work around a missing Mallok capability** — no writing into Mallok's core tables, no `onRequest` hook to intercept pages, no client-side fetching of prices. A defect or a gap met in Mallok is written up for the owner, who does the Mallok-side work in the Mallok repository; do not edit that repository from a session here.
+Nundar is in development. `mallok@0.1.0-rc.12` carries plugin API 2 — the extension points of design §7 — and several features are not built on them yet (the list is below). **Do not work around a missing Mallok capability** — no writing into Mallok's core tables, no `onRequest` hook to intercept pages, no client-side fetching of prices. A defect or a gap met in Mallok is written up for the owner, who does the Mallok-side work in the Mallok repository; do not edit that repository from a session here.
 
 ## Commands
 
@@ -111,13 +111,13 @@ Mallok decides the contracts on both sides. Its documentation is the reference: 
 
 ### What is not built on plugin API 2 yet
 
-`mallok@0.1.0-rc.11` allows each of these; the code here does not use it yet.
+`mallok@0.1.0-rc.12` allows each of these; the code here does not use it yet.
 
 - The sample's products name one collection each, though `reference[]` is resolved now.
 
 When one is built, take it off this list and prove the behaviour with a test or the smoke run.
 
-### Known limits of mallok 0.1.0-rc.11 that shape the code
+### Known limits of mallok 0.1.0-rc.12 that shape the code
 
 - `renderData` is told the items a list or the home page shows, and nothing of what a content page lists through a reference. So the products on a collection's page, and a product's neighbours, have no prices; `test/theme/prices.test.ts` holds that, and fails the day Mallok passes them.
 - A `remove` handler of a records panel can only throw, which the admin shows as a failure with no reason; so deleting a variant that is on an order archives it instead of refusing. A panel's own order is always descending, so the variants list opens on the last one changed, not in the order a page shows them.
@@ -131,7 +131,7 @@ When one is built, take it off this list and prove the behaviour with a test or 
 - An action can answer only success or a refusal, so one that acted on some of the rows ticked and not others answers 422 with what it changed and what it did not (M43).
 - `mallok prepare` stages the files of the theme at `src/theme` and no other, so a second theme can have no assets (M46): the editorial theme's stylesheet is in the page.
 - Nothing tells a plugin of a deletion it missed, and nothing here sweeps up afterwards: a variant with no product may as well be one that was loaded before its product was published, and a sweep cannot tell the two apart.
-- Switching a plugin on or off, or changing a setting, can leave cached pages as they were — and the admin's "Clear cached pages" can report success without clearing anything. So the plugins are switched on before the first publish (`scripts/lib/local-shop.mjs`, the README), and `test/shop/helpers.ts` deletes the cached home page by hand after changing settings. Keep both until a Mallok release says the purge can be trusted.
+- Switching a plugin on or off, or changing a setting, can leave cached pages as they were. rc.12 made a failed purge say so ("Clear cached pages" answers 502, `GET /health` shows the last failure) but not these changes purge. So the plugins are switched on before the first publish (`scripts/lib/local-shop.mjs`, the README), and `test/shop/helpers.ts` deletes the cached home page by hand after changing settings. Keep both until a Mallok release says these changes purge.
 
 ## Testing
 

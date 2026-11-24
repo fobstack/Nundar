@@ -54,7 +54,7 @@ Everything runs on Cloudflare Workers with D1 and R2. Local development needs no
 
 ## What works today
 
-Nundar builds on `mallok@0.1.0-rc.11`, the first release with the plugin API the rest of the shop needs. The right-hand column is what has not been built on it yet.
+Nundar builds on `mallok@0.1.0-rc.12`; `0.1.0-rc.11` was the first release with the plugin API the rest of the shop needs. The right-hand column is what has not been built on it yet.
 
 | | Works today | Not built yet |
 |---|---|---|

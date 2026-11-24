@@ -286,7 +286,7 @@ The Next.js application stays in maintenance mode, with security and correctness
 
 ## 9. Phases
 
-The phases follow Mallok's own roadmap (`mallok: docs/PRODUCT_VISION.md §9`: 0.2 inquiry cart, 0.3 payment, 1.0 storefront). Nundar was started on the published `mallok@0.1.0-rc.7`, moved to `0.1.0-rc.9` (§12), and is on `0.1.0-rc.11` now — the release that carries the extension points of §7 (§16).
+The phases follow Mallok's own roadmap (`mallok: docs/PRODUCT_VISION.md §9`: 0.2 inquiry cart, 0.3 payment, 1.0 storefront). Nundar was started on the published `mallok@0.1.0-rc.7`, moved to `0.1.0-rc.9` (§12), moved to `0.1.0-rc.11` — the release that carries the extension points of §7 (§16) — and is on `0.1.0-rc.12` now (§23).
 
 **Phase 0: decisions, no code**
 - §11 is answered (2026-10-01).
@@ -928,3 +928,19 @@ Two ticks of Mallok's scheduled handler, run by hand on the local Worker (`/cdn-
   - Stripe's hosted page, which the owner paid on in their own browser;
   - the order page Stripe returned them to.
 - No site was deployed and no email was delivered.
+
+## 23. What the move to `mallok@0.1.0-rc.12` changed or found (2026-11-24)
+
+`0.1.0-rc.12` was published on 2026-11-23 under npm's `next` tag; `latest` is still rc.10. Nundar pins it exactly. Its changelog dates it 2026-11-05.
+
+**The upgrade changed two test stubs and nothing in the shop.** `ctx.purgeTags` now resolves to `PurgeOutcome` (`{ attempted, ok, status? }`) instead of `unknown`, and `npx mallok upgrade --to 0.1.0-rc.12` refused twice, restoring rc.11, on the type check of `test/shop/variant-records.test.ts`: one stub resolved with nothing, and one resolved with whatever answer a test hands it. The first now resolves with a purge that was done. The second is cast, because it feeds answers the type does not allow on purpose: `purgeOutcome` (`lib/render-data.ts`) still reads only `attempted` and `ok` and takes anything else at its word, since a type is not a check and a purge that is not understood must not fail a save. After that the upgrade passed its own type check, tests, build and deploy dry run, and the lint, both test suites (54 project checks, 1,104 in workerd), both smoke runs and `npm run preview -- --check` for each theme passed.
+
+**What the release brings that touches the shop:**
+
+- A failed purge is no longer reported as a success. "Clear cached pages" answers 502 with the reason, and the last failure is shown under Settings → Advanced and in `GET /health`. Switching a plugin on or off, or changing a setting, is still not said to purge, so the order of set-up in `scripts/lib/local-shop.mjs` and the cached home page that `test/shop/helpers.ts` deletes by hand both stay.
+- A purge token needs **Zone → Cache Purge → Purge**. One with only Cache Rules → Edit purges nothing and now says so. This is the operator's, when a site is deployed.
+- The default language can be prefixed (`prefixDefaultLocale`, with `localePrefix(locale, ctx.site)` for a plugin). It is off by default and `site.json` leaves it off, so every address is as before. The shop's own addresses (`shopPath` in `lib/paths.ts`) leave the default language out of the path. Whether Mallok prefixes a plugin's routes on such a site has not been looked at, so a site that turns the option on has not been tried with the shop.
+- Each stored page body is rendered again once, with an id on every heading. The theme tests and the smoke run passed with it.
+- Two schema migrations of Mallok's run on the first request. Neither touches a `p_shop_` table.
+
+Nothing in the list of what is not built on plugin API 2, or in the known limits of `CLAUDE.md`, was lifted by this release, apart from the honest report of a failed purge.
